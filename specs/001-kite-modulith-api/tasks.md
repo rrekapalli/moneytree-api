@@ -118,11 +118,11 @@
 ### Implementation for User Story 4
 
 - [ ] T029 [P] [US4] Review existing portfolio/screener/backtest/signal controllers and services in `/home/raja/code/MoneyPlant/backend` for current contracts and behavior
-- [ ] T030 [P] [US4] Introduce or update portfolio CRUD controller and service in `backend/src/main/java/com/moneytree/api/PortfolioController.java` and `backend/src/main/java/com/moneytree/portfolio/PortfolioService.java`
-- [ ] T031 [P] [US4] Introduce or update screener CRUD controller and service in `backend/src/main/java/com/moneytree/api/ScreenerController.java` and `backend/src/main/java/com/moneytree/screener/ScreenerService.java`
-- [ ] T032 [P] [US4] Introduce or update backtest CRUD controller and service in `backend/src/main/java/com/moneytree/api/BacktestController.java` and `backend/src/main/java/com/moneytree/backtest/BacktestService.java`
-- [ ] T033 [P] [US4] Introduce or update signal CRUD controller and service in `backend/src/main/java/com/moneytree/api/SignalController.java` and `backend/src/main/java/com/moneytree/signal/SignalService.java`
-- [ ] T034 [US4] Add regression tests to verify CRUD parity with existing implementation in `backend/src/test/java/com/moneytree/portfolio/`, `backend/src/test/java/com/moneytree/screener/`, `backend/src/test/java/com/moneytree/backtest/`, and `backend/src/test/java/com/moneytree/signal/`
+- [X] T030 [P] [US4] Introduce or update portfolio CRUD controller and service in `backend/src/main/java/com/moneytree/api/PortfolioController.java` and `backend/src/main/java/com/moneytree/portfolio/PortfolioService.java`
+- [X] T031 [P] [US4] Introduce or update screener CRUD controller and service in `backend/src/main/java/com/moneytree/api/ScreenerController.java` and `backend/src/main/java/com/moneytree/screener/ScreenerService.java`
+- [X] T032 [P] [US4] Introduce or update backtest CRUD controller and service in `backend/src/main/java/com/moneytree/api/BacktestController.java` and `backend/src/main/java/com/moneytree/backtest/BacktestService.java`
+- [X] T033 [P] [US4] Introduce or update signal CRUD controller and service in `backend/src/main/java/com/moneytree/api/SignalController.java` and `backend/src/main/java/com/moneytree/signal/SignalService.java`
+- [X] T034 [US4] Add regression tests to verify CRUD parity with existing implementation in `backend/src/test/java/com/moneytree/portfolio/`, `backend/src/test/java/com/moneytree/screener/`, `backend/src/test/java/com/moneytree/backtest/`, and `backend/src/test/java/com/moneytree/signal/`
 
 **Checkpoint**: User Story 4 confirms that non-NSE domain CRUD APIs are present and compatible with existing clients.
 
