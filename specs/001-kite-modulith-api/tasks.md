@@ -74,14 +74,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add regression tests comparing responses between legacy NSE and new Kite endpoints in `backend/src/test/java/com/moneytree/marketdata/kite/NseToKiteRegressionTest.java`
+- [X] T018 [P] [US2] Add regression tests comparing responses between legacy NSE and new Kite endpoints in `backend/src/test/java/com/moneytree/marketdata/kite/NseToKiteRegressionTest.java`
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Document mapping from each NSE endpoint to its Kite equivalent in `specs/001-kite-modulith-api/contracts/market-data-openapi.md`
-- [ ] T020 [US2] Ensure existing API routes in `backend/src/main/java/com/moneytree/api/MarketDataController.java` are wired to Kite-backed services instead of NSE implementations
-- [ ] T021 [US2] Handle any NSE-specific fields not available from Kite (e.g., mark deprecated or optional) in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
-- [ ] T022 [US2] Update API documentation to highlight Kite-based behavior and any contract differences in `specs/001-kite-modulith-api/quickstart.md`
+- [X] T019 [P] [US2] Document mapping from each NSE endpoint to its Kite equivalent in `specs/001-kite-modulith-api/contracts/market-data-openapi.md`
+- [X] T020 [US2] Ensure existing API routes in `backend/src/main/java/com/moneytree/api/MarketDataController.java` are wired to Kite-backed services instead of NSE implementations
+- [X] T021 [US2] Handle any NSE-specific fields not available from Kite (e.g., mark deprecated or optional) in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
+- [X] T022 [US2] Update API documentation to highlight Kite-based behavior and any contract differences in `specs/001-kite-modulith-api/quickstart.md`
 
 **Checkpoint**: User Story 2 allows clients to migrate from NSE to Kite endpoints with minimal code changes.
 

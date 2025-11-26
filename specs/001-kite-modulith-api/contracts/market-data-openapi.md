@@ -64,6 +64,9 @@ paths:
       responses:
         '200':
           description: Quote snapshots aligned with legacy NSE quote responses where fields are available
+  # Legacy NSE endpoint mapping (documentation only):
+  # - /api/marketdata/nse/{symbol}/history  -> /api/marketdata/kite/{symbol}/history
+  # - /api/marketdata/nse/quotes           -> /api/marketdata/kite/quotes
 ```
 
 

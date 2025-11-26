@@ -45,4 +45,14 @@ Use these calls to confirm:
 - Response structures align with the former NSE-based endpoints where expected.
 - Latency is within the defined performance targets under normal dev/test loads.
 
+## Migrating from NSE endpoints
+
+If you currently use NSE-based endpoints, the recommended migration is:
+
+- Replace calls to `/api/marketdata/nse/{symbol}/history` with `/api/marketdata/kite/{instrumentToken}/history`.
+- Replace calls to `/api/marketdata/nse/quotes` with `/api/marketdata/kite/quotes`.
+
+The request/response shapes are intended to remain as close as possible to the existing NSE contracts, with any unavoidable differences documented in the API contract file and handled in response DTOs.
+
+
 
