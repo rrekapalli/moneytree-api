@@ -1,6 +1,7 @@
 package com.moneytree.screener.entity;
 
 import jakarta.persistence.*;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_alert_delivery_channels")
@@ -8,8 +9,8 @@ import jakarta.persistence.*;
 public class ScreenerAlertDeliveryChannel {
 
     @Id
-    @Column(name = "alert_id", nullable = false)
-    private Long alertId;
+    @Column(name = "alert_id", nullable = false, columnDefinition = "uuid")
+    private UUID alertId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "alert_id", nullable = false, insertable = false, updatable = false, foreignKey = @ForeignKey(name = "fk43npt3486b9ujqxr6i5ftnek3"))
@@ -20,8 +21,8 @@ public class ScreenerAlertDeliveryChannel {
     private String deliveryChannel;
 
     // Getters and setters
-    public Long getAlertId() { return alertId; }
-    public void setAlertId(Long alertId) { this.alertId = alertId; }
+    public UUID getAlertId() { return alertId; }
+    public void setAlertId(UUID alertId) { this.alertId = alertId; }
     public ScreenerAlert getAlert() { return alert; }
     public void setAlert(ScreenerAlert alert) { this.alert = alert; if (alert != null) this.alertId = alert.getAlertId(); }
     public String getDeliveryChannel() { return deliveryChannel; }

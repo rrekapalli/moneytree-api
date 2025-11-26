@@ -2,21 +2,22 @@ package com.moneytree.screener.entity;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 public class ScreenerAlertDeliveryChannelId implements Serializable {
-    private Long alertId;
+    private UUID alertId;
     private String deliveryChannel;
 
     public ScreenerAlertDeliveryChannelId() {
     }
 
-    public ScreenerAlertDeliveryChannelId(Long alertId, String deliveryChannel) {
+    public ScreenerAlertDeliveryChannelId(UUID alertId, String deliveryChannel) {
         this.alertId = alertId;
         this.deliveryChannel = deliveryChannel;
     }
 
-    public Long getAlertId() { return alertId; }
-    public void setAlertId(Long alertId) { this.alertId = alertId; }
+    public UUID getAlertId() { return alertId; }
+    public void setAlertId(UUID alertId) { this.alertId = alertId; }
     public String getDeliveryChannel() { return deliveryChannel; }
     public void setDeliveryChannel(String deliveryChannel) { this.deliveryChannel = deliveryChannel; }
 
