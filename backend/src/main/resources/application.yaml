@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postres.tailce422e.ts.net:5432/MoneyTree
+    username: ${DB_USERNAME:moneytree}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  main:
+    banner-mode: "off"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+
+kite:
+  api-key: ${KITE_API_KEY:}
+  api-secret: ${KITE_API_SECRET:}
+  access-token: ${KITE_ACCESS_TOKEN:}
+  base-url: ${KITE_BASE_URL:https://api.kite.trade}
+
+

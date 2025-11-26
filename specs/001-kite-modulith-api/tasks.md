@@ -19,7 +19,7 @@
 
 **Purpose**: Ensure repository and backend modulith are ready for Kite-based development.
 
-- [ ] T001 Verify existing `backend` Java modulith build tooling and project structure in `backend/`
+- [X] T001 Verify existing `backend` Java modulith build tooling and project structure in `backend/`
 - [ ] T002 [P] Confirm connectivity to TimescaleDB `MoneyTree` instance and presence of `kite_*` tables in `backend/src/main/resources/db/` migration configuration
 - [ ] T003 [P] Decide and document environment variable names for Kite credentials and config in `specs/001-kite-modulith-api/research.md` and `backend/README.md`
 
