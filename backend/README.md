@@ -7,16 +7,16 @@ This module is a Java 21 Spring Boot application that exposes the MoneyTree API 
 
 ## Environment configuration
 
-The backend relies on the following environment variables (or equivalent configuration) at runtime:
+For local development, create a `.env` file in the `backend/` directory (note that `.env` is already git-ignored at repo root) with entries like:
 
-- `DB_USERNAME` – database username for TimescaleDB
-- `DB_PASSWORD` – database password for TimescaleDB
-- `KITE_API_KEY` – Zerodha Kite API key
-- `KITE_API_SECRET` – Zerodha Kite API secret
-- `KITE_ACCESS_TOKEN` – Zerodha Kite access token for REST calls
-- `KITE_BASE_URL` – base URL for Kite API (default `https://api.kite.trade`)
+- `DB_USERNAME=moneytree`
+- `DB_PASSWORD=changeme`
+- `KITE_API_KEY=your_kite_api_key`
+- `KITE_API_SECRET=your_kite_api_secret`
+- `KITE_ACCESS_TOKEN=your_kite_access_token`
+- `KITE_BASE_URL=https://api.kite.trade`
 
-These are wired through `application.yaml`, `KiteConfig`, and `EnvironmentConfig`.
+These values are wired through `application.yaml`, `KiteConfig`, and `EnvironmentConfig` via the corresponding environment variables. In production or CI, you can set the same keys directly in the process environment instead of using `.env`.
 
 ## Database schema
 
