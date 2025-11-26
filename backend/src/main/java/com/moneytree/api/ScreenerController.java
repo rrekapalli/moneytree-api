@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/screeners")
@@ -37,7 +38,7 @@ public class ScreenerController {
         @ApiResponse(responseCode = "404", description = "Screener not found")
     })
     public ResponseEntity<Screener> getScreener(
-            @Parameter(description = "Screener ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "Screener ID", required = true) @PathVariable UUID id) {
         return screenerService.getScreener(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -59,7 +60,7 @@ public class ScreenerController {
         @ApiResponse(responseCode = "404", description = "Screener not found")
     })
     public ResponseEntity<Screener> updateScreener(
-            @Parameter(description = "Screener ID", required = true) @PathVariable Long id,
+            @Parameter(description = "Screener ID", required = true) @PathVariable UUID id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated screener details", required = true)
             @RequestBody Screener screener) {
         screener.setScreenerId(id);
@@ -73,7 +74,7 @@ public class ScreenerController {
         @ApiResponse(responseCode = "404", description = "Screener not found")
     })
     public ResponseEntity<Void> deleteScreener(
-            @Parameter(description = "Screener ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "Screener ID", required = true) @PathVariable UUID id) {
         screenerService.deleteScreener(id);
         return ResponseEntity.noContent().build();
     }

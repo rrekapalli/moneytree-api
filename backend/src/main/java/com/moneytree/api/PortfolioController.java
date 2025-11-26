@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio")
@@ -39,7 +40,7 @@ public class PortfolioController {
         @ApiResponse(responseCode = "404", description = "Portfolio not found")
     })
     public ResponseEntity<Portfolio> getPortfolio(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID id) {
         return portfolioService.getPortfolio(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -61,7 +62,7 @@ public class PortfolioController {
         @ApiResponse(responseCode = "404", description = "Portfolio not found")
     })
     public ResponseEntity<Portfolio> updatePortfolio(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long id,
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated portfolio details", required = true)
             @RequestBody Portfolio portfolio) {
         portfolio.setId(id);
@@ -75,7 +76,7 @@ public class PortfolioController {
         @ApiResponse(responseCode = "404", description = "Portfolio not found")
     })
     public ResponseEntity<Void> deletePortfolio(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long id) {
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID id) {
         portfolioService.deletePortfolio(id);
         return ResponseEntity.noContent().build();
     }

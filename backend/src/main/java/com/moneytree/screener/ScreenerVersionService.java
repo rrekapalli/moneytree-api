@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,15 +21,15 @@ public class ScreenerVersionService {
         this.repository = repository;
     }
 
-    public List<ScreenerVersion> findByScreenerId(Long screenerId) {
+    public List<ScreenerVersion> findByScreenerId(UUID screenerId) {
         return repository.findByScreenerIdOrderByVersionNumberDesc(screenerId);
     }
 
-    public Optional<ScreenerVersion> findByScreenerIdAndVersionNumber(Long screenerId, Integer versionNumber) {
+    public Optional<ScreenerVersion> findByScreenerIdAndVersionNumber(UUID screenerId, Integer versionNumber) {
         return repository.findByScreenerIdAndVersionNumber(screenerId, versionNumber);
     }
 
-    public Optional<ScreenerVersion> findById(Long id) {
+    public Optional<ScreenerVersion> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -36,7 +37,7 @@ public class ScreenerVersionService {
         return repository.save(version);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

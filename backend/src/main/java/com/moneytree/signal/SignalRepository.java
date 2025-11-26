@@ -7,11 +7,13 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface SignalRepository extends JpaRepository<Signal, Integer> {
+public interface SignalRepository extends JpaRepository<Signal, UUID> {
 
-    List<Signal> findByPortfolioId(Long portfolioId);
+    @Query("SELECT s FROM Signal s WHERE s.portfolio.id = ?1")
+    List<Signal> findByPortfolioId(UUID portfolioId);
 
     List<Signal> findBySymbol(String symbol);
 
@@ -19,10 +21,11 @@ public interface SignalRepository extends JpaRepository<Signal, Integer> {
 
     List<Signal> findByExecutedFalse();
 
-    List<Signal> findByPortfolioIdAndExecutedFalse(Long portfolioId);
+    @Query("SELECT s FROM Signal s WHERE s.portfolio.id = ?1 AND s.executed = false")
+    List<Signal> findByPortfolioIdAndExecutedFalse(UUID portfolioId);
 
     @Query("SELECT s FROM Signal s WHERE s.portfolio.id = ?1 ORDER BY s.timestamp DESC")
-    List<Signal> findByPortfolioIdOrderByTimestampDesc(Long portfolioId);
+    List<Signal> findByPortfolioIdOrderByTimestampDesc(UUID portfolioId);
 
     List<Signal> findByTimestampBetween(Instant start, Instant end);
 }

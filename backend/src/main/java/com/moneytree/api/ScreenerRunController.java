@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/runs")
@@ -23,7 +24,7 @@ public class ScreenerRunController {
 
     @GetMapping
     public ResponseEntity<List<ScreenerRun>> listRuns(
-            @PathVariable Long screenerId,
+            @PathVariable UUID screenerId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate tradingDay) {
         if (status != null) {
@@ -36,25 +37,25 @@ public class ScreenerRunController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ScreenerRun> getRun(@PathVariable Long screenerId, @PathVariable Long id) {
+    public ResponseEntity<ScreenerRun> getRun(@PathVariable UUID screenerId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<ScreenerRun> createRun(@PathVariable Long screenerId, @RequestBody ScreenerRun run) {
+    public ResponseEntity<ScreenerRun> createRun(@PathVariable UUID screenerId, @RequestBody ScreenerRun run) {
         return ResponseEntity.ok(service.save(run));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScreenerRun> updateRun(@PathVariable Long screenerId, @PathVariable Long id, @RequestBody ScreenerRun run) {
+    public ResponseEntity<ScreenerRun> updateRun(@PathVariable UUID screenerId, @PathVariable UUID id, @RequestBody ScreenerRun run) {
         run.setScreenerRunId(id);
         return ResponseEntity.ok(service.save(run));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRun(@PathVariable Long screenerId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteRun(@PathVariable UUID screenerId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

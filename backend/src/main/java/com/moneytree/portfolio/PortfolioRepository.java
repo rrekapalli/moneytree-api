@@ -7,17 +7,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
+public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
 
     List<Portfolio> findByIsActiveTrue();
 
     @Query("SELECT p FROM Portfolio p WHERE p.user.id = ?1")
-    List<Portfolio> findByUserId(Long userId);
+    List<Portfolio> findByUserId(UUID userId);
 
     @Query("SELECT p FROM Portfolio p WHERE p.user.id = ?1 AND p.name = ?2")
-    Optional<Portfolio> findByUserIdAndName(Long userId, String name);
+    Optional<Portfolio> findByUserIdAndName(UUID userId, String name);
 
     @Query("SELECT p FROM Portfolio p WHERE p.isActive = true ORDER BY p.createdAt DESC")
     List<Portfolio> findAllActiveOrderByCreatedAtDesc();

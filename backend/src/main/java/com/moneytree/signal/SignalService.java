@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for trading signal CRUD operations using Spring Data JPA.
@@ -29,7 +30,7 @@ public class SignalService {
         return signalRepository.findAll();
     }
 
-    public List<Signal> listSignalsByPortfolio(Long portfolioId) {
+    public List<Signal> listSignalsByPortfolio(UUID portfolioId) {
         log.info("listSignalsByPortfolio portfolioId={}", portfolioId);
         return signalRepository.findByPortfolioIdOrderByTimestampDesc(portfolioId);
     }
@@ -39,12 +40,12 @@ public class SignalService {
         return signalRepository.findBySymbol(symbol);
     }
 
-    public List<Signal> listPendingSignals(Long portfolioId) {
+    public List<Signal> listPendingSignals(UUID portfolioId) {
         log.info("listPendingSignals portfolioId={}", portfolioId);
         return signalRepository.findByPortfolioIdAndExecutedFalse(portfolioId);
     }
 
-    public Optional<Signal> getSignal(Integer signalId) {
+    public Optional<Signal> getSignal(UUID signalId) {
         log.info("getSignal signalId={}", signalId);
         return signalRepository.findById(signalId);
     }
@@ -60,7 +61,7 @@ public class SignalService {
         return signalRepository.save(signal);
     }
 
-    public void deleteSignal(Integer signalId) {
+    public void deleteSignal(UUID signalId) {
         log.info("deleteSignal signalId={}", signalId);
         signalRepository.deleteById(signalId);
     }

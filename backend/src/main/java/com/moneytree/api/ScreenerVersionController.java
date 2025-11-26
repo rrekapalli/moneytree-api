@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/versions")
@@ -20,37 +21,37 @@ public class ScreenerVersionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ScreenerVersion>> listVersions(@PathVariable Long screenerId) {
+    public ResponseEntity<List<ScreenerVersion>> listVersions(@PathVariable UUID screenerId) {
         return ResponseEntity.ok(service.findByScreenerId(screenerId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ScreenerVersion> getVersion(@PathVariable Long screenerId, @PathVariable Long id) {
+    public ResponseEntity<ScreenerVersion> getVersion(@PathVariable UUID screenerId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/version/{versionNumber}")
-    public ResponseEntity<ScreenerVersion> getVersionByNumber(@PathVariable Long screenerId, @PathVariable Integer versionNumber) {
+    public ResponseEntity<ScreenerVersion> getVersionByNumber(@PathVariable UUID screenerId, @PathVariable Integer versionNumber) {
         return service.findByScreenerIdAndVersionNumber(screenerId, versionNumber)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<ScreenerVersion> createVersion(@PathVariable Long screenerId, @RequestBody ScreenerVersion version) {
+    public ResponseEntity<ScreenerVersion> createVersion(@PathVariable UUID screenerId, @RequestBody ScreenerVersion version) {
         return ResponseEntity.ok(service.save(version));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScreenerVersion> updateVersion(@PathVariable Long screenerId, @PathVariable Long id, @RequestBody ScreenerVersion version) {
+    public ResponseEntity<ScreenerVersion> updateVersion(@PathVariable UUID screenerId, @PathVariable UUID id, @RequestBody ScreenerVersion version) {
         version.setScreenerVersionId(id);
         return ResponseEntity.ok(service.save(version));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVersion(@PathVariable Long screenerId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteVersion(@PathVariable UUID screenerId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

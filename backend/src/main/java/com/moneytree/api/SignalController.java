@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/signals")
@@ -37,7 +38,7 @@ public class SignalController {
         @ApiResponse(responseCode = "404", description = "Signal not found")
     })
     public ResponseEntity<Signal> getSignal(
-            @Parameter(description = "Signal ID", required = true) @PathVariable Integer id) {
+            @Parameter(description = "Signal ID", required = true) @PathVariable UUID id) {
         return signalService.getSignal(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -47,7 +48,7 @@ public class SignalController {
     @Operation(summary = "List signals by portfolio", description = "Retrieve all signals for a specific portfolio, ordered by timestamp")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved signals")
     public ResponseEntity<List<Signal>> listSignalsByPortfolio(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId) {
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId) {
         return ResponseEntity.ok(signalService.listSignalsByPortfolio(portfolioId));
     }
 
@@ -55,7 +56,7 @@ public class SignalController {
     @Operation(summary = "List pending signals", description = "Retrieve all pending (non-executed) signals for a specific portfolio")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved pending signals")
     public ResponseEntity<List<Signal>> listPendingSignals(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId) {
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId) {
         return ResponseEntity.ok(signalService.listPendingSignals(portfolioId));
     }
 
@@ -75,7 +76,7 @@ public class SignalController {
         @ApiResponse(responseCode = "404", description = "Signal not found")
     })
     public ResponseEntity<Signal> updateSignal(
-            @Parameter(description = "Signal ID", required = true) @PathVariable Integer id,
+            @Parameter(description = "Signal ID", required = true) @PathVariable UUID id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated signal details", required = true)
             @RequestBody Signal signal) {
         signal.setSignalId(id);
@@ -89,7 +90,7 @@ public class SignalController {
         @ApiResponse(responseCode = "404", description = "Signal not found")
     })
     public ResponseEntity<Void> deleteSignal(
-            @Parameter(description = "Signal ID", required = true) @PathVariable Integer id) {
+            @Parameter(description = "Signal ID", required = true) @PathVariable UUID id) {
         signalService.deleteSignal(id);
         return ResponseEntity.noContent().build();
     }

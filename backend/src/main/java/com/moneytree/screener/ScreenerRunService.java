@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,7 +22,7 @@ public class ScreenerRunService {
         this.repository = repository;
     }
 
-    public List<ScreenerRun> findByScreenerId(Long screenerId) {
+    public List<ScreenerRun> findByScreenerId(UUID screenerId) {
         return repository.findByScreenerIdOrderByStartedAtDesc(screenerId);
     }
 
@@ -33,7 +34,7 @@ public class ScreenerRunService {
         return repository.findByRunForTradingDay(tradingDay);
     }
 
-    public Optional<ScreenerRun> findById(Long id) {
+    public Optional<ScreenerRun> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -41,7 +42,7 @@ public class ScreenerRunService {
         return repository.save(run);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

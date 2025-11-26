@@ -7,17 +7,19 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface ScreenerRunRepository extends JpaRepository<ScreenerRun, Long> {
+public interface ScreenerRunRepository extends JpaRepository<ScreenerRun, UUID> {
 
-    List<ScreenerRun> findByScreenerId(Long screenerId);
+    @Query("SELECT sr FROM ScreenerRun sr WHERE sr.screener.id = ?1")
+    List<ScreenerRun> findByScreenerId(UUID screenerId);
 
     List<ScreenerRun> findByStatus(String status);
 
     List<ScreenerRun> findByRunForTradingDay(LocalDate tradingDay);
 
     @Query("SELECT sr FROM ScreenerRun sr WHERE sr.screener.id = ?1 ORDER BY sr.startedAt DESC")
-    List<ScreenerRun> findByScreenerIdOrderByStartedAtDesc(Long screenerId);
+    List<ScreenerRun> findByScreenerIdOrderByStartedAtDesc(UUID screenerId);
 }
 

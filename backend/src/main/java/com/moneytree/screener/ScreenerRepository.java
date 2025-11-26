@@ -6,16 +6,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface ScreenerRepository extends JpaRepository<Screener, Long> {
+public interface ScreenerRepository extends JpaRepository<Screener, UUID> {
 
     List<Screener> findByIsPublicTrue();
 
     @Query("SELECT s FROM Screener s WHERE s.owner.id = ?1")
-    List<Screener> findByOwnerId(Long ownerId);
+    List<Screener> findByOwnerId(UUID ownerId);
 
     @Query("SELECT s FROM Screener s WHERE s.isPublic = true OR s.owner.id = ?1 ORDER BY s.createdAt DESC")
-    List<Screener> findPublicOrOwnedByUser(Long userId);
+    List<Screener> findPublicOrOwnedByUser(UUID userId);
 }
 

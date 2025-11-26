@@ -7,17 +7,20 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface OpenPositionRepository extends JpaRepository<OpenPosition, Integer> {
+public interface OpenPositionRepository extends JpaRepository<OpenPosition, UUID> {
 
-    List<OpenPosition> findByPortfolioId(Long portfolioId);
+    @Query("SELECT op FROM OpenPosition op WHERE op.portfolio.id = ?1")
+    List<OpenPosition> findByPortfolioId(UUID portfolioId);
 
-    Optional<OpenPosition> findByPortfolioIdAndSymbol(Long portfolioId, String symbol);
+    @Query("SELECT op FROM OpenPosition op WHERE op.portfolio.id = ?1 AND op.symbol = ?2")
+    Optional<OpenPosition> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol);
 
     List<OpenPosition> findBySymbol(String symbol);
 
     @Query("SELECT op FROM OpenPosition op WHERE op.portfolio.id = ?1 ORDER BY op.entryDate DESC")
-    List<OpenPosition> findByPortfolioIdOrderByEntryDateDesc(Long portfolioId);
+    List<OpenPosition> findByPortfolioIdOrderByEntryDateDesc(UUID portfolioId);
 }
 

@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/open-positions")
@@ -27,7 +28,7 @@ public class OpenPositionController {
     @Operation(summary = "List open positions", description = "Retrieve all open positions for a portfolio")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved open positions")
     public ResponseEntity<List<OpenPosition>> listOpenPositions(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId) {
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId) {
         return ResponseEntity.ok(service.findByPortfolioId(portfolioId));
     }
 
@@ -38,8 +39,8 @@ public class OpenPositionController {
         @ApiResponse(responseCode = "404", description = "Position not found")
     })
     public ResponseEntity<OpenPosition> getOpenPosition(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId,
-            @Parameter(description = "Position ID", required = true) @PathVariable Integer id) {
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId,
+            @Parameter(description = "Position ID", required = true) @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -52,7 +53,7 @@ public class OpenPositionController {
         @ApiResponse(responseCode = "404", description = "Position not found")
     })
     public ResponseEntity<OpenPosition> getOpenPositionBySymbol(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId,
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId,
             @Parameter(description = "Trading symbol", required = true, example = "RELIANCE") @PathVariable String symbol) {
         return service.findByPortfolioIdAndSymbol(portfolioId, symbol)
                 .map(ResponseEntity::ok)
@@ -60,24 +61,24 @@ public class OpenPositionController {
     }
 
     @PostMapping
-    public ResponseEntity<OpenPosition> createOpenPosition(@PathVariable Long portfolioId, @RequestBody OpenPosition position) {
+    public ResponseEntity<OpenPosition> createOpenPosition(@PathVariable UUID portfolioId, @RequestBody OpenPosition position) {
         return ResponseEntity.ok(service.save(position));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OpenPosition> updateOpenPosition(@PathVariable Long portfolioId, @PathVariable Integer id, @RequestBody OpenPosition position) {
+    public ResponseEntity<OpenPosition> updateOpenPosition(@PathVariable UUID portfolioId, @PathVariable UUID id, @RequestBody OpenPosition position) {
         position.setPositionId(id);
         return ResponseEntity.ok(service.save(position));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOpenPosition(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<Void> deleteOpenPosition(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/symbol/{symbol}")
-    public ResponseEntity<Void> deleteOpenPositionBySymbol(@PathVariable Long portfolioId, @PathVariable String symbol) {
+    public ResponseEntity<Void> deleteOpenPositionBySymbol(@PathVariable UUID portfolioId, @PathVariable String symbol) {
         service.deleteByPortfolioIdAndSymbol(portfolioId, symbol);
         return ResponseEntity.noContent().build();
     }

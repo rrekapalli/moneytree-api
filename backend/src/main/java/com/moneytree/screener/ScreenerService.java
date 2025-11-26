@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for screener CRUD operations using Spring Data JPA.
@@ -29,17 +30,17 @@ public class ScreenerService {
         return screenerRepository.findByIsPublicTrue();
     }
 
-    public List<Screener> listScreenersByUser(Long userId) {
+    public List<Screener> listScreenersByUser(UUID userId) {
         log.info("listScreenersByUser userId={}", userId);
         return screenerRepository.findPublicOrOwnedByUser(userId);
     }
 
-    public List<Screener> listScreenersByOwner(Long ownerId) {
+    public List<Screener> listScreenersByOwner(UUID ownerId) {
         log.info("listScreenersByOwner ownerId={}", ownerId);
         return screenerRepository.findByOwnerId(ownerId);
     }
 
-    public Optional<Screener> getScreener(Long id) {
+    public Optional<Screener> getScreener(UUID id) {
         log.info("getScreener id={}", id);
         return screenerRepository.findById(id);
     }
@@ -54,7 +55,7 @@ public class ScreenerService {
         return screenerRepository.save(screener);
     }
 
-    public void deleteScreener(Long id) {
+    public void deleteScreener(UUID id) {
         log.info("deleteScreener id={}", id);
         screenerRepository.deleteById(id);
     }

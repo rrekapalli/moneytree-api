@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for portfolio CRUD operations using Spring Data JPA.
@@ -29,12 +30,12 @@ public class PortfolioService {
         return portfolioRepository.findAllActiveOrderByCreatedAtDesc();
     }
 
-    public List<Portfolio> listPortfoliosByUser(Long userId) {
+    public List<Portfolio> listPortfoliosByUser(UUID userId) {
         log.info("listPortfoliosByUser userId={}", userId);
         return portfolioRepository.findByUserId(userId);
     }
 
-    public Optional<Portfolio> getPortfolio(Long id) {
+    public Optional<Portfolio> getPortfolio(UUID id) {
         log.info("getPortfolio id={}", id);
         return portfolioRepository.findById(id);
     }
@@ -49,7 +50,7 @@ public class PortfolioService {
         return portfolioRepository.save(portfolio);
     }
 
-    public void deletePortfolio(Long id) {
+    public void deletePortfolio(UUID id) {
         log.info("deletePortfolio id={}", id);
         portfolioRepository.deleteById(id);
     }
