@@ -6,15 +6,15 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_function_params")
 public class ScreenerFunctionParam {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "param_id")
-    private Long paramId;
+    @Column(name = "param_id", columnDefinition = "uuid")
+    private UUID paramId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "function_id", nullable = false, foreignKey = @ForeignKey(name = "fkh5k1r7ucggleg6sio0toji0ma"))
@@ -55,8 +55,8 @@ public class ScreenerFunctionParam {
     private Map<String, Object> validationRules;
 
     // Getters and setters
-    public Long getParamId() { return paramId; }
-    public void setParamId(Long paramId) { this.paramId = paramId; }
+    public UUID getParamId() { return paramId; }
+    public void setParamId(UUID paramId) { this.paramId = paramId; }
     public ScreenerFunction getFunction() { return function; }
     public void setFunction(ScreenerFunction function) { this.function = function; }
     public Instant getCreatedAt() { return createdAt; }

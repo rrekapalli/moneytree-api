@@ -7,6 +7,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_saved_view", uniqueConstraints = {
@@ -15,9 +16,8 @@ import java.util.Map;
 public class ScreenerSavedView {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "saved_view_id")
-    private Long savedViewId;
+    @Column(name = "saved_view_id", columnDefinition = "uuid")
+    private UUID savedViewId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_id", nullable = false, foreignKey = @ForeignKey(name = "screener_saved_view_screener_id_fkey"))
@@ -41,8 +41,8 @@ public class ScreenerSavedView {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Long getSavedViewId() { return savedViewId; }
-    public void setSavedViewId(Long savedViewId) { this.savedViewId = savedViewId; }
+    public UUID getSavedViewId() { return savedViewId; }
+    public void setSavedViewId(UUID savedViewId) { this.savedViewId = savedViewId; }
     public Screener getScreener() { return screener; }
     public void setScreener(Screener screener) { this.screener = screener; }
     public User getUser() { return user; }

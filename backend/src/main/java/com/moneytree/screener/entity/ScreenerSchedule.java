@@ -2,15 +2,15 @@ package com.moneytree.screener.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_schedule")
 public class ScreenerSchedule {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "schedule_id")
-    private Long scheduleId;
+    @Column(name = "schedule_id", columnDefinition = "uuid")
+    private UUID scheduleId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_id", nullable = false, foreignKey = @ForeignKey(name = "screener_schedule_screener_id_fkey"))
@@ -29,8 +29,8 @@ public class ScreenerSchedule {
     private Instant createdAt = Instant.now();
 
     // Getters and setters
-    public Long getScheduleId() { return scheduleId; }
-    public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
+    public UUID getScheduleId() { return scheduleId; }
+    public void setScheduleId(UUID scheduleId) { this.scheduleId = scheduleId; }
     public Screener getScreener() { return screener; }
     public void setScreener(Screener screener) { this.screener = screener; }
     public String getCronExpr() { return cronExpr; }

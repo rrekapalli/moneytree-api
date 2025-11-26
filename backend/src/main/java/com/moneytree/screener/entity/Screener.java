@@ -3,15 +3,15 @@ package com.moneytree.screener.entity;
 import com.moneytree.user.entity.User;
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener")
 public class Screener {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "screener_id")
-    private Long screenerId;
+    @Column(name = "screener_id", columnDefinition = "uuid")
+    private UUID screenerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", nullable = false, foreignKey = @ForeignKey(name = "screener_owner_user_id_fkey"))
@@ -36,11 +36,11 @@ public class Screener {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Long getScreenerId() {
+    public UUID getScreenerId() {
         return screenerId;
     }
 
-    public void setScreenerId(Long screenerId) {
+    public void setScreenerId(UUID screenerId) {
         this.screenerId = screenerId;
     }
 

@@ -6,6 +6,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "pending_orders", uniqueConstraints = {
@@ -14,9 +15,8 @@ import java.util.Map;
 public class PendingOrder {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "pending_order_id")
-    private Integer pendingOrderId;
+    @Column(name = "pending_order_id", columnDefinition = "uuid")
+    private UUID pendingOrderId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "pending_orders_portfolio_id_fkey"))
@@ -54,8 +54,8 @@ public class PendingOrder {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Integer getPendingOrderId() { return pendingOrderId; }
-    public void setPendingOrderId(Integer pendingOrderId) { this.pendingOrderId = pendingOrderId; }
+    public UUID getPendingOrderId() { return pendingOrderId; }
+    public void setPendingOrderId(UUID pendingOrderId) { this.pendingOrderId = pendingOrderId; }
     public Portfolio getPortfolio() { return portfolio; }
     public void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
     public String getSymbol() { return symbol; }

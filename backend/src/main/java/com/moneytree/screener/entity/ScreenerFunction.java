@@ -6,6 +6,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_functions", uniqueConstraints = {
@@ -14,9 +15,8 @@ import java.util.Map;
 public class ScreenerFunction {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "function_id")
-    private Long functionId;
+    @Column(name = "function_id", columnDefinition = "uuid")
+    private UUID functionId;
 
     @Column(length = 100)
     private String category;
@@ -53,8 +53,8 @@ public class ScreenerFunction {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Long getFunctionId() { return functionId; }
-    public void setFunctionId(Long functionId) { this.functionId = functionId; }
+    public UUID getFunctionId() { return functionId; }
+    public void setFunctionId(UUID functionId) { this.functionId = functionId; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
     public Instant getCreatedAt() { return createdAt; }

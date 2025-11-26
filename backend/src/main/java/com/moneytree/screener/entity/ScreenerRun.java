@@ -8,15 +8,15 @@ import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_run")
 public class ScreenerRun {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "screener_run_id")
-    private Long screenerRunId;
+    @Column(name = "screener_run_id", columnDefinition = "uuid")
+    private UUID screenerRunId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_id", nullable = false, foreignKey = @ForeignKey(name = "screener_run_screener_id_fkey"))
@@ -70,8 +70,8 @@ public class ScreenerRun {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Long getScreenerRunId() { return screenerRunId; }
-    public void setScreenerRunId(Long screenerRunId) { this.screenerRunId = screenerRunId; }
+    public UUID getScreenerRunId() { return screenerRunId; }
+    public void setScreenerRunId(UUID screenerRunId) { this.screenerRunId = screenerRunId; }
     public Screener getScreener() { return screener; }
     public void setScreener(Screener screener) { this.screener = screener; }
     public ScreenerVersion getScreenerVersion() { return screenerVersion; }

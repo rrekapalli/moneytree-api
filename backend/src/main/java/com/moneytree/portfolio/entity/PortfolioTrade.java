@@ -3,15 +3,15 @@ package com.moneytree.portfolio.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "portfolio_trades")
 public class PortfolioTrade {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "trade_id")
-    private Integer tradeId;
+    @Column(name = "trade_id", columnDefinition = "uuid")
+    private UUID tradeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "portfolio_trades_portfolio_id_fkey"))
@@ -66,8 +66,8 @@ public class PortfolioTrade {
     private Instant createdAt = Instant.now();
 
     // Getters and setters
-    public Integer getTradeId() { return tradeId; }
-    public void setTradeId(Integer tradeId) { this.tradeId = tradeId; }
+    public UUID getTradeId() { return tradeId; }
+    public void setTradeId(UUID tradeId) { this.tradeId = tradeId; }
     public Portfolio getPortfolio() { return portfolio; }
     public void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
     public String getSymbol() { return symbol; }

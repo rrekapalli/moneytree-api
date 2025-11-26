@@ -7,6 +7,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_paramset", uniqueConstraints = {
@@ -15,9 +16,8 @@ import java.util.Map;
 public class ScreenerParamset {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "paramset_id")
-    private Long paramsetId;
+    @Column(name = "paramset_id", columnDefinition = "uuid")
+    private UUID paramsetId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_version_id", nullable = false, foreignKey = @ForeignKey(name = "screener_paramset_screener_version_id_fkey"))
@@ -38,8 +38,8 @@ public class ScreenerParamset {
     private Instant createdAt = Instant.now();
 
     // Getters and setters
-    public Long getParamsetId() { return paramsetId; }
-    public void setParamsetId(Long paramsetId) { this.paramsetId = paramsetId; }
+    public UUID getParamsetId() { return paramsetId; }
+    public void setParamsetId(UUID paramsetId) { this.paramsetId = paramsetId; }
     public ScreenerVersion getScreenerVersion() { return screenerVersion; }
     public void setScreenerVersion(ScreenerVersion screenerVersion) { this.screenerVersion = screenerVersion; }
     public String getName() { return name; }

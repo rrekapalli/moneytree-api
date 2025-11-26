@@ -8,15 +8,15 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "signals")
 public class Signal {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "signal_id")
-    private Integer signalId;
+    @Column(name = "signal_id", columnDefinition = "uuid")
+    private UUID signalId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "signals_portfolio_id_fkey"))
@@ -45,11 +45,11 @@ public class Signal {
     private Instant createdAt = Instant.now();
 
     // Getters and setters
-    public Integer getSignalId() {
+    public UUID getSignalId() {
         return signalId;
     }
 
-    public void setSignalId(Integer signalId) {
+    public void setSignalId(UUID signalId) {
         this.signalId = signalId;
     }
 

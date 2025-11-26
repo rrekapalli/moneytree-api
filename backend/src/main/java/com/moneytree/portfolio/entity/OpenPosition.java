@@ -3,6 +3,7 @@ package com.moneytree.portfolio.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "open_positions", uniqueConstraints = {
@@ -11,9 +12,8 @@ import java.time.Instant;
 public class OpenPosition {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "position_id")
-    private Integer positionId;
+    @Column(name = "position_id", columnDefinition = "uuid")
+    private UUID positionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "open_positions_portfolio_id_fkey"))
@@ -50,8 +50,8 @@ public class OpenPosition {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Integer getPositionId() { return positionId; }
-    public void setPositionId(Integer positionId) { this.positionId = positionId; }
+    public UUID getPositionId() { return positionId; }
+    public void setPositionId(UUID positionId) { this.positionId = positionId; }
     public Portfolio getPortfolio() { return portfolio; }
     public void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
     public String getSymbol() { return symbol; }

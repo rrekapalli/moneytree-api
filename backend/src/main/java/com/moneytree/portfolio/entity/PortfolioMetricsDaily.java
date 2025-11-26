@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "portfolio_metrics_daily", uniqueConstraints = {
@@ -12,8 +13,8 @@ import java.time.LocalDate;
 public class PortfolioMetricsDaily {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", columnDefinition = "uuid")
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "portfolio_metrics_daily_portfolio_id_fkey"))
@@ -191,11 +192,11 @@ public class PortfolioMetricsDaily {
     private Instant createdAt = Instant.now();
 
     // Getters and setters - abbreviated for brevity, but all fields need getters/setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

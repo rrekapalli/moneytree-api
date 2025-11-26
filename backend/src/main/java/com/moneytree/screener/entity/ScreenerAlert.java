@@ -6,15 +6,15 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_alert")
 public class ScreenerAlert {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "alert_id")
-    private Long alertId;
+    @Column(name = "alert_id", columnDefinition = "uuid")
+    private UUID alertId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_id", nullable = false, foreignKey = @ForeignKey(name = "screener_alert_screener_id_fkey"))
@@ -34,8 +34,8 @@ public class ScreenerAlert {
     private Instant createdAt = Instant.now();
 
     // Getters and setters
-    public Long getAlertId() { return alertId; }
-    public void setAlertId(Long alertId) { this.alertId = alertId; }
+    public UUID getAlertId() { return alertId; }
+    public void setAlertId(UUID alertId) { this.alertId = alertId; }
     public Screener getScreener() { return screener; }
     public void setScreener(Screener screener) { this.screener = screener; }
     public Map<String, Object> getConditionJson() { return conditionJson; }

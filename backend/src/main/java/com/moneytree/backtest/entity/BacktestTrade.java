@@ -4,15 +4,15 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "backtest_trades")
 public class BacktestTrade {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "trade_id")
-    private Integer tradeId;
+    @Column(name = "trade_id", columnDefinition = "uuid")
+    private UUID tradeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "run_id", nullable = false, foreignKey = @ForeignKey(name = "backtest_trades_run_id_fkey"))
@@ -52,11 +52,11 @@ public class BacktestTrade {
     private Instant createdAt = Instant.now();
 
     // Getters and setters
-    public Integer getTradeId() {
+    public UUID getTradeId() {
         return tradeId;
     }
 
-    public void setTradeId(Integer tradeId) {
+    public void setTradeId(UUID tradeId) {
         this.tradeId = tradeId;
     }
 
