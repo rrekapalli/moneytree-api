@@ -31,12 +31,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Create Kite connectivity module package `backend/src/main/java/com/moneytree/connectivity/kite/` with initial class skeletons
-- [ ] T005 [P] Implement configuration binding for Kite credentials and settings in `backend/src/main/java/com/moneytree/connectivity/kite/KiteConfig.java`
-- [ ] T006 [P] Implement Kite API HTTP client wrapper with basic request/response handling in `backend/src/main/java/com/moneytree/connectivity/kite/KiteHttpClient.java`
-- [ ] T007 Setup TimescaleDB access layer for `kite_*` tables in `backend/src/main/java/com/moneytree/marketdata/kite/KiteMarketDataRepository.java`
-- [ ] T008 Configure logging and metrics for Kite connectivity and market data in `backend/src/main/java/com/moneytree/connectivity/kite/` and `backend/src/main/java/com/moneytree/marketdata/kite/`
-- [ ] T009 Implement environment configuration loading (including `.env` support if used) in `backend/src/main/java/com/moneytree/config/EnvironmentConfig.java`
+- [X] T004 Create Kite connectivity module package `backend/src/main/java/com/moneytree/connectivity/kite/` with initial class skeletons
+- [X] T005 [P] Implement configuration binding for Kite credentials and settings in `backend/src/main/java/com/moneytree/connectivity/kite/KiteConfig.java`
+- [X] T006 [P] Implement Kite API HTTP client wrapper with basic request/response handling in `backend/src/main/java/com/moneytree/connectivity/kite/KiteHttpClient.java`
+- [X] T007 Setup TimescaleDB access layer for `kite_*` tables in `backend/src/main/java/com/moneytree/marketdata/kite/KiteMarketDataRepository.java`
+- [X] T008 Configure logging and metrics for Kite connectivity and market data in `backend/src/main/java/com/moneytree/connectivity/kite/` and `backend/src/main/java/com/moneytree/marketdata/kite/`
+- [X] T009 Implement environment configuration loading (including `.env` support if used) in `backend/src/main/java/com/moneytree/config/EnvironmentConfig.java`
 
 **Checkpoint**: Foundational connectivity, configuration, and data access for Kite are ready; user story implementation can now begin.
 
