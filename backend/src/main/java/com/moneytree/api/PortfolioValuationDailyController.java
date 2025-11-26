@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.portfolio.PortfolioValuationDailyService;
 import com.moneytree.portfolio.entity.PortfolioValuationDaily;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/valuations-daily")
+@Tag(name = "Portfolio Valuation Daily", description = "Portfolio-level daily valuation and return metrics")
 public class PortfolioValuationDailyController {
 
     private final PortfolioValuationDailyService service;

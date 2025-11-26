@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerVersionService;
 import com.moneytree.screener.entity.ScreenerVersion;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/versions")
+@Tag(name = "Screener Versions", description = "Versioned screener definitions")
 public class ScreenerVersionController {
 
     private final ScreenerVersionService service;

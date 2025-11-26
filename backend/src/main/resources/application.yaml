@@ -36,6 +36,16 @@ management:
       exposure:
         include: "health,info"
 
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+
 kite:
   api-key: ${KITE_API_KEY:}
   api-secret: ${KITE_API_SECRET:}

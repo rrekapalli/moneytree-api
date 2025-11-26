@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.portfolio.PortfolioCashFlowService;
 import com.moneytree.portfolio.entity.PortfolioCashFlow;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/cash-flows")
+@Tag(name = "Portfolio Cash Flows", description = "Portfolio cash flow management")
 public class PortfolioCashFlowController {
 
     private final PortfolioCashFlowService service;

@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerSavedViewService;
 import com.moneytree.screener.entity.ScreenerSavedView;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/saved-views")
+@Tag(name = "Screener Saved Views", description = "User-saved screener view preferences")
 public class ScreenerSavedViewController {
 
     private final ScreenerSavedViewService service;

@@ -2,6 +2,11 @@ package com.moneytree.api;
 
 import com.moneytree.portfolio.PendingOrderService;
 import com.moneytree.portfolio.entity.PendingOrder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/pending-orders")
+@Tag(name = "Pending Orders", description = "Pending order management operations with partial fill support")
 public class PendingOrderController {
 
     private final PendingOrderService service;
@@ -18,9 +24,13 @@ public class PendingOrderController {
     }
 
     @GetMapping
+    @Operation(summary = "List pending orders", description = "Retrieve all pending orders for a portfolio, with optional filtering")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved pending orders")
     public ResponseEntity<List<PendingOrder>> listPendingOrders(
-            @PathVariable Long portfolioId,
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId,
+            @Parameter(description = "Filter by order type (BUY or SELL)", example = "BUY")
             @RequestParam(required = false) String orderType,
+            @Parameter(description = "Show only active orders (remaining quantity > 0)", example = "true")
             @RequestParam(required = false, defaultValue = "false") Boolean activeOnly) {
         if (Boolean.TRUE.equals(activeOnly)) {
             return ResponseEntity.ok(service.findActiveByPortfolioId(portfolioId));

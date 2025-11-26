@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.portfolio.PortfolioHoldingValuationDailyService;
 import com.moneytree.portfolio.entity.PortfolioHoldingValuationDaily;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/holding-valuations")
+@Tag(name = "Portfolio Holding Valuations", description = "Daily holding-level valuation and PnL metrics")
 public class PortfolioHoldingValuationDailyController {
 
     private final PortfolioHoldingValuationDailyService service;

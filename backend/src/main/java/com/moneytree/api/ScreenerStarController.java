@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerStarService;
 import com.moneytree.screener.entity.ScreenerStar;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/stars")
+@Tag(name = "Screener Stars", description = "User favorites/stars for screeners")
 public class ScreenerStarController {
 
     private final ScreenerStarService service;

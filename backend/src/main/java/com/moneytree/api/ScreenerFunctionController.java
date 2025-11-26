@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerFunctionService;
 import com.moneytree.screener.entity.ScreenerFunction;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screener-functions")
+@Tag(name = "Screener Functions", description = "Screener function library management")
 public class ScreenerFunctionController {
 
     private final ScreenerFunctionService service;

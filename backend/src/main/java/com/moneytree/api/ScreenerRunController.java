@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerRunService;
 import com.moneytree.screener.entity.ScreenerRun;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/runs")
+@Tag(name = "Screener Runs", description = "Screener execution runs and status")
 public class ScreenerRunController {
 
     private final ScreenerRunService service;

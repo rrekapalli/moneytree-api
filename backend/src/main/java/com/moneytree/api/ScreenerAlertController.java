@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerAlertService;
 import com.moneytree.screener.entity.ScreenerAlert;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/alerts")
+@Tag(name = "Screener Alerts", description = "Screener alert configuration and management")
 public class ScreenerAlertController {
 
     private final ScreenerAlertService service;

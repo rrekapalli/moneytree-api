@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerResultService;
 import com.moneytree.screener.entity.ScreenerResult;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screener-runs/{screenerRunId}/results")
+@Tag(name = "Screener Results", description = "Results from screener execution runs")
 public class ScreenerResultController {
 
     private final ScreenerResultService service;

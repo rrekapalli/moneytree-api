@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.screener.ScreenerScheduleService;
 import com.moneytree.screener.entity.ScreenerSchedule;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/schedules")
+@Tag(name = "Screener Schedules", description = "Scheduled screener execution configuration")
 public class ScreenerScheduleController {
 
     private final ScreenerScheduleService service;

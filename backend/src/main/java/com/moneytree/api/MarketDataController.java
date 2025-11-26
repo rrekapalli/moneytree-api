@@ -16,6 +16,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -24,6 +31,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/marketdata/kite")
+@Tag(name = "Market Data", description = "Kite-based market data operations (time-series data using JDBC)")
 public class MarketDataController {
 
     private static final Logger log = LoggerFactory.getLogger(MarketDataController.class);
@@ -35,8 +43,21 @@ public class MarketDataController {
     }
 
     @PostMapping("/{tradingsymbol}/history")
-    public ResponseEntity<?> getHistory(@PathVariable String tradingsymbol,
-                                        @Valid @RequestBody HistoryRequest request) {
+    @Operation(
+        summary = "Get historical price data",
+        description = "Retrieve historical candle/price data for a trading symbol from Kite. " +
+                     "This endpoint uses JDBC for high-performance time-series queries."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved historical data"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> getHistory(
+            @Parameter(description = "Trading symbol", required = true, example = "RELIANCE")
+            @PathVariable String tradingsymbol,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "History request parameters", required = true)
+            @Valid @RequestBody HistoryRequest request) {
         try {
             // Validate required fields
             if (request.getInterval() == null || request.getInterval().isEmpty()) {
@@ -87,7 +108,19 @@ public class MarketDataController {
     }
 
     @GetMapping("/quotes")
-    public ResponseEntity<?> getQuotes(@RequestParam("symbols") String symbolsCsv) {
+    @Operation(
+        summary = "Get current quotes",
+        description = "Retrieve current/live quotes for one or more trading symbols. " +
+                     "Symbols should be comma-separated."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved quotes"),
+        @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> getQuotes(
+            @Parameter(description = "Comma-separated list of trading symbols", required = true, example = "RELIANCE,TCS,INFY")
+            @RequestParam("symbols") String symbolsCsv) {
         try {
             List<String> symbols = Arrays.stream(symbolsCsv.split(","))
                     .map(String::trim)

@@ -2,6 +2,7 @@ package com.moneytree.api;
 
 import com.moneytree.portfolio.PortfolioTradeService;
 import com.moneytree.portfolio.entity.PortfolioTrade;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/trades")
+@Tag(name = "Portfolio Trades", description = "Completed trade records for portfolio analysis")
 public class PortfolioTradeController {
 
     private final PortfolioTradeService service;
