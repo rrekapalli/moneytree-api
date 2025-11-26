@@ -39,16 +39,22 @@ public class MarketDataController {
             Instant fromTs = Instant.parse(from);
             Instant toTs = Instant.parse(to);
             if (fromTs.isAfter(toTs)) {
-                return ResponseEntity.badRequest().body("from must be <= to");
+                return ResponseEntity.badRequest().body(
+                        java.util.Map.of("error", "from must be <= to")
+                );
             }
             List<PriceData> candles = service.getHistory(instrumentToken, interval, fromTs, toTs);
             return ResponseEntity.ok(candles);
         } catch (DateTimeParseException ex) {
             log.warn("Invalid date range for history: from={}, to={}", from, to);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid from/to timestamp format");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    java.util.Map.of("error", "Invalid from/to timestamp format")
+            );
         } catch (Exception ex) {
             log.error("Error in getHistory", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal error fetching history");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    java.util.Map.of("error", "Internal error fetching history")
+            );
         }
     }
 
@@ -60,13 +66,17 @@ public class MarketDataController {
                     .filter(s -> !s.isEmpty())
                     .toList();
             if (symbols.isEmpty()) {
-                return ResponseEntity.badRequest().body("At least one symbol must be provided");
+                return ResponseEntity.badRequest().body(
+                        java.util.Map.of("error", "At least one symbol must be provided")
+                );
             }
             List<Quote> quotes = service.getQuotes(symbols);
             return ResponseEntity.ok(quotes);
         } catch (Exception ex) {
             log.error("Error in getQuotes", ex);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal error fetching quotes");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    java.util.Map.of("error", "Internal error fetching quotes")
+            );
         }
     }
 }

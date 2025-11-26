@@ -54,5 +54,16 @@ If you currently use NSE-based endpoints, the recommended migration is:
 
 The request/response shapes are intended to remain as close as possible to the existing NSE contracts, with any unavoidable differences documented in the API contract file and handled in response DTOs.
 
+## End-to-end validation checklist
+
+After wiring configuration and starting the backend:
+
+- Call `GET /api/marketdata/kite/{instrumentToken}/history` with a valid date range and confirm 200 OK and a JSON array body.
+- Call the same endpoint with `from > to` and confirm a 400 response with a JSON `{"error": ...}` payload.
+- Call `GET /api/marketdata/kite/quotes?symbols=INFY,NIFTY50` and confirm 200 OK and a JSON array body.
+- Exercise `/api/portfolio`, `/api/screeners`, `/api/backtests`, and `/api/signals` and confirm they respond successfully (and, once wired, match legacy MoneyPlant behavior).
+
+Record any deviations from expected contracts and performance SLOs in the load-test and parity test artifacts.
+
 
 

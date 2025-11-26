@@ -117,7 +117,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T029 [P] [US4] Review existing portfolio/screener/backtest/signal controllers and services in `/home/raja/code/MoneyPlant/backend` for current contracts and behavior
+- [X] T029 [P] [US4] Review existing portfolio/screener/backtest/signal controllers and services in `/home/raja/code/MoneyPlant/backend` for current contracts and behavior
 - [X] T030 [P] [US4] Introduce or update portfolio CRUD controller and service in `backend/src/main/java/com/moneytree/api/PortfolioController.java` and `backend/src/main/java/com/moneytree/portfolio/PortfolioService.java`
 - [X] T031 [P] [US4] Introduce or update screener CRUD controller and service in `backend/src/main/java/com/moneytree/api/ScreenerController.java` and `backend/src/main/java/com/moneytree/screener/ScreenerService.java`
 - [X] T032 [P] [US4] Introduce or update backtest CRUD controller and service in `backend/src/main/java/com/moneytree/api/BacktestController.java` and `backend/src/main/java/com/moneytree/backtest/BacktestService.java`
@@ -133,9 +133,9 @@
 **Purpose**: Improvements that affect multiple user stories and overall quality.
 
 - [X] T035 [P] Add developer documentation for Kite and non-NSE domain modules and endpoints in `backend/README.md` and `specs/001-kite-modulith-api/quickstart.md`
-- [ ] T036 Refine error messages and response payloads for consistency across Kite-backed and non-NSE CRUD endpoints in `backend/src/main/java/com/moneytree/api/`
+- [X] T036 Refine error messages and response payloads for consistency across Kite-backed and non-NSE CRUD endpoints in `backend/src/main/java/com/moneytree/api/`
 - [X] T037 [P] Add additional unit tests for edge cases (e.g., missing data, spikes) in `backend/src/test/java/com/moneytree/marketdata/kite/` and domain-specific test packages
-- [ ] T038 [P] Run end-to-end validation using quickstart flows and record results in `specs/001-kite-modulith-api/quickstart.md`
+- [X] T038 [P] Run end-to-end validation using quickstart flows and record results in `specs/001-kite-modulith-api/quickstart.md`
 
 ---
 
