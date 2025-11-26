@@ -1,0 +1,213 @@
+Waiting for application to start on http://localhost:8080...
+[0;32m✓ Application is running![0m
+
+=========================================
+Testing All MoneyTree API Endpoints
+=========================================
+
+=== Health Endpoints ===
+[0;32m✓[0m Health Check
+   Status: 200
+
+=== Market Data Endpoints ===
+[0;32m✓[0m Kite History
+   Status: 200
+[0;32m✓[0m Kite Quotes
+   Status: 200
+
+=== Portfolio Endpoints ===
+[0;32m✓[0m List Portfolios
+   Status: 200
+[0;32m✓[0m Get Portfolio by ID
+   Status: 404 (acceptable for GET)
+[0;31m✗[0m Create Portfolio
+   Status: 405
+   Response: {"timestamp":"2025-11-26T17:25:20.366+00:00","status":405,"error":"Method Not Allowed","path":"/api/portfolio"}
+[0;31m✗[0m Update Portfolio
+   Expected: 200, Got: 404
+   Response: {"timestamp":"2025-11-26T17:25:20.392+00:00","status":404,"error":"Not Found","path":"/api/portfolio/550e8400-e29b-41d4-a716-446655440000"}
+[0;31m✗[0m Delete Portfolio
+   Expected: 204, Got: 404
+   Response: {"timestamp":"2025-11-26T17:25:20.406+00:00","status":404,"error":"Not Found","path":"/api/portfolio/550e8400-e29b-41d4-a716-446655440000"}
+
+=== Portfolio Sub-resources ===
+[0;32m✓[0m List Open Positions
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Open Position by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Open Position by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Pending Orders
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Pending Order by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Pending Order by Order ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Holdings
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Holding by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Trades
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Trades by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Trade by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Benchmarks
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Benchmark by Index
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Cash Flows
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Cash Flows by Date Range
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Cash Flow by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Transactions
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Transactions by Date Range
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Transaction by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Trade Logs
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Trade Logs by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Trade Log by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Daily Valuations
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Daily Valuations by Date Range
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Daily Valuation by Date
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Daily Metrics
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Daily Metrics by Date Range
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Daily Metrics by Date
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Stock Metrics Daily
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Stock Metrics Daily by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Stock Metrics Daily by Date Range
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Stock Metrics Daily by Symbol and Date
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Holding Valuations
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Holding Valuations by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Holding Valuations by Date Range
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Holding Valuation by Symbol and Date
+   Status: 404 (acceptable for GET)
+
+=== Screener Endpoints ===
+[0;32m✓[0m List Screeners
+   Status: 200
+[0;32m✓[0m Get Screener by ID
+   Status: 404 (acceptable for GET)
+[0;31m✗[0m Create Screener
+   Status: 405
+   Response: {"timestamp":"2025-11-26T17:25:21.206+00:00","status":405,"error":"Method Not Allowed","path":"/api/screeners"}
+[0;31m✗[0m Update Screener
+   Expected: 200, Got: 404
+   Response: {"timestamp":"2025-11-26T17:25:21.221+00:00","status":404,"error":"Not Found","path":"/api/screeners/660e8400-e29b-41d4-a716-446655440000"}
+[0;31m✗[0m Delete Screener
+   Expected: 204, Got: 404
+   Response: {"timestamp":"2025-11-26T17:25:21.236+00:00","status":404,"error":"Not Found","path":"/api/screeners/660e8400-e29b-41d4-a716-446655440000"}
+
+=== Screener Sub-resources ===
+[0;32m✓[0m List Screener Versions
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Version by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Version by Number
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Runs
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Runs by Status
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Runs by Trading Day
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Run by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Results
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Results by Matched
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Results by Score
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Result by Symbol
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Paramsets
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Paramset by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Paramset by Name
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Alerts
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Alert by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Saved Views
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Saved View by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Schedules
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Schedule by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Stars
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Star by User ID
+   Status: 404 (acceptable for GET)
+
+=== Screener Functions ===
+[0;32m✓[0m List Screener Functions
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Functions by Category
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Function by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Function by Name
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Screener Function Params
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Screener Function Param by ID
+   Status: 404 (acceptable for GET)
+
+=== Backtest Endpoints ===
+[0;32m✓[0m List Backtests
+   Status: 200
+[0;32m✓[0m Get Backtest by UUID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m Get Backtest Trades
+   Status: 404 (acceptable for GET)
+
+=== Signal Endpoints ===
+[0;32m✓[0m List Signals
+   Status: 200
+[0;32m✓[0m Get Signal by ID
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Signals by Portfolio
+   Status: 404 (acceptable for GET)
+[0;32m✓[0m List Pending Signals
+   Status: 404 (acceptable for GET)
+
+=========================================
+Testing Summary
+=========================================
+[0;32mPassed: 78[0m
+[0;31mFailed: 6[0m
+
+[0;31mFailed Endpoints:[0m
+  - Create Portfolio - Status: 405, Response: {"timestamp":"2025-11-26T17:25:20.366+00:00","status":405,"error":"Method Not Allowed","path":"/api/portfolio"}
+  - Update Portfolio - Expected: 200, Got: 404
+  - Delete Portfolio - Expected: 204, Got: 404
+  - Create Screener - Status: 405, Response: {"timestamp":"2025-11-26T17:25:21.206+00:00","status":405,"error":"Method Not Allowed","path":"/api/screeners"}
+  - Update Screener - Expected: 200, Got: 404
+  - Delete Screener - Expected: 204, Got: 404
+

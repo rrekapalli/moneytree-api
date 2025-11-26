@@ -1,0 +1,55 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres.tailce422e.ts.net:5432/MoneyTree
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:mysecretpassword}
+    driver-class-name: org.postgresql.Driver
+  main:
+    banner-mode: "off"
+
+  jdbc:
+    template:
+      fetch-size: 1000
+      max-rows: 100000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Validate schema on startup, don't auto-create
+    show-sql: false  # Set to true for debugging
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    open-in-view: false  # Better for performance, prevents lazy loading issues
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    doc-expansion: none
+
+kite:
+  api-key: ${KITE_API_KEY:}
+  api-secret: ${KITE_API_SECRET:}
+  access-token: ${KITE_ACCESS_TOKEN:}
+  base-url: ${KITE_BASE_URL:https://api.kite.trade}
+
+
