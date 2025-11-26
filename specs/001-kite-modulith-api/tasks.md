@@ -50,17 +50,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [P] [US1] Add contract tests for Kite history endpoint in `backend/src/test/java/com/moneytree/marketdata/kite/KiteHistoryContractTest.java`
-- [ ] T011 [P] [US1] Add contract tests for Kite quotes endpoint in `backend/src/test/java/com/moneytree/marketdata/kite/KiteQuotesContractTest.java`
+- [X] T010 [P] [US1] Add contract tests for Kite history endpoint in `backend/src/test/java/com/moneytree/marketdata/kite/KiteHistoryContractTest.java`
+- [X] T011 [P] [US1] Add contract tests for Kite quotes endpoint in `backend/src/test/java/com/moneytree/marketdata/kite/KiteQuotesContractTest.java`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Define `Instrument`, `PriceData`, and `Quote` entities aligned with `kite_*` tables in `backend/src/main/java/com/moneytree/marketdata/kite/model/`
-- [ ] T013 [P] [US1] Implement `KiteMarketDataService` for history and quotes retrieval in `backend/src/main/java/com/moneytree/marketdata/kite/KiteMarketDataService.java`
-- [ ] T014 [US1] Expose Kite-backed history endpoint in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
-- [ ] T015 [US1] Expose Kite-backed quotes endpoint in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
-- [ ] T016 [US1] Add validation and error handling for invalid instruments and time ranges in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
-- [ ] T017 [US1] Add logging and metrics for Kite-backed history and quotes endpoints in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
+- [X] T012 [P] [US1] Define `Instrument`, `PriceData`, and `Quote` entities aligned with `kite_*` tables in `backend/src/main/java/com/moneytree/marketdata/kite/model/`
+- [X] T013 [P] [US1] Implement `KiteMarketDataService` for history and quotes retrieval in `backend/src/main/java/com/moneytree/marketdata/kite/KiteMarketDataService.java`
+- [X] T014 [US1] Expose Kite-backed history endpoint in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
+- [X] T015 [US1] Expose Kite-backed quotes endpoint in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
+- [X] T016 [US1] Add validation and error handling for invalid instruments and time ranges in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
+- [X] T017 [US1] Add logging and metrics for Kite-backed history and quotes endpoints in `backend/src/main/java/com/moneytree/api/MarketDataController.java`
 
 **Checkpoint**: User Story 1 is fully functional and testable independently via contract tests and API calls.
 
