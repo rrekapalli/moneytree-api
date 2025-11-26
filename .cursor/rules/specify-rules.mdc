@@ -1,0 +1,29 @@
+# moneytree-api Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-11-26
+
+## Active Technologies
+
+- Java 21 (per constitution) + Existing MoneyPlant Java backend stack (Spring-based modulith conventions), JDBC/ORM for TimescaleDB (PostgreSQL), HTTP client for Zerodha Kite connectivity (001-kite-modulith-api)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+# Add commands for Java 21 (per constitution)
+
+## Code Style
+
+Java 21 (per constitution): Follow standard conventions
+
+## Recent Changes
+
+- 001-kite-modulith-api: Added Java 21 (per constitution) + Existing MoneyPlant Java backend stack (Spring-based modulith conventions), JDBC/ORM for TimescaleDB (PostgreSQL), HTTP client for Zerodha Kite connectivity
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->
