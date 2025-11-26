@@ -37,6 +37,15 @@ This document resolves open questions and clarifications for the Kite-based modu
   - **Designing an entirely new contract**: Would offer more freedom but significantly increase migration cost.
   - **Forcing clients to adopt Kite-native field names**: Rejected for this phase to keep change surface small; can be revisited later via versioned APIs.
 
+### R4: Environment variable names for backend configuration
+
+- **Decision**: Use environment variables with clear, descriptive names:
+  - `DB_USERNAME`, `DB_PASSWORD` for TimescaleDB credentials.
+  - `KITE_API_KEY`, `KITE_API_SECRET`, `KITE_ACCESS_TOKEN`, `KITE_BASE_URL` for Zerodha Kite configuration.
+- **Rationale**: These names are explicit, easy to understand, and align with standard practices for secret and configuration management. They also match the configuration properties used in `application.yaml`, `KiteConfig`, and `EnvironmentConfig`.
+- **Alternatives considered**:
+  - Embedding credentials directly in `application.yaml` or using less descriptive names: rejected for security and maintainability reasons.
+
 ## Impact on Specification
 
 The following spec items are updated based on these decisions:
