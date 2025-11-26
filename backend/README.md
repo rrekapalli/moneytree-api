@@ -2,7 +2,7 @@
 
 This module is a Java 21 Spring Boot application that exposes the MoneyTree API as a modulith. It uses:
 
-- TimescaleDB (PostgreSQL) at `postres.tailce422e.ts.net:5432/MoneyTree`
+- TimescaleDB (PostgreSQL) at `postgres.tailce422e.ts.net:5432/MoneyTree`
 - Zerodha Kite API for market data
 
 ## Environment configuration
