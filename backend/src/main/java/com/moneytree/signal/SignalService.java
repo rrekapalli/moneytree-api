@@ -51,9 +51,10 @@ public class SignalService {
     }
 
     public Signal createSignal(Signal signal) {
-        log.info("createSignal portfolioId={}, symbol={}, signalType={}",
-                signal.getPortfolio().getId(), signal.getSymbol(), signal.getSignalType());
-        return signalRepository.save(signal);
+        log.info("createSignal symbol={}, signalType={}", signal.getSymbol(), signal.getSignalType());
+        Signal saved = signalRepository.save(signal);
+        log.info("createSignal completed signalId={}", saved.getSignalId());
+        return saved;
     }
 
     public Signal updateSignal(Signal signal) {

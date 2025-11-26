@@ -1,5 +1,7 @@
 package com.moneytree.screener.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.moneytree.user.entity.User;
 import jakarta.persistence.*;
 import java.time.Instant;
@@ -7,6 +9,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "screener")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Screener {
 
     @Id
@@ -15,6 +18,7 @@ public class Screener {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", nullable = false, foreignKey = @ForeignKey(name = "screener_owner_user_id_fkey"))
+    @JsonIgnore
     private User owner;
 
     @Column(nullable = false, columnDefinition = "text")

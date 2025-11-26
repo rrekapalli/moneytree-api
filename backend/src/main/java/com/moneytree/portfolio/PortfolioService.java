@@ -1,11 +1,14 @@
 package com.moneytree.portfolio;
 
 import com.moneytree.portfolio.entity.Portfolio;
+import com.moneytree.user.UserRepository;
+import com.moneytree.user.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,9 +23,11 @@ public class PortfolioService {
     private static final Logger log = LoggerFactory.getLogger(PortfolioService.class);
 
     private final PortfolioRepository portfolioRepository;
+    private final UserRepository userRepository;
 
-    public PortfolioService(PortfolioRepository portfolioRepository) {
+    public PortfolioService(PortfolioRepository portfolioRepository, UserRepository userRepository) {
         this.portfolioRepository = portfolioRepository;
+        this.userRepository = userRepository;
     }
 
     public List<Portfolio> listPortfolios() {
@@ -42,6 +47,29 @@ public class PortfolioService {
 
     public Portfolio createPortfolio(Portfolio portfolio) {
         log.info("createPortfolio name={}", portfolio.getName());
+        
+        // Generate UUID if not set
+        if (portfolio.getId() == null) {
+            portfolio.setId(UUID.randomUUID());
+        }
+        
+        // If user is not set, find or create a default user
+        if (portfolio.getUser() == null) {
+            User defaultUser = userRepository.findFirstByOrderByCreatedAtAsc()
+                    .orElseGet(() -> {
+                        // Create a default test user if none exists
+                        User newUser = new User();
+                        newUser.setId(UUID.randomUUID());
+                        newUser.setEmail("test@moneytree.com");
+                        newUser.setProvider("test");
+                        newUser.setProviderUserId("test-user");
+                        newUser.setIsEnabled(true);
+                        newUser.setCreatedAt(Instant.now());
+                        return userRepository.save(newUser);
+                    });
+            portfolio.setUser(defaultUser);
+        }
+        
         return portfolioRepository.save(portfolio);
     }
 

@@ -1,5 +1,7 @@
 package com.moneytree.portfolio.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.moneytree.user.entity.User;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -15,6 +17,7 @@ import java.util.UUID;
 @Table(name = "portfolios", uniqueConstraints = {
     @UniqueConstraint(name = "portfolios_user_name_uk", columnNames = {"user_id", "name"})
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Portfolio {
 
     @Id
@@ -23,6 +26,7 @@ public class Portfolio {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "portfolios_user_id_fkey"))
+    @JsonIgnore
     private User user;
 
     @Column(nullable = false, length = 200)

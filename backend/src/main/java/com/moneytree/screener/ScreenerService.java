@@ -1,11 +1,14 @@
 package com.moneytree.screener;
 
 import com.moneytree.screener.entity.Screener;
+import com.moneytree.user.UserRepository;
+import com.moneytree.user.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -20,9 +23,11 @@ public class ScreenerService {
     private static final Logger log = LoggerFactory.getLogger(ScreenerService.class);
 
     private final ScreenerRepository screenerRepository;
+    private final UserRepository userRepository;
 
-    public ScreenerService(ScreenerRepository screenerRepository) {
+    public ScreenerService(ScreenerRepository screenerRepository, UserRepository userRepository) {
         this.screenerRepository = screenerRepository;
+        this.userRepository = userRepository;
     }
 
     public List<Screener> listScreeners() {
@@ -47,6 +52,29 @@ public class ScreenerService {
 
     public Screener createScreener(Screener screener) {
         log.info("createScreener name={}", screener.getName());
+        
+        // Generate UUID if not set
+        if (screener.getScreenerId() == null) {
+            screener.setScreenerId(UUID.randomUUID());
+        }
+        
+        // If owner is not set, find or create a default user
+        if (screener.getOwner() == null) {
+            User defaultUser = userRepository.findFirstByOrderByCreatedAtAsc()
+                    .orElseGet(() -> {
+                        // Create a default test user if none exists
+                        User newUser = new User();
+                        newUser.setId(UUID.randomUUID());
+                        newUser.setEmail("test@moneytree.com");
+                        newUser.setProvider("test");
+                        newUser.setProviderUserId("test-user");
+                        newUser.setIsEnabled(true);
+                        newUser.setCreatedAt(Instant.now());
+                        return userRepository.save(newUser);
+                    });
+            screener.setOwner(defaultUser);
+        }
+        
         return screenerRepository.save(screener);
     }
 

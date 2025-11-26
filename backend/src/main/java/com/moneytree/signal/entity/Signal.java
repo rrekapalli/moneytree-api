@@ -1,5 +1,7 @@
 package com.moneytree.signal.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.moneytree.portfolio.entity.Portfolio;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -12,6 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "signals")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Signal {
 
     @Id
@@ -20,6 +23,7 @@ public class Signal {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "signals_portfolio_id_fkey"))
+    @JsonIgnore
     private Portfolio portfolio;
 
     @Column(nullable = false, columnDefinition = "text")
