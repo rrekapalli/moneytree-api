@@ -46,11 +46,27 @@ public class TransactionService {
     public Optional<Transaction> updateTransaction(Long id, Transaction transactionDetails) {
         return transactionRepository.findById(id)
                 .map(transaction -> {
+                    // Reverse the old transaction's effect on balance
+                    BigDecimal oldAmount = transaction.getAmount();
+                    if ("EXPENSE".equalsIgnoreCase(transaction.getTransactionType())) {
+                        oldAmount = oldAmount.negate();
+                    }
+                    accountService.updateBalance(transaction.getAccount().getId(), oldAmount.negate());
+                    
+                    // Update transaction fields
                     transaction.setAmount(transactionDetails.getAmount());
                     transaction.setDescription(transactionDetails.getDescription());
                     transaction.setTransactionType(transactionDetails.getTransactionType());
                     transaction.setCategory(transactionDetails.getCategory());
                     transaction.setTransactionDate(transactionDetails.getTransactionDate());
+                    
+                    // Apply the new transaction's effect on balance
+                    BigDecimal newAmount = transactionDetails.getAmount();
+                    if ("EXPENSE".equalsIgnoreCase(transactionDetails.getTransactionType())) {
+                        newAmount = newAmount.negate();
+                    }
+                    accountService.updateBalance(transaction.getAccount().getId(), newAmount);
+                    
                     return transactionRepository.save(transaction);
                 });
     }
@@ -58,6 +74,14 @@ public class TransactionService {
     public boolean deleteTransaction(Long id) {
         return transactionRepository.findById(id)
                 .map(transaction -> {
+                    // Reverse the transaction's effect on account balance
+                    BigDecimal amount = transaction.getAmount();
+                    if ("EXPENSE".equalsIgnoreCase(transaction.getTransactionType())) {
+                        amount = amount.negate();
+                    }
+                    // Negate to reverse the effect
+                    accountService.updateBalance(transaction.getAccount().getId(), amount.negate());
+                    
                     transactionRepository.delete(transaction);
                     return true;
                 })
