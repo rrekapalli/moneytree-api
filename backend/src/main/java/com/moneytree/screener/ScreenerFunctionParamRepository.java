@@ -11,6 +11,7 @@ import java.util.UUID;
 @Repository
 public interface ScreenerFunctionParamRepository extends JpaRepository<ScreenerFunctionParam, UUID> {
 
+    @Query("SELECT sfp FROM ScreenerFunctionParam sfp WHERE sfp.function.id = ?1")
     List<ScreenerFunctionParam> findByFunctionId(UUID functionId);
 
     @Query("SELECT sfp FROM ScreenerFunctionParam sfp WHERE sfp.function.id = ?1 ORDER BY sfp.paramOrder")
