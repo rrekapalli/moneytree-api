@@ -3,12 +3,17 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://postres.tailce422e.ts.net:5432/MoneyTree
+    url: jdbc:postgresql://postgres.tailce422e.ts.net:5432/MoneyTree
     username: ${DB_USERNAME:moneytree}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
   main:
     banner-mode: "off"
+
+  jdbc:
+    template:
+      fetch-size: 1000
+      max-rows: 100000
 
 management:
   endpoints:

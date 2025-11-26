@@ -95,15 +95,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Implement load test scenario for Kite-backed endpoints targeting 1,000 req/s per node in `backend/load-tests/kite_marketdata_load_test.md`
-- [ ] T024 [P] [US3] Capture latency and error-rate metrics for peak window scenarios in `backend/load-tests/kite_peak_window_results.md`
+- [X] T023 [P] [US3] Implement load test scenario for Kite-backed endpoints targeting 1,000 req/s per node in `backend/load-tests/kite_marketdata_load_test.md`
+- [X] T024 [P] [US3] Capture latency and error-rate metrics for peak window scenarios in `backend/load-tests/kite_peak_window_results.md`
 
 ### Implementation for User Story 3
 
-- [ ] T025 [P] [US3] Refine Java 21 runtime and threading configuration for market data hot paths in `backend/src/main/resources/application.yml`
-- [ ] T026 [US3] Verify and, if needed, refactor modulith boundaries so Kite modules only interact via defined interfaces in `backend/src/main/java/com/moneytree/marketdata/kite/` and `backend/src/main/java/com/moneytree/connectivity/kite/`
-- [ ] T027 [US3] Add observability (metrics, logs, traces) for Kite request latency and error tracking in `backend/src/main/java/com/moneytree/connectivity/kite/` and related config files
-- [ ] T028 [US3] Design and implement caching or other performance optimizations for frequently requested Kite-backed stock data in `backend/src/main/java/com/moneytree/marketdata/kite/KiteMarketDataService.java`
+- [X] T025 [P] [US3] Refine Java 21 runtime and threading configuration for market data hot paths in `backend/src/main/resources/application.yaml`
+- [X] T026 [US3] Verify and, if needed, refactor modulith boundaries so Kite modules only interact via defined interfaces in `backend/src/main/java/com/moneytree/marketdata/kite/` and `backend/src/main/java/com/moneytree/connectivity/kite/`
+- [X] T027 [US3] Add observability (metrics, logs, traces) for Kite request latency and error tracking in `backend/src/main/java/com/moneytree/connectivity/kite/` and related config files
+- [X] T028 [US3] Design and implement caching or other performance optimizations for frequently requested Kite-backed stock data in `backend/src/main/java/com/moneytree/marketdata/kite/KiteMarketDataService.java`
 
 **Checkpoint**: User Story 3 ensures the API operates as a performant modulith with measurable SLOs and clean modular boundaries.
 
