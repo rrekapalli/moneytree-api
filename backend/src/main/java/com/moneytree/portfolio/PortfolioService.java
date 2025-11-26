@@ -45,14 +45,21 @@ public class PortfolioService {
         return portfolioRepository.save(portfolio);
     }
 
-    public Portfolio updatePortfolio(Portfolio portfolio) {
+    public Optional<Portfolio> updatePortfolio(Portfolio portfolio) {
         log.info("updatePortfolio id={}", portfolio.getId());
-        return portfolioRepository.save(portfolio);
+        if (!portfolioRepository.existsById(portfolio.getId())) {
+            return Optional.empty();
+        }
+        return Optional.of(portfolioRepository.save(portfolio));
     }
 
-    public void deletePortfolio(UUID id) {
+    public boolean deletePortfolio(UUID id) {
         log.info("deletePortfolio id={}", id);
+        if (!portfolioRepository.existsById(id)) {
+            return false;
+        }
         portfolioRepository.deleteById(id);
+        return true;
     }
 }
 

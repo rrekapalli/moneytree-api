@@ -31,7 +31,7 @@ public class ScreenerController {
         return ResponseEntity.ok(screenerService.listScreeners());
     }
 
-    @PostMapping(consumes = "application/json")
+    @PostMapping(value = "", consumes = "application/json", produces = "application/json")
     @Operation(summary = "Create a new screener", description = "Create a new screener with the provided details")
     @ApiResponse(responseCode = "200", description = "Screener created successfully")
     public ResponseEntity<Screener> createScreener(
@@ -40,7 +40,7 @@ public class ScreenerController {
         return ResponseEntity.ok(screenerService.createScreener(screener));
     }
 
-    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    @GetMapping("/{id}")
     @Operation(summary = "Get screener by ID", description = "Retrieve a specific screener by its ID")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Screener found"),
@@ -53,7 +53,7 @@ public class ScreenerController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    @PutMapping("/{id}")
     @Operation(summary = "Update screener", description = "Update an existing screener")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Screener updated successfully"),
@@ -64,10 +64,12 @@ public class ScreenerController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated screener details", required = true)
             @RequestBody Screener screener) {
         screener.setScreenerId(id);
-        return ResponseEntity.ok(screenerService.updateScreener(screener));
+        return screenerService.updateScreener(screener)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    @DeleteMapping("/{id}")
     @Operation(summary = "Delete screener", description = "Delete a screener by its ID")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Screener deleted successfully"),
@@ -75,8 +77,10 @@ public class ScreenerController {
     })
     public ResponseEntity<Void> deleteScreener(
             @Parameter(description = "Screener ID", required = true) @PathVariable UUID id) {
-        screenerService.deleteScreener(id);
-        return ResponseEntity.noContent().build();
+        if (screenerService.deleteScreener(id)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }
 

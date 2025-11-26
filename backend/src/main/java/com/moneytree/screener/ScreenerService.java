@@ -50,14 +50,21 @@ public class ScreenerService {
         return screenerRepository.save(screener);
     }
 
-    public Screener updateScreener(Screener screener) {
+    public Optional<Screener> updateScreener(Screener screener) {
         log.info("updateScreener id={}", screener.getScreenerId());
-        return screenerRepository.save(screener);
+        if (!screenerRepository.existsById(screener.getScreenerId())) {
+            return Optional.empty();
+        }
+        return Optional.of(screenerRepository.save(screener));
     }
 
-    public void deleteScreener(UUID id) {
+    public boolean deleteScreener(UUID id) {
         log.info("deleteScreener id={}", id);
+        if (!screenerRepository.existsById(id)) {
+            return false;
+        }
         screenerRepository.deleteById(id);
+        return true;
     }
 }
 

@@ -33,7 +33,7 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioService.listPortfolios());
     }
 
-    @PostMapping(consumes = "application/json")
+    @PostMapping(value = "", consumes = "application/json", produces = "application/json")
     @Operation(summary = "Create a new portfolio", description = "Create a new portfolio with the provided details")
     @ApiResponse(responseCode = "200", description = "Portfolio created successfully")
     public ResponseEntity<Portfolio> createPortfolio(
@@ -42,7 +42,7 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioService.createPortfolio(portfolio));
     }
 
-    @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    @GetMapping("/{id}")
     @Operation(summary = "Get portfolio by ID", description = "Retrieve a specific portfolio by its ID")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Portfolio found"),
@@ -55,7 +55,7 @@ public class PortfolioController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    @PutMapping("/{id}")
     @Operation(summary = "Update portfolio", description = "Update an existing portfolio")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Portfolio updated successfully"),
@@ -66,10 +66,12 @@ public class PortfolioController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated portfolio details", required = true)
             @RequestBody Portfolio portfolio) {
         portfolio.setId(id);
-        return ResponseEntity.ok(portfolioService.updatePortfolio(portfolio));
+        return portfolioService.updatePortfolio(portfolio)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    @DeleteMapping("/{id}")
     @Operation(summary = "Delete portfolio", description = "Delete a portfolio by its ID")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Portfolio deleted successfully"),
@@ -77,8 +79,10 @@ public class PortfolioController {
     })
     public ResponseEntity<Void> deletePortfolio(
             @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID id) {
-        portfolioService.deletePortfolio(id);
-        return ResponseEntity.noContent().build();
+        if (portfolioService.deletePortfolio(id)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }
 
