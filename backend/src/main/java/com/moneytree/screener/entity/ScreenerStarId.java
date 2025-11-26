@@ -2,23 +2,24 @@ package com.moneytree.screener.entity;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 public class ScreenerStarId implements Serializable {
-    private Long screenerId;
-    private Long userId;
+    private UUID screenerId;
+    private UUID userId;
 
     public ScreenerStarId() {
     }
 
-    public ScreenerStarId(Long screenerId, Long userId) {
+    public ScreenerStarId(UUID screenerId, UUID userId) {
         this.screenerId = screenerId;
         this.userId = userId;
     }
 
-    public Long getScreenerId() { return screenerId; }
-    public void setScreenerId(Long screenerId) { this.screenerId = screenerId; }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public UUID getScreenerId() { return screenerId; }
+    public void setScreenerId(UUID screenerId) { this.screenerId = screenerId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
 
     @Override
     public boolean equals(Object o) {

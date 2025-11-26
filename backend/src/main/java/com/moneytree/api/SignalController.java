@@ -31,6 +31,15 @@ public class SignalController {
         return ResponseEntity.ok(signalService.listSignals());
     }
 
+    @PostMapping(consumes = "application/json")
+    @Operation(summary = "Create a new signal", description = "Create a new trading signal")
+    @ApiResponse(responseCode = "200", description = "Signal created successfully")
+    public ResponseEntity<Signal> createSignal(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Signal details", required = true)
+            @RequestBody Signal signal) {
+        return ResponseEntity.ok(signalService.createSignal(signal));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get signal by ID", description = "Retrieve a specific signal by its ID")
     @ApiResponses({
@@ -58,15 +67,6 @@ public class SignalController {
     public ResponseEntity<List<Signal>> listPendingSignals(
             @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId) {
         return ResponseEntity.ok(signalService.listPendingSignals(portfolioId));
-    }
-
-    @PostMapping
-    @Operation(summary = "Create a new signal", description = "Create a new trading signal")
-    @ApiResponse(responseCode = "200", description = "Signal created successfully")
-    public ResponseEntity<Signal> createSignal(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Signal details", required = true)
-            @RequestBody Signal signal) {
-        return ResponseEntity.ok(signalService.createSignal(signal));
     }
 
     @PutMapping("/{id}")

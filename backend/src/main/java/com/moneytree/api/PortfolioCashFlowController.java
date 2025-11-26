@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/cash-flows")
@@ -23,7 +24,7 @@ public class PortfolioCashFlowController {
 
     @GetMapping
     public ResponseEntity<List<PortfolioCashFlow>> listCashFlows(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         if (startDate != null && endDate != null) {
@@ -33,19 +34,19 @@ public class PortfolioCashFlowController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PortfolioCashFlow> getCashFlow(@PathVariable Long portfolioId, @PathVariable Long id) {
+    public ResponseEntity<PortfolioCashFlow> getCashFlow(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioCashFlow> createCashFlow(@PathVariable Long portfolioId, @RequestBody PortfolioCashFlow cashFlow) {
+    public ResponseEntity<PortfolioCashFlow> createCashFlow(@PathVariable UUID portfolioId, @RequestBody PortfolioCashFlow cashFlow) {
         return ResponseEntity.ok(service.save(cashFlow));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCashFlow(@PathVariable Long portfolioId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteCashFlow(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

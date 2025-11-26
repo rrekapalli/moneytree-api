@@ -7,19 +7,20 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface PortfolioTradeLogRepository extends JpaRepository<PortfolioTradeLog, Integer> {
+public interface PortfolioTradeLogRepository extends JpaRepository<PortfolioTradeLog, UUID> {
 
-    List<PortfolioTradeLog> findByPortfolioId(Long portfolioId);
+    List<PortfolioTradeLog> findByPortfolioId(UUID portfolioId);
 
-    List<PortfolioTradeLog> findByPortfolioIdAndSymbol(Long portfolioId, String symbol);
+    List<PortfolioTradeLog> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol);
 
     List<PortfolioTradeLog> findByEvaluationType(String evaluationType);
 
-    List<PortfolioTradeLog> findByPortfolioIdAndCycleTimestampBetween(Long portfolioId, Instant start, Instant end);
+    List<PortfolioTradeLog> findByPortfolioIdAndCycleTimestampBetween(UUID portfolioId, Instant start, Instant end);
 
     @Query("SELECT ptl FROM PortfolioTradeLog ptl WHERE ptl.portfolio.id = ?1 ORDER BY ptl.cycleTimestamp DESC")
-    List<PortfolioTradeLog> findByPortfolioIdOrderByCycleTimestampDesc(Long portfolioId);
+    List<PortfolioTradeLog> findByPortfolioIdOrderByCycleTimestampDesc(UUID portfolioId);
 }
 

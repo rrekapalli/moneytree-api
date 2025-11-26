@@ -6,14 +6,15 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ScreenerSavedViewRepository extends JpaRepository<ScreenerSavedView, Long> {
+public interface ScreenerSavedViewRepository extends JpaRepository<ScreenerSavedView, UUID> {
 
-    List<ScreenerSavedView> findByScreenerId(Long screenerId);
+    List<ScreenerSavedView> findByScreenerId(UUID screenerId);
 
-    List<ScreenerSavedView> findByUserId(Long userId);
+    List<ScreenerSavedView> findByUserId(UUID userId);
 
-    Optional<ScreenerSavedView> findByScreenerIdAndUserIdAndName(Long screenerId, Long userId, String name);
+    Optional<ScreenerSavedView> findByScreenerIdAndUserIdAndName(UUID screenerId, UUID userId, String name);
 }
 

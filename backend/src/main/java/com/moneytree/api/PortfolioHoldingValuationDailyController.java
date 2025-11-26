@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/holding-valuations")
@@ -23,7 +24,7 @@ public class PortfolioHoldingValuationDailyController {
 
     @GetMapping
     public ResponseEntity<List<PortfolioHoldingValuationDaily>> listValuations(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @RequestParam(required = false) String symbol,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
@@ -38,7 +39,7 @@ public class PortfolioHoldingValuationDailyController {
 
     @GetMapping("/{symbol}/{date}")
     public ResponseEntity<PortfolioHoldingValuationDaily> getValuation(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @PathVariable String symbol,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return service.findByPortfolioIdAndSymbolAndDate(portfolioId, symbol, date)
@@ -47,12 +48,12 @@ public class PortfolioHoldingValuationDailyController {
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioHoldingValuationDaily> createValuation(@PathVariable Long portfolioId, @RequestBody PortfolioHoldingValuationDaily valuation) {
+    public ResponseEntity<PortfolioHoldingValuationDaily> createValuation(@PathVariable UUID portfolioId, @RequestBody PortfolioHoldingValuationDaily valuation) {
         return ResponseEntity.ok(service.save(valuation));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteValuation(@PathVariable Long portfolioId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteValuation(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

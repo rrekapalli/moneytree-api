@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/benchmarks")
@@ -20,24 +21,24 @@ public class PortfolioBenchmarkController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PortfolioBenchmark>> listBenchmarks(@PathVariable Long portfolioId) {
+    public ResponseEntity<List<PortfolioBenchmark>> listBenchmarks(@PathVariable UUID portfolioId) {
         return ResponseEntity.ok(service.findByPortfolioId(portfolioId));
     }
 
     @GetMapping("/{indexName}")
-    public ResponseEntity<PortfolioBenchmark> getBenchmark(@PathVariable Long portfolioId, @PathVariable String indexName) {
+    public ResponseEntity<PortfolioBenchmark> getBenchmark(@PathVariable UUID portfolioId, @PathVariable String indexName) {
         return service.findById(portfolioId, indexName)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioBenchmark> createBenchmark(@PathVariable Long portfolioId, @RequestBody PortfolioBenchmark benchmark) {
+    public ResponseEntity<PortfolioBenchmark> createBenchmark(@PathVariable UUID portfolioId, @RequestBody PortfolioBenchmark benchmark) {
         return ResponseEntity.ok(service.save(benchmark));
     }
 
     @DeleteMapping("/{indexName}")
-    public ResponseEntity<Void> deleteBenchmark(@PathVariable Long portfolioId, @PathVariable String indexName) {
+    public ResponseEntity<Void> deleteBenchmark(@PathVariable UUID portfolioId, @PathVariable String indexName) {
         service.deleteById(portfolioId, indexName);
         return ResponseEntity.noContent().build();
     }

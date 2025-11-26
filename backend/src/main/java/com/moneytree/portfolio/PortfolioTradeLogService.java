@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,19 +22,19 @@ public class PortfolioTradeLogService {
         this.repository = repository;
     }
 
-    public List<PortfolioTradeLog> findByPortfolioId(Long portfolioId) {
+    public List<PortfolioTradeLog> findByPortfolioId(UUID portfolioId) {
         return repository.findByPortfolioIdOrderByCycleTimestampDesc(portfolioId);
     }
 
-    public List<PortfolioTradeLog> findByPortfolioIdAndSymbol(Long portfolioId, String symbol) {
+    public List<PortfolioTradeLog> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol) {
         return repository.findByPortfolioIdAndSymbol(portfolioId, symbol);
     }
 
-    public List<PortfolioTradeLog> findByPortfolioIdAndTimeRange(Long portfolioId, Instant start, Instant end) {
+    public List<PortfolioTradeLog> findByPortfolioIdAndTimeRange(UUID portfolioId, Instant start, Instant end) {
         return repository.findByPortfolioIdAndCycleTimestampBetween(portfolioId, start, end);
     }
 
-    public Optional<PortfolioTradeLog> findById(Integer id) {
+    public Optional<PortfolioTradeLog> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -41,7 +42,7 @@ public class PortfolioTradeLogService {
         return repository.save(tradeLog);
     }
 
-    public void deleteById(Integer id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

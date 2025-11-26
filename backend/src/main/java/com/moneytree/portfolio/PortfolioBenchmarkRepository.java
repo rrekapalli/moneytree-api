@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface PortfolioBenchmarkRepository extends JpaRepository<PortfolioBenchmark, PortfolioBenchmarkId> {
 
-    List<PortfolioBenchmark> findByPortfolioId(Long portfolioId);
+    List<PortfolioBenchmark> findByPortfolioId(java.util.UUID portfolioId);
 
     List<PortfolioBenchmark> findByIndexName(String indexName);
 }

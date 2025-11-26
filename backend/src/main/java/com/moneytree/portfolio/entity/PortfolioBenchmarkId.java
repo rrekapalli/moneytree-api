@@ -2,24 +2,25 @@ package com.moneytree.portfolio.entity;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 public class PortfolioBenchmarkId implements Serializable {
-    private Long portfolioId;
+    private UUID portfolioId;
     private String indexName;
 
     public PortfolioBenchmarkId() {
     }
 
-    public PortfolioBenchmarkId(Long portfolioId, String indexName) {
+    public PortfolioBenchmarkId(UUID portfolioId, String indexName) {
         this.portfolioId = portfolioId;
         this.indexName = indexName;
     }
 
-    public Long getPortfolioId() {
+    public UUID getPortfolioId() {
         return portfolioId;
     }
 
-    public void setPortfolioId(Long portfolioId) {
+    public void setPortfolioId(UUID portfolioId) {
         this.portfolioId = portfolioId;
     }
 

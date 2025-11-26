@@ -7,17 +7,18 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface PortfolioCashFlowRepository extends JpaRepository<PortfolioCashFlow, Long> {
+public interface PortfolioCashFlowRepository extends JpaRepository<PortfolioCashFlow, UUID> {
 
-    List<PortfolioCashFlow> findByPortfolioId(Long portfolioId);
+    List<PortfolioCashFlow> findByPortfolioId(UUID portfolioId);
 
-    List<PortfolioCashFlow> findByPortfolioIdAndFlowDateBetween(Long portfolioId, LocalDate start, LocalDate end);
+    List<PortfolioCashFlow> findByPortfolioIdAndFlowDateBetween(UUID portfolioId, LocalDate start, LocalDate end);
 
     List<PortfolioCashFlow> findByFlowType(String flowType);
 
     @Query("SELECT pcf FROM PortfolioCashFlow pcf WHERE pcf.portfolio.id = ?1 ORDER BY pcf.flowDate DESC")
-    List<PortfolioCashFlow> findByPortfolioIdOrderByFlowDateDesc(Long portfolioId);
+    List<PortfolioCashFlow> findByPortfolioIdOrderByFlowDateDesc(UUID portfolioId);
 }
 

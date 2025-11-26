@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/metrics-daily")
@@ -23,7 +24,7 @@ public class PortfolioMetricsDailyController {
 
     @GetMapping
     public ResponseEntity<List<PortfolioMetricsDaily>> listMetrics(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         if (startDate != null && endDate != null) {
@@ -34,7 +35,7 @@ public class PortfolioMetricsDailyController {
 
     @GetMapping("/{date}")
     public ResponseEntity<PortfolioMetricsDaily> getMetrics(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return service.findByPortfolioIdAndDate(portfolioId, date)
                 .map(ResponseEntity::ok)
@@ -42,12 +43,12 @@ public class PortfolioMetricsDailyController {
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioMetricsDaily> createMetrics(@PathVariable Long portfolioId, @RequestBody PortfolioMetricsDaily metrics) {
+    public ResponseEntity<PortfolioMetricsDaily> createMetrics(@PathVariable UUID portfolioId, @RequestBody PortfolioMetricsDaily metrics) {
         return ResponseEntity.ok(service.save(metrics));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMetrics(@PathVariable Long portfolioId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteMetrics(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

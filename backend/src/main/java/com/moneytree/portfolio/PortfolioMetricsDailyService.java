@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,15 +22,15 @@ public class PortfolioMetricsDailyService {
         this.repository = repository;
     }
 
-    public List<PortfolioMetricsDaily> findByPortfolioId(Long portfolioId) {
+    public List<PortfolioMetricsDaily> findByPortfolioId(UUID portfolioId) {
         return repository.findByPortfolioIdOrderByDateDesc(portfolioId);
     }
 
-    public List<PortfolioMetricsDaily> findByPortfolioIdAndDateRange(Long portfolioId, LocalDate start, LocalDate end) {
+    public List<PortfolioMetricsDaily> findByPortfolioIdAndDateRange(UUID portfolioId, LocalDate start, LocalDate end) {
         return repository.findByPortfolioIdAndDateBetween(portfolioId, start, end);
     }
 
-    public Optional<PortfolioMetricsDaily> findByPortfolioIdAndDate(Long portfolioId, LocalDate date) {
+    public Optional<PortfolioMetricsDaily> findByPortfolioIdAndDate(UUID portfolioId, LocalDate date) {
         return repository.findByPortfolioIdAndDate(portfolioId, date);
     }
 
@@ -37,7 +38,7 @@ public class PortfolioMetricsDailyService {
         return repository.save(metrics);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

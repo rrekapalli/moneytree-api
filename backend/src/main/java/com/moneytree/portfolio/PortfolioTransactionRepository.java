@@ -7,19 +7,20 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface PortfolioTransactionRepository extends JpaRepository<PortfolioTransaction, Long> {
+public interface PortfolioTransactionRepository extends JpaRepository<PortfolioTransaction, UUID> {
 
-    List<PortfolioTransaction> findByPortfolioId(Long portfolioId);
+    List<PortfolioTransaction> findByPortfolioId(UUID portfolioId);
 
-    List<PortfolioTransaction> findByPortfolioIdAndTradeDateBetween(Long portfolioId, LocalDate start, LocalDate end);
+    List<PortfolioTransaction> findByPortfolioIdAndTradeDateBetween(UUID portfolioId, LocalDate start, LocalDate end);
 
     List<PortfolioTransaction> findBySymbol(String symbol);
 
     List<PortfolioTransaction> findByTxnType(String txnType);
 
     @Query("SELECT pt FROM PortfolioTransaction pt WHERE pt.portfolio.id = ?1 ORDER BY pt.tradeDate DESC, pt.tradeTime DESC")
-    List<PortfolioTransaction> findByPortfolioIdOrderByTradeDateDesc(Long portfolioId);
+    List<PortfolioTransaction> findByPortfolioIdOrderByTradeDateDesc(UUID portfolioId);
 }
 

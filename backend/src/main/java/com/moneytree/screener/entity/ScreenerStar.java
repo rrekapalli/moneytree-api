@@ -3,6 +3,7 @@ package com.moneytree.screener.entity;
 import com.moneytree.user.entity.User;
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_star")
@@ -10,16 +11,16 @@ import java.time.Instant;
 public class ScreenerStar {
 
     @Id
-    @Column(name = "screener_id", nullable = false)
-    private Long screenerId;
+    @Column(name = "screener_id", nullable = false, columnDefinition = "uuid")
+    private UUID screenerId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_id", nullable = false, insertable = false, updatable = false, foreignKey = @ForeignKey(name = "screener_star_screener_id_fkey"))
     private Screener screener;
 
     @Id
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
+    private UUID userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, insertable = false, updatable = false, foreignKey = @ForeignKey(name = "screener_star_user_id_fkey"))
@@ -38,12 +39,12 @@ public class ScreenerStar {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Long getScreenerId() { return screenerId; }
-    public void setScreenerId(Long screenerId) { this.screenerId = screenerId; }
+    public UUID getScreenerId() { return screenerId; }
+    public void setScreenerId(UUID screenerId) { this.screenerId = screenerId; }
     public Screener getScreener() { return screener; }
     public void setScreener(Screener screener) { this.screener = screener; if (screener != null) this.screenerId = screener.getScreenerId(); }
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; if (user != null) this.userId = user.getId(); }
     public Instant getCreatedAt() { return createdAt; }

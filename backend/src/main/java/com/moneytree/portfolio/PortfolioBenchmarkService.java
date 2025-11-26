@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,11 +22,11 @@ public class PortfolioBenchmarkService {
         this.repository = repository;
     }
 
-    public List<PortfolioBenchmark> findByPortfolioId(Long portfolioId) {
+    public List<PortfolioBenchmark> findByPortfolioId(UUID portfolioId) {
         return repository.findByPortfolioId(portfolioId);
     }
 
-    public Optional<PortfolioBenchmark> findById(Long portfolioId, String indexName) {
+    public Optional<PortfolioBenchmark> findById(UUID portfolioId, String indexName) {
         return repository.findById(new PortfolioBenchmarkId(portfolioId, indexName));
     }
 
@@ -33,7 +34,7 @@ public class PortfolioBenchmarkService {
         return repository.save(benchmark);
     }
 
-    public void deleteById(Long portfolioId, String indexName) {
+    public void deleteById(UUID portfolioId, String indexName) {
         repository.deleteById(new PortfolioBenchmarkId(portfolioId, indexName));
     }
 }

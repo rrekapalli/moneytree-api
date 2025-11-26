@@ -2,21 +2,22 @@ package com.moneytree.screener.entity;
 
 import java.io.Serializable;
 import java.util.Objects;
+import java.util.UUID;
 
 public class ScreenerResultId implements Serializable {
-    private Long screenerRunId;
+    private UUID screenerRunId;
     private String symbol;
 
     public ScreenerResultId() {
     }
 
-    public ScreenerResultId(Long screenerRunId, String symbol) {
+    public ScreenerResultId(UUID screenerRunId, String symbol) {
         this.screenerRunId = screenerRunId;
         this.symbol = symbol;
     }
 
-    public Long getScreenerRunId() { return screenerRunId; }
-    public void setScreenerRunId(Long screenerRunId) { this.screenerRunId = screenerRunId; }
+    public UUID getScreenerRunId() { return screenerRunId; }
+    public void setScreenerRunId(UUID screenerRunId) { this.screenerRunId = screenerRunId; }
     public String getSymbol() { return symbol; }
     public void setSymbol(String symbol) { this.symbol = symbol; }
 

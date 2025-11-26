@@ -7,6 +7,7 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "screener_result")
@@ -14,8 +15,8 @@ import java.util.Map;
 public class ScreenerResult {
 
     @Id
-    @Column(name = "screener_run_id", nullable = false)
-    private Long screenerRunId;
+    @Column(name = "screener_run_id", nullable = false, columnDefinition = "uuid")
+    private UUID screenerRunId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screener_run_id", nullable = false, insertable = false, updatable = false, foreignKey = @ForeignKey(name = "screener_result_screener_run_id_fkey"))
@@ -55,8 +56,8 @@ public class ScreenerResult {
     private Instant updatedAt = Instant.now();
 
     // Getters and setters
-    public Long getScreenerRunId() { return screenerRunId; }
-    public void setScreenerRunId(Long screenerRunId) { this.screenerRunId = screenerRunId; }
+    public UUID getScreenerRunId() { return screenerRunId; }
+    public void setScreenerRunId(UUID screenerRunId) { this.screenerRunId = screenerRunId; }
     public ScreenerRun getScreenerRun() { return screenerRun; }
     public void setScreenerRun(ScreenerRun screenerRun) { this.screenerRun = screenerRun; if (screenerRun != null) this.screenerRunId = screenerRun.getScreenerRunId(); }
     public String getSymbol() { return symbol; }

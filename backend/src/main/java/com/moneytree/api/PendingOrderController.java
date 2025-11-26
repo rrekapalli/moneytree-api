@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/pending-orders")
@@ -27,7 +28,7 @@ public class PendingOrderController {
     @Operation(summary = "List pending orders", description = "Retrieve all pending orders for a portfolio, with optional filtering")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved pending orders")
     public ResponseEntity<List<PendingOrder>> listPendingOrders(
-            @Parameter(description = "Portfolio ID", required = true) @PathVariable Long portfolioId,
+            @Parameter(description = "Portfolio ID", required = true) @PathVariable UUID portfolioId,
             @Parameter(description = "Filter by order type (BUY or SELL)", example = "BUY")
             @RequestParam(required = false) String orderType,
             @Parameter(description = "Show only active orders (remaining quantity > 0)", example = "true")
@@ -42,32 +43,32 @@ public class PendingOrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PendingOrder> getPendingOrder(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<PendingOrder> getPendingOrder(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/order-id/{orderId}")
-    public ResponseEntity<PendingOrder> getPendingOrderByOrderId(@PathVariable Long portfolioId, @PathVariable String orderId) {
+    public ResponseEntity<PendingOrder> getPendingOrderByOrderId(@PathVariable UUID portfolioId, @PathVariable String orderId) {
         return service.findByOrderId(orderId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<PendingOrder> createPendingOrder(@PathVariable Long portfolioId, @RequestBody PendingOrder order) {
+    public ResponseEntity<PendingOrder> createPendingOrder(@PathVariable UUID portfolioId, @RequestBody PendingOrder order) {
         return ResponseEntity.ok(service.save(order));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PendingOrder> updatePendingOrder(@PathVariable Long portfolioId, @PathVariable Integer id, @RequestBody PendingOrder order) {
+    public ResponseEntity<PendingOrder> updatePendingOrder(@PathVariable UUID portfolioId, @PathVariable UUID id, @RequestBody PendingOrder order) {
         order.setPendingOrderId(id);
         return ResponseEntity.ok(service.save(order));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePendingOrder(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<Void> deletePendingOrder(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

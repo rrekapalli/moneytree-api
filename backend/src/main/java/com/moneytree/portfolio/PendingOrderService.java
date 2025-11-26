@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,15 +21,15 @@ public class PendingOrderService {
         this.repository = repository;
     }
 
-    public List<PendingOrder> findByPortfolioId(Long portfolioId) {
+    public List<PendingOrder> findByPortfolioId(UUID portfolioId) {
         return repository.findByPortfolioIdOrderByOrderTimestampDesc(portfolioId);
     }
 
-    public List<PendingOrder> findActiveByPortfolioId(Long portfolioId) {
+    public List<PendingOrder> findActiveByPortfolioId(UUID portfolioId) {
         return repository.findActiveByPortfolioId(portfolioId);
     }
 
-    public List<PendingOrder> findByPortfolioIdAndOrderType(Long portfolioId, String orderType) {
+    public List<PendingOrder> findByPortfolioIdAndOrderType(UUID portfolioId, String orderType) {
         return repository.findByPortfolioIdAndOrderType(portfolioId, orderType);
     }
 
@@ -36,7 +37,7 @@ public class PendingOrderService {
         return repository.findByOrderId(orderId);
     }
 
-    public Optional<PendingOrder> findById(Integer id) {
+    public Optional<PendingOrder> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -44,7 +45,7 @@ public class PendingOrderService {
         return repository.save(order);
     }
 
-    public void deleteById(Integer id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

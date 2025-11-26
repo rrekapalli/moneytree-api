@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/valuations-daily")
@@ -23,7 +24,7 @@ public class PortfolioValuationDailyController {
 
     @GetMapping
     public ResponseEntity<List<PortfolioValuationDaily>> listValuations(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         if (startDate != null && endDate != null) {
@@ -34,7 +35,7 @@ public class PortfolioValuationDailyController {
 
     @GetMapping("/{date}")
     public ResponseEntity<PortfolioValuationDaily> getValuation(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return service.findByPortfolioIdAndDate(portfolioId, date)
                 .map(ResponseEntity::ok)
@@ -42,12 +43,12 @@ public class PortfolioValuationDailyController {
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioValuationDaily> createValuation(@PathVariable Long portfolioId, @RequestBody PortfolioValuationDaily valuation) {
+    public ResponseEntity<PortfolioValuationDaily> createValuation(@PathVariable UUID portfolioId, @RequestBody PortfolioValuationDaily valuation) {
         return ResponseEntity.ok(service.save(valuation));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteValuation(@PathVariable Long portfolioId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteValuation(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

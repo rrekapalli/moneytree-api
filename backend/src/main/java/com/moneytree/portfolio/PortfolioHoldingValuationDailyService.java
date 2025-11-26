@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,19 +22,19 @@ public class PortfolioHoldingValuationDailyService {
         this.repository = repository;
     }
 
-    public List<PortfolioHoldingValuationDaily> findByPortfolioId(Long portfolioId) {
+    public List<PortfolioHoldingValuationDaily> findByPortfolioId(UUID portfolioId) {
         return repository.findByPortfolioIdOrderByDateDesc(portfolioId);
     }
 
-    public List<PortfolioHoldingValuationDaily> findByPortfolioIdAndSymbol(Long portfolioId, String symbol) {
+    public List<PortfolioHoldingValuationDaily> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol) {
         return repository.findByPortfolioIdAndSymbol(portfolioId, symbol);
     }
 
-    public List<PortfolioHoldingValuationDaily> findByPortfolioIdAndDateRange(Long portfolioId, LocalDate start, LocalDate end) {
+    public List<PortfolioHoldingValuationDaily> findByPortfolioIdAndDateRange(UUID portfolioId, LocalDate start, LocalDate end) {
         return repository.findByPortfolioIdAndDateBetween(portfolioId, start, end);
     }
 
-    public Optional<PortfolioHoldingValuationDaily> findByPortfolioIdAndSymbolAndDate(Long portfolioId, String symbol, LocalDate date) {
+    public Optional<PortfolioHoldingValuationDaily> findByPortfolioIdAndSymbolAndDate(UUID portfolioId, String symbol, LocalDate date) {
         return repository.findByPortfolioIdAndSymbolAndDate(portfolioId, symbol, date);
     }
 
@@ -41,7 +42,7 @@ public class PortfolioHoldingValuationDailyService {
         return repository.save(valuation);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

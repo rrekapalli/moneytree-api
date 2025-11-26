@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/screener-runs/{screenerRunId}/results")
@@ -21,7 +22,7 @@ public class ScreenerResultController {
 
     @GetMapping
     public ResponseEntity<List<ScreenerResult>> listResults(
-            @PathVariable Long screenerRunId,
+            @PathVariable UUID screenerRunId,
             @RequestParam(required = false) Boolean matched,
             @RequestParam(required = false, defaultValue = "rank") String sortBy) {
         if (matched != null) {
@@ -34,19 +35,19 @@ public class ScreenerResultController {
     }
 
     @GetMapping("/{symbol}")
-    public ResponseEntity<ScreenerResult> getResult(@PathVariable Long screenerRunId, @PathVariable String symbol) {
+    public ResponseEntity<ScreenerResult> getResult(@PathVariable UUID screenerRunId, @PathVariable String symbol) {
         return service.findById(screenerRunId, symbol)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<ScreenerResult> createResult(@PathVariable Long screenerRunId, @RequestBody ScreenerResult result) {
+    public ResponseEntity<ScreenerResult> createResult(@PathVariable UUID screenerRunId, @RequestBody ScreenerResult result) {
         return ResponseEntity.ok(service.save(result));
     }
 
     @DeleteMapping("/{symbol}")
-    public ResponseEntity<Void> deleteResult(@PathVariable Long screenerRunId, @PathVariable String symbol) {
+    public ResponseEntity<Void> deleteResult(@PathVariable UUID screenerRunId, @PathVariable String symbol) {
         service.deleteById(screenerRunId, symbol);
         return ResponseEntity.noContent().build();
     }

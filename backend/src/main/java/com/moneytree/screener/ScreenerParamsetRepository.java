@@ -6,12 +6,13 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ScreenerParamsetRepository extends JpaRepository<ScreenerParamset, Long> {
+public interface ScreenerParamsetRepository extends JpaRepository<ScreenerParamset, UUID> {
 
-    List<ScreenerParamset> findByScreenerVersionId(Long screenerVersionId);
+    List<ScreenerParamset> findByScreenerVersionId(UUID screenerVersionId);
 
-    Optional<ScreenerParamset> findByScreenerVersionIdAndName(Long screenerVersionId, String name);
+    Optional<ScreenerParamset> findByScreenerVersionIdAndName(UUID screenerVersionId, String name);
 }
 

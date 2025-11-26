@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -32,7 +33,7 @@ public class ScreenerFunctionService {
         return repository.findByFunctionName(functionName);
     }
 
-    public Optional<ScreenerFunction> findById(Long id) {
+    public Optional<ScreenerFunction> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -40,7 +41,7 @@ public class ScreenerFunctionService {
         return repository.save(function);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

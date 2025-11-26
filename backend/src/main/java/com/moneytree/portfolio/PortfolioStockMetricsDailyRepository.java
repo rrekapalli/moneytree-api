@@ -8,19 +8,20 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface PortfolioStockMetricsDailyRepository extends JpaRepository<PortfolioStockMetricsDaily, Integer> {
+public interface PortfolioStockMetricsDailyRepository extends JpaRepository<PortfolioStockMetricsDaily, UUID> {
 
-    List<PortfolioStockMetricsDaily> findByPortfolioId(Long portfolioId);
+    List<PortfolioStockMetricsDaily> findByPortfolioId(UUID portfolioId);
 
-    List<PortfolioStockMetricsDaily> findByPortfolioIdAndSymbol(Long portfolioId, String symbol);
+    List<PortfolioStockMetricsDaily> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol);
 
-    List<PortfolioStockMetricsDaily> findByPortfolioIdAndDateBetween(Long portfolioId, LocalDate start, LocalDate end);
+    List<PortfolioStockMetricsDaily> findByPortfolioIdAndDateBetween(UUID portfolioId, LocalDate start, LocalDate end);
 
-    Optional<PortfolioStockMetricsDaily> findByPortfolioIdAndSymbolAndDate(Long portfolioId, String symbol, LocalDate date);
+    Optional<PortfolioStockMetricsDaily> findByPortfolioIdAndSymbolAndDate(UUID portfolioId, String symbol, LocalDate date);
 
     @Query("SELECT psmd FROM PortfolioStockMetricsDaily psmd WHERE psmd.portfolio.id = ?1 ORDER BY psmd.date DESC")
-    List<PortfolioStockMetricsDaily> findByPortfolioIdOrderByDateDesc(Long portfolioId);
+    List<PortfolioStockMetricsDaily> findByPortfolioIdOrderByDateDesc(UUID portfolioId);
 }
 

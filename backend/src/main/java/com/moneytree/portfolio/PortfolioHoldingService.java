@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,11 +21,11 @@ public class PortfolioHoldingService {
         this.repository = repository;
     }
 
-    public List<PortfolioHolding> findByPortfolioId(Long portfolioId) {
+    public List<PortfolioHolding> findByPortfolioId(UUID portfolioId) {
         return repository.findByPortfolioId(portfolioId);
     }
 
-    public Optional<PortfolioHolding> findByPortfolioIdAndSymbol(Long portfolioId, String symbol) {
+    public Optional<PortfolioHolding> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol) {
         return repository.findByPortfolioIdAndSymbol(portfolioId, symbol);
     }
 
@@ -32,7 +33,7 @@ public class PortfolioHoldingService {
         return repository.save(holding);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

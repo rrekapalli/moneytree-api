@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/screener-functions")
@@ -28,7 +29,7 @@ public class ScreenerFunctionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ScreenerFunction> getFunction(@PathVariable Long id) {
+    public ResponseEntity<ScreenerFunction> getFunction(@PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -47,13 +48,13 @@ public class ScreenerFunctionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScreenerFunction> updateFunction(@PathVariable Long id, @RequestBody ScreenerFunction function) {
+    public ResponseEntity<ScreenerFunction> updateFunction(@PathVariable UUID id, @RequestBody ScreenerFunction function) {
         function.setFunctionId(id);
         return ResponseEntity.ok(service.save(function));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteFunction(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteFunction(@PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

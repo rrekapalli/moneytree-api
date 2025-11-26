@@ -6,13 +6,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface PortfolioHoldingRepository extends JpaRepository<PortfolioHolding, Long> {
+public interface PortfolioHoldingRepository extends JpaRepository<PortfolioHolding, UUID> {
 
-    List<PortfolioHolding> findByPortfolioId(Long portfolioId);
+    List<PortfolioHolding> findByPortfolioId(UUID portfolioId);
 
-    Optional<PortfolioHolding> findByPortfolioIdAndSymbol(Long portfolioId, String symbol);
+    Optional<PortfolioHolding> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol);
 
     List<PortfolioHolding> findBySymbol(String symbol);
 }

@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/trades")
@@ -21,7 +22,7 @@ public class PortfolioTradeController {
 
     @GetMapping
     public ResponseEntity<List<PortfolioTrade>> listTrades(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @RequestParam(required = false) String symbol) {
         if (symbol != null) {
             return ResponseEntity.ok(service.findByPortfolioIdAndSymbol(portfolioId, symbol));
@@ -30,25 +31,25 @@ public class PortfolioTradeController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PortfolioTrade> getTrade(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<PortfolioTrade> getTrade(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioTrade> createTrade(@PathVariable Long portfolioId, @RequestBody PortfolioTrade trade) {
+    public ResponseEntity<PortfolioTrade> createTrade(@PathVariable UUID portfolioId, @RequestBody PortfolioTrade trade) {
         return ResponseEntity.ok(service.save(trade));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PortfolioTrade> updateTrade(@PathVariable Long portfolioId, @PathVariable Integer id, @RequestBody PortfolioTrade trade) {
+    public ResponseEntity<PortfolioTrade> updateTrade(@PathVariable UUID portfolioId, @PathVariable UUID id, @RequestBody PortfolioTrade trade) {
         trade.setTradeId(id);
         return ResponseEntity.ok(service.save(trade));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTrade(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<Void> deleteTrade(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

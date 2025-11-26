@@ -5,11 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface ScreenerScheduleRepository extends JpaRepository<ScreenerSchedule, Long> {
+public interface ScreenerScheduleRepository extends JpaRepository<ScreenerSchedule, UUID> {
 
-    List<ScreenerSchedule> findByScreenerId(Long screenerId);
+    List<ScreenerSchedule> findByScreenerId(UUID screenerId);
 
     List<ScreenerSchedule> findByIsEnabledTrue();
 }

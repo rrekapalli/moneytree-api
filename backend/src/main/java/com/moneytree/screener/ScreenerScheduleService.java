@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,11 +21,11 @@ public class ScreenerScheduleService {
         this.repository = repository;
     }
 
-    public List<ScreenerSchedule> findByScreenerId(Long screenerId) {
+    public List<ScreenerSchedule> findByScreenerId(UUID screenerId) {
         return repository.findByScreenerId(screenerId);
     }
 
-    public Optional<ScreenerSchedule> findById(Long id) {
+    public Optional<ScreenerSchedule> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -32,7 +33,7 @@ public class ScreenerScheduleService {
         return repository.save(schedule);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

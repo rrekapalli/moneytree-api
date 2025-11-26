@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,15 +21,15 @@ public class ScreenerParamsetService {
         this.repository = repository;
     }
 
-    public List<ScreenerParamset> findByScreenerVersionId(Long screenerVersionId) {
+    public List<ScreenerParamset> findByScreenerVersionId(UUID screenerVersionId) {
         return repository.findByScreenerVersionId(screenerVersionId);
     }
 
-    public Optional<ScreenerParamset> findByScreenerVersionIdAndName(Long screenerVersionId, String name) {
+    public Optional<ScreenerParamset> findByScreenerVersionIdAndName(UUID screenerVersionId, String name) {
         return repository.findByScreenerVersionIdAndName(screenerVersionId, name);
     }
 
-    public Optional<ScreenerParamset> findById(Long id) {
+    public Optional<ScreenerParamset> findById(UUID id) {
         return repository.findById(id);
     }
 
@@ -36,7 +37,7 @@ public class ScreenerParamsetService {
         return repository.save(paramset);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(UUID id) {
         repository.deleteById(id);
     }
 }

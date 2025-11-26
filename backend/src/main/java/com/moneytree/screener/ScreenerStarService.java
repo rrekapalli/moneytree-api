@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -21,15 +22,15 @@ public class ScreenerStarService {
         this.repository = repository;
     }
 
-    public List<ScreenerStar> findByScreenerId(Long screenerId) {
+    public List<ScreenerStar> findByScreenerId(UUID screenerId) {
         return repository.findByScreenerId(screenerId);
     }
 
-    public List<ScreenerStar> findByUserId(Long userId) {
+    public List<ScreenerStar> findByUserId(UUID userId) {
         return repository.findByUserId(userId);
     }
 
-    public Optional<ScreenerStar> findById(Long screenerId, Long userId) {
+    public Optional<ScreenerStar> findById(UUID screenerId, UUID userId) {
         return repository.findById(new ScreenerStarId(screenerId, userId));
     }
 
@@ -37,7 +38,7 @@ public class ScreenerStarService {
         return repository.save(star);
     }
 
-    public void deleteById(Long screenerId, Long userId) {
+    public void deleteById(UUID screenerId, UUID userId) {
         repository.deleteById(new ScreenerStarId(screenerId, userId));
     }
 }

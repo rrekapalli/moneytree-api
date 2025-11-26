@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/trade-logs")
@@ -21,7 +22,7 @@ public class PortfolioTradeLogController {
 
     @GetMapping
     public ResponseEntity<List<PortfolioTradeLog>> listTradeLogs(
-            @PathVariable Long portfolioId,
+            @PathVariable UUID portfolioId,
             @RequestParam(required = false) String symbol) {
         if (symbol != null) {
             return ResponseEntity.ok(service.findByPortfolioIdAndSymbol(portfolioId, symbol));
@@ -30,19 +31,19 @@ public class PortfolioTradeLogController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PortfolioTradeLog> getTradeLog(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<PortfolioTradeLog> getTradeLog(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<PortfolioTradeLog> createTradeLog(@PathVariable Long portfolioId, @RequestBody PortfolioTradeLog tradeLog) {
+    public ResponseEntity<PortfolioTradeLog> createTradeLog(@PathVariable UUID portfolioId, @RequestBody PortfolioTradeLog tradeLog) {
         return ResponseEntity.ok(service.save(tradeLog));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTradeLog(@PathVariable Long portfolioId, @PathVariable Integer id) {
+    public ResponseEntity<Void> deleteTradeLog(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

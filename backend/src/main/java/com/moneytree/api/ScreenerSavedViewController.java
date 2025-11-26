@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/screeners/{screenerId}/saved-views")
@@ -20,30 +21,30 @@ public class ScreenerSavedViewController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ScreenerSavedView>> listSavedViews(@PathVariable Long screenerId) {
+    public ResponseEntity<List<ScreenerSavedView>> listSavedViews(@PathVariable UUID screenerId) {
         return ResponseEntity.ok(service.findByScreenerId(screenerId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ScreenerSavedView> getSavedView(@PathVariable Long screenerId, @PathVariable Long id) {
+    public ResponseEntity<ScreenerSavedView> getSavedView(@PathVariable UUID screenerId, @PathVariable UUID id) {
         return service.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<ScreenerSavedView> createSavedView(@PathVariable Long screenerId, @RequestBody ScreenerSavedView savedView) {
+    public ResponseEntity<ScreenerSavedView> createSavedView(@PathVariable UUID screenerId, @RequestBody ScreenerSavedView savedView) {
         return ResponseEntity.ok(service.save(savedView));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ScreenerSavedView> updateSavedView(@PathVariable Long screenerId, @PathVariable Long id, @RequestBody ScreenerSavedView savedView) {
+    public ResponseEntity<ScreenerSavedView> updateSavedView(@PathVariable UUID screenerId, @PathVariable UUID id, @RequestBody ScreenerSavedView savedView) {
         savedView.setSavedViewId(id);
         return ResponseEntity.ok(service.save(savedView));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSavedView(@PathVariable Long screenerId, @PathVariable Long id) {
+    public ResponseEntity<Void> deleteSavedView(@PathVariable UUID screenerId, @PathVariable UUID id) {
         service.deleteById(id);
         return ResponseEntity.noContent().build();
     }

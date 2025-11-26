@@ -27,8 +27,8 @@ public class PortfolioCashFlow {
     @Column(name = "flow_type", nullable = false, length = 20)
     private String flowType; // DEPOSIT, WITHDRAWAL, DIVIDEND, INTEREST, FEES, TAX
 
-    @Column(name = "reference_txn_id")
-    private Long referenceTxnId;
+    @Column(name = "reference_txn_id", columnDefinition = "uuid")
+    private UUID referenceTxnId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -74,11 +74,11 @@ public class PortfolioCashFlow {
         this.flowType = flowType;
     }
 
-    public Long getReferenceTxnId() {
+    public UUID getReferenceTxnId() {
         return referenceTxnId;
     }
 
-    public void setReferenceTxnId(Long referenceTxnId) {
+    public void setReferenceTxnId(UUID referenceTxnId) {
         this.referenceTxnId = referenceTxnId;
     }
 
