@@ -24,4 +24,21 @@ The application expects `kite_*` tables (for example `kite_candles`) to be prese
 
 `backend/src/main/resources/db/V1__kite_schema_placeholder.sql` documents this expectation. Actual DDL for these tables should be managed by the central database/migrations project for MoneyTree.
 
+## Modules and endpoints overview
+
+- `com.moneytree.connectivity.kite`  
+  - Handles Kite API configuration (`KiteConfig`) and HTTP calls (`KiteHttpClient`).
+
+- `com.moneytree.marketdata.kite`  
+  - Repository (`KiteMarketDataRepository`) for `kite_*` tables.  
+  - Service (`KiteMarketDataService`) exposing history and quotes operations.
+
+- `com.moneytree.api`  
+  - `MarketDataController` – `/api/marketdata/kite/...` endpoints.  
+  - `PortfolioController` – `/api/portfolio`.  
+  - `ScreenerController` – `/api/screeners`.  
+  - `BacktestController` – `/api/backtests`.  
+  - `SignalController` – `/api/signals`.
+
+
 

@@ -132,9 +132,9 @@
 
 **Purpose**: Improvements that affect multiple user stories and overall quality.
 
-- [ ] T035 [P] Add developer documentation for Kite and non-NSE domain modules and endpoints in `backend/README.md` and `specs/001-kite-modulith-api/quickstart.md`
+- [X] T035 [P] Add developer documentation for Kite and non-NSE domain modules and endpoints in `backend/README.md` and `specs/001-kite-modulith-api/quickstart.md`
 - [ ] T036 Refine error messages and response payloads for consistency across Kite-backed and non-NSE CRUD endpoints in `backend/src/main/java/com/moneytree/api/`
-- [ ] T037 [P] Add additional unit tests for edge cases (e.g., missing data, spikes) in `backend/src/test/java/com/moneytree/marketdata/kite/` and domain-specific test packages
+- [X] T037 [P] Add additional unit tests for edge cases (e.g., missing data, spikes) in `backend/src/test/java/com/moneytree/marketdata/kite/` and domain-specific test packages
 - [ ] T038 [P] Run end-to-end validation using quickstart flows and record results in `specs/001-kite-modulith-api/quickstart.md`
 
 ---
