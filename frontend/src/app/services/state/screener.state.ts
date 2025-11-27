@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest, map, tap, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ScreenerApiService } from '../apis/screener.api';
 import { QueryConverterService } from 'querybuilder';
 import {
@@ -141,27 +142,32 @@ export class ScreenerStateService {
 
   // API actions
   loadScreeners(params: ScreenerListParams = {}): Observable<PageResp<ScreenerResp>> {
+    // Ensure we return a valid response even if API fails
     this.setLoading(true);
     this.setError(null);
 
     return this.screenerApi.listScreeners(params).pipe(
       tap(response => {
         this.updateState({
-          screeners: response.content,
+          screeners: response?.content || [],
           pagination: {
-            page: response.page,
-            size: response.size,
-            totalElements: response.totalElements,
-            totalPages: response.totalPages
+            page: response?.page || 0,
+            size: response?.size || 25,
+            totalElements: response?.totalElements || 0,
+            totalPages: response?.totalPages || 0
           },
           loading: false
         });
       }),
-      tap({
-        error: (error) => {
-          this.setError('Failed to load screeners');
-          this.setLoading(false);
-        }
+      catchError((error) => {
+        this.setError('Failed to load screeners');
+        this.setLoading(false);
+        // Ensure arrays are set to empty on error
+        this.updateState({
+          screeners: [],
+          loading: false
+        });
+        return throwError(() => error);
       })
     );
   }
@@ -173,15 +179,19 @@ export class ScreenerStateService {
     return this.screenerApi.listMyScreeners().pipe(
       tap(screeners => {
         this.updateState({
-          myScreeners: screeners,
+          myScreeners: screeners || [],
           loading: false
         });
       }),
-      tap({
-        error: (error) => {
-          this.setError('Failed to load my screeners');
-          this.setLoading(false);
-        }
+      catchError((error) => {
+        this.setError('Failed to load my screeners');
+        this.setLoading(false);
+        // Ensure arrays are set to empty on error
+        this.updateState({
+          myScreeners: [],
+          loading: false
+        });
+        return throwError(() => error);
       })
     );
   }
@@ -193,15 +203,19 @@ export class ScreenerStateService {
     return this.screenerApi.listPublicScreeners().pipe(
       tap(screeners => {
         this.updateState({
-          publicScreeners: screeners,
+          publicScreeners: screeners || [],
           loading: false
         });
       }),
-      tap({
-        error: (error) => {
-          this.setError('Failed to load public screeners');
-          this.setLoading(false);
-        }
+      catchError((error) => {
+        this.setError('Failed to load public screeners');
+        this.setLoading(false);
+        // Ensure arrays are set to empty on error
+        this.updateState({
+          publicScreeners: [],
+          loading: false
+        });
+        return throwError(() => error);
       })
     );
   }
@@ -213,15 +227,19 @@ export class ScreenerStateService {
     return this.screenerApi.getStarredScreeners().pipe(
       tap(screeners => {
         this.updateState({
-          starredScreeners: screeners,
+          starredScreeners: screeners || [],
           loading: false
         });
       }),
-      tap({
-        error: (error) => {
-          this.setError('Failed to load starred screeners');
-          this.setLoading(false);
-        }
+      catchError((error) => {
+        this.setError('Failed to load starred screeners');
+        this.setLoading(false);
+        // Ensure arrays are set to empty on error
+        this.updateState({
+          starredScreeners: [],
+          loading: false
+        });
+        return throwError(() => error);
       })
     );
   }

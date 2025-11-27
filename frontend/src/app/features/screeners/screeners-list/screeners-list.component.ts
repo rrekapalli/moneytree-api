@@ -71,23 +71,23 @@ export class ScreenersListComponent implements OnInit, OnDestroy {
 
   // Summary statistics
   get totalScreeners(): number {
-    return this.screeners.length;
+    return this.screeners?.length || 0;
   }
 
   get activeScreeners(): number {
-    return this.screeners.length; // Assuming all screeners are active for now
+    return this.screeners?.length || 0; // Assuming all screeners are active for now
   }
 
   get publicScreenersCount(): number {
-    return this.screeners.filter(s => s.isPublic).length;
+    return this.screeners?.filter(s => s.isPublic).length || 0;
   }
 
   get privateScreeners(): number {
-    return this.screeners.filter(s => !s.isPublic).length;
+    return this.screeners?.filter(s => !s.isPublic).length || 0;
   }
 
   get starredScreenersCount(): number {
-    return this.starredScreeners.length;
+    return this.starredScreeners?.length || 0;
   }
   
   visibilityOptions = [
@@ -132,13 +132,19 @@ export class ScreenersListComponent implements OnInit, OnDestroy {
       this.screenerState.pagination$
     ]).pipe(takeUntil(this.destroy$))
     .subscribe(([screeners, myScreeners, publicScreeners, starredScreeners, loading, error, pagination]) => {
-      this.screeners = screeners;
-      this.myScreeners = myScreeners;
-      this.publicScreeners = publicScreeners;
-      this.starredScreeners = starredScreeners;
+      // Ensure arrays are never undefined - use empty array as fallback
+      this.screeners = screeners || [];
+      this.myScreeners = myScreeners || [];
+      this.publicScreeners = publicScreeners || [];
+      this.starredScreeners = starredScreeners || [];
       this.loading = loading;
       this.error = error;
-      this.pagination = pagination;
+      this.pagination = pagination || {
+        page: 0,
+        size: 25,
+        totalElements: 0,
+        totalPages: 0
+      };
       
       // Mark data as loaded when we're not loading and have received the first response
       if (!loading) {
@@ -201,6 +207,12 @@ export class ScreenersListComponent implements OnInit, OnDestroy {
   }
 
   updateFilteredScreeners(): void {
+    // Ensure screeners array exists before filtering
+    if (!this.screeners) {
+      this.filteredScreeners = [];
+      return;
+    }
+    
     let filtered = [...this.screeners];
 
     if (this.searchQuery) {
