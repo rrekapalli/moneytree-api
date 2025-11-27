@@ -7,7 +7,7 @@ import { Indicator, IndicatorQuery, IndicatorResponse } from '../entities/indica
   providedIn: 'root'
 })
 export class IndicatorsService {
-  private readonly endpoint = '/api/v1/indicators';
+  private readonly endpoint = '/v1/indicators';
 
   constructor(private apiService: ApiService) {}
 

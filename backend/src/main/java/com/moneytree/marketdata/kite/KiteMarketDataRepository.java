@@ -36,7 +36,7 @@ public class KiteMarketDataRepository {
                 SELECT date, open, high, low, close, volume, candle_interval
                 FROM kite_ohlcv_historic
                 WHERE instrument_token = ?
-                  AND exchange = 'NSE'
+                  AND exchange IN ('NSE')
                   AND date >= ?
                   AND date <= ?
                   AND candle_interval = ?
@@ -45,23 +45,74 @@ public class KiteMarketDataRepository {
         return jdbcTemplate.queryForList(sql, instrumentToken, from, to, interval);
     }
 
+    private String normalizeSymbol(String symbol) {
+        if (symbol == null) {
+            return "";
+        }
+        return symbol.toUpperCase().replaceAll("[^A-Z0-9]", "");
+    }
+
+    /**
+     * List instruments by exchange and segment filters.
+     */
+    public List<Map<String, Object>> getInstrumentsByExchangeAndSegment(String exchange, String segment) {
+        String normalizedExchange = exchange != null && !exchange.isBlank() ? exchange.trim().toUpperCase() : null;
+        String normalizedSegment = segment != null && !segment.isBlank() ? segment.trim().toUpperCase() : null;
+
+        log.debug("Listing instruments by exchange={}, segment={}", normalizedExchange, normalizedSegment);
+
+        String sql = """
+                SELECT instrument_token, exchange_token, tradingsymbol, name, last_price,
+                       expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
+                FROM kite_instrument_master
+                WHERE ( ? IS NULL
+                        OR UPPER(exchange) = ?
+                        OR (? = 'NSE' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX'))
+                        OR (? = 'NSE_INDEX' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX')) )
+                  AND ( ? IS NULL OR UPPER(segment) = ? )
+                ORDER BY
+                    CASE WHEN UPPER(segment) = 'INDICES' THEN 0 ELSE 1 END,
+                    CASE WHEN UPPER(exchange) IN ('NSE', 'NSE_INDEX') THEN 0 ELSE 1 END,
+                    name
+                """;
+
+        return jdbcTemplate.queryForList(
+                sql,
+                normalizedExchange, normalizedExchange,
+                normalizedExchange, normalizedExchange,
+                normalizedSegment, normalizedSegment
+        );
+    }
+
     /**
      * Get instrument info by name from kite_instrument_master
      */
     public Map<String, Object> getInstrumentByName(String name) {
         log.debug("Getting instrument by name: {}", name);
-        // Try exact match first, then case-insensitive, then partial match
+        String normalized = normalizeSymbol(name);
         String sql = """
                 SELECT instrument_token, exchange_token, tradingsymbol, name, last_price,
                        expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
                 FROM kite_instrument_master
-                WHERE (UPPER(name) = UPPER(?) OR UPPER(tradingsymbol) = UPPER(?))
-                  AND exchange = 'NSE'
-                  AND segment = 'INDICES'
-                ORDER BY CASE WHEN UPPER(name) = UPPER(?) THEN 1 ELSE 2 END
+                WHERE (
+                        UPPER(TRIM(name)) = UPPER(TRIM(?))
+                     OR UPPER(TRIM(tradingsymbol)) = UPPER(TRIM(?))
+                     OR REGEXP_REPLACE(UPPER(name), '[^A-Z0-9]', '', 'g') = ?
+                     OR REGEXP_REPLACE(UPPER(tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
+                  )
+                ORDER BY
+                    CASE WHEN UPPER(segment) = 'INDICES' THEN 0 ELSE 1 END,
+                    CASE WHEN UPPER(exchange) IN ('NSE', 'NSE_INDEX') THEN 0 ELSE 1 END,
+                    CASE WHEN UPPER(TRIM(tradingsymbol)) = UPPER(TRIM(?)) THEN 0 ELSE 1 END,
+                    CASE WHEN UPPER(TRIM(name)) = UPPER(TRIM(?)) THEN 0 ELSE 1 END
                 LIMIT 1
                 """;
-        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, name, name, name);
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(
+                sql,
+                name, name,
+                normalized, normalized,
+                name, name
+        );
         return results.isEmpty() ? null : results.get(0);
     }
 
@@ -71,21 +122,30 @@ public class KiteMarketDataRepository {
     public Map<String, Object> getPreviousDayData(String tradingsymbol) {
         log.debug("Getting previous day data for tradingsymbol: {}", tradingsymbol);
         // Get the most recent day's data before today
+        String normalized = normalizeSymbol(tradingsymbol);
         String sql = """
                 SELECT o.date, o.open, o.high, o.low, o.close, o.volume,
                        m.name, m.tradingsymbol, m.last_price
                 FROM kite_ohlcv_historic o
                 JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
                     AND o.exchange = m.exchange
-                WHERE (UPPER(m.tradingsymbol) = UPPER(?) OR UPPER(m.name) = UPPER(?))
-                  AND o.exchange = 'NSE'
-                  AND m.segment = 'INDICES'
+                WHERE (
+                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
+                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
+                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
+                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
+                  )
+                  AND o.exchange IN ('NSE', 'NSE_INDEX')
                   AND o.candle_interval = 'day'
                   AND o.date < CURRENT_DATE
                 ORDER BY o.date DESC
                 LIMIT 1
                 """;
-        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, tradingsymbol, tradingsymbol);
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(
+                sql,
+                tradingsymbol, tradingsymbol,
+                normalized, normalized
+        );
         return results.isEmpty() ? null : results.get(0);
     }
 
@@ -94,20 +154,30 @@ public class KiteMarketDataRepository {
      */
     public List<Map<String, Object>> getHistoricalData(String tradingsymbol, int days) {
         log.debug("Getting historical data for tradingsymbol: {}, days: {}", tradingsymbol, days);
+        String normalized = normalizeSymbol(tradingsymbol);
         String sql = """
                 SELECT o.date, o.open, o.high, o.low, o.close, o.volume,
                        m.name, m.tradingsymbol
                 FROM kite_ohlcv_historic o
                 JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
                     AND o.exchange = m.exchange
-                WHERE (UPPER(m.tradingsymbol) = UPPER(?) OR UPPER(m.name) = UPPER(?))
-                  AND o.exchange = 'NSE'
-                  AND m.segment = 'INDICES'
+                WHERE (
+                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
+                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
+                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
+                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
+                  )
+                  AND o.exchange IN ('NSE', 'NSE_INDEX')
                   AND o.candle_interval = 'day'
                   AND o.date >= CURRENT_DATE - (? || ' days')::interval
                 ORDER BY o.date DESC
                 """;
-        return jdbcTemplate.queryForList(sql, tradingsymbol, tradingsymbol, String.valueOf(days));
+        return jdbcTemplate.queryForList(
+                sql,
+                tradingsymbol, tradingsymbol,
+                normalized, normalized,
+                String.valueOf(days)
+        );
     }
 
     /**
@@ -133,6 +203,33 @@ public class KiteMarketDataRepository {
                 LIMIT 100
                 """;
         return jdbcTemplate.queryForList(sql);
+    }
+
+    /**
+     * Fetch stocks by filters on kite_instrument_master.
+     */
+    public List<Map<String, Object>> getStocksByFilters(String exchange, String segment, String instrumentType) {
+        log.debug("Getting stocks by exchange={}, segment={}, instrumentType={}", exchange, segment, instrumentType);
+
+        String sql = """
+                SELECT instrument_token, tradingsymbol, name, segment, exchange, instrument_type,
+                       last_price, lot_size, tick_size
+                FROM kite_instrument_master
+                WHERE ( ? IS NULL OR UPPER(exchange) = UPPER(?)
+                        OR (? = 'NSE' AND UPPER(exchange) IN ('NSE', 'NSE_EQ'))
+                        OR (? = 'NSE_EQ' AND UPPER(exchange) IN ('NSE', 'NSE_EQ')) )
+                  AND ( ? IS NULL OR UPPER(segment) = UPPER(?) )
+                  AND ( ? IS NULL OR UPPER(instrument_type) = UPPER(?) )
+                ORDER BY tradingsymbol
+                """;
+
+        return jdbcTemplate.queryForList(
+                sql,
+                exchange, exchange,
+                exchange, exchange,
+                segment, segment,
+                instrumentType, instrumentType
+        );
     }
 
     /**

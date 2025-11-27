@@ -7,7 +7,7 @@ import {StockDataDto, StockTicksDto, StockTicksResponseDto} from '../entities/st
   providedIn: 'root'
 })
 export class StockTicksService {
-  private readonly endpoint = '/api/v1/stock-ticks';
+  private readonly endpoint = '/v1/stock-ticks';
 
   constructor(private apiService: ApiService) {}
 
@@ -64,4 +64,5 @@ export class StockTicksService {
   getNiftyITStockTicks(): Observable<StockTicksDto> {
     return this.getStockTicks('NIFTY IT');
   }
+
 }

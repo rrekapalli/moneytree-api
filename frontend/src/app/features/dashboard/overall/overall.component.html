@@ -17,7 +17,8 @@
       [widgets]="dashboardConfig.widgets" 
       [options]="dashboardConfig.config"
       [dashboardId]="dashboardConfig.dashboardId"
-      (filterValuesChanged)="onFilterValuesChanged($event)">
+      (filterValuesChanged)="onFilterValuesChanged($event)"
+      (onStockDoubleClicked)="onIndexDoubleClicked($event)">
     </vis-dashboard-container>
   </div>
 </p-scrollPanel>

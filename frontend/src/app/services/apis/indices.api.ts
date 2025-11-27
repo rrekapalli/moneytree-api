@@ -10,9 +10,9 @@ import { IndicesDto } from '../entities/indices-websocket';
   providedIn: 'root'
 })
 export class IndicesService {
-  private readonly endpoint = '/api/v1/index';
-  private readonly publicEndpoint = '/api/public/indices';
-  private readonly stockEndpoint = '/api/v1/indices';
+  private readonly endpoint = '/v1/index';
+  private readonly publicEndpoint = '/public/indices';
+  private readonly stockEndpoint = '/v1/indices';
 
   // In-flight request de-duplication and short-term cache for previous-day API
   private previousDayRequests = new Map<string, Observable<IndicesDto>>();
@@ -76,6 +76,15 @@ export class IndicesService {
   }
 
   /**
+   * Lists indices for a specific exchange and segment
+   * @param exchange Exchange name (default NSE)
+   * @param segment Segment name (default INDICES)
+   */
+  getIndicesByExchangeSegment(exchange: string = 'NSE', segment: string = 'INDICES'): Observable<IndexResponseDto[]> {
+    return this.apiService.get<IndexResponseDto[]>(`${this.endpoint}/exchange/${exchange}/segment/${segment}`);
+  }
+
+  /**
    * Gets previous day's indices data for a specific index
    * @param indexName The name of the index to retrieve previous day's data for
    * @returns An Observable of the indices data for the previous day
@@ -125,9 +134,14 @@ export class IndicesService {
   /**
    * Gets historical data for a given index name
    * @param indexName The name of the index to retrieve historical data for
+   * @param days Number of days to retrieve (defaults to 365)
    * @returns An Observable of index historical data array
    */
-  getIndexHistoricalData(indexName: string): Observable<IndexHistoricalData[]> {
-    return this.apiService.get<IndexHistoricalData[]>(`${this.endpoint}/${indexName}/historical-data`);
+  getIndexHistoricalData(indexName: string, days: number = 365): Observable<IndexHistoricalData[]> {
+    const payload = {
+      indexName,
+      days
+    };
+    return this.apiService.post<IndexHistoricalData[]>(`${this.endpoint}/historical-data`, payload);
   }
 }

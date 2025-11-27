@@ -7,7 +7,7 @@ import { NseEquity } from '../entities/nse-equity';
   providedIn: 'root'
 })
 export class NseEquityService {
-  private readonly endpoint = '/api/v1/nse-equities';
+  private readonly endpoint = '/v1/nse-equities';
 
   constructor(private apiService: ApiService) {}
 

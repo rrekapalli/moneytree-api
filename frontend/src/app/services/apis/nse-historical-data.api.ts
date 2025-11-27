@@ -8,7 +8,7 @@ import { NseEquityHistoricDataId } from '../entities/nse-historical-data-id';
   providedIn: 'root'
 })
 export class NseEquityHistoricDataService {
-  private readonly endpoint = '/api/v1/nse-historical-data';
+  private readonly endpoint = '/v1/nse-historical-data';
 
   constructor(private apiService: ApiService) {}
 

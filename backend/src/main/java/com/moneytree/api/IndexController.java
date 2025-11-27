@@ -1,5 +1,6 @@
 package com.moneytree.api;
 
+import com.moneytree.api.dto.IndexHistoricalRequest;
 import com.moneytree.marketdata.kite.KiteMarketDataRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,7 +11,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import jakarta.validation.Valid;
 
 import java.util.HashMap;
 import java.util.List;
@@ -135,24 +143,30 @@ public class IndexController {
         }
     }
 
-    @GetMapping("/index/{indexName}/historical-data")
+    @PostMapping("/index/historical-data")
     @Operation(summary = "Get index historical data", description = "Retrieve historical OHLCV data for an index from kite_ohlcv_historic")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Successfully retrieved historical data"),
+        @ApiResponse(responseCode = "400", description = "Invalid request payload"),
         @ApiResponse(responseCode = "404", description = "Index not found")
     })
     public ResponseEntity<?> getIndexHistoricalData(
-            @Parameter(description = "Index name", required = true, example = "NIFTY 50")
-            @PathVariable String indexName,
-            @Parameter(description = "Number of days to retrieve", example = "365")
-            @RequestParam(defaultValue = "365") int days) {
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Historical data request payload", required = true)
+            @Valid @RequestBody IndexHistoricalRequest request) {
         try {
-            String tradingsymbol = mapIndexNameToTradingsymbol(indexName);
+            if (request == null || request.getIndexName() == null || request.getIndexName().isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "indexName is required"));
+            }
+
+            int days = request.getDays() == null || request.getDays() <= 0 ? 365 : request.getDays();
+
+            String tradingsymbol = mapIndexNameToTradingsymbol(request.getIndexName());
             List<Map<String, Object>> historicalData = repository.getHistoricalData(tradingsymbol, days);
             
             if (historicalData.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Historical data not found for: " + indexName));
+                    .body(Map.of("error", "Historical data not found for: " + request.getIndexName()));
             }
             
             // Map to IndexHistoricalData format expected by frontend
@@ -172,10 +186,53 @@ public class IndexController {
             
             return ResponseEntity.ok(response);
         } catch (Exception ex) {
-            log.error("Error getting historical data for index: {}", indexName, ex);
+            log.error("Error getting historical data for index: {}", request != null ? request.getIndexName() : "unknown", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Internal error fetching historical data"));
         }
     }
+
+    @GetMapping("/index/exchange/{exchange}/segment/{segment}")
+    @Operation(summary = "List indices by exchange and segment", description = "Retrieve indices filtered by exchange and segment from kite_instrument_master")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved indices")
+    })
+    public ResponseEntity<?> getIndicesByExchangeAndSegment(
+            @Parameter(description = "Exchange name", example = "NSE")
+            @PathVariable String exchange,
+            @Parameter(description = "Segment name", example = "INDICES")
+            @PathVariable String segment) {
+        try {
+            String effectiveExchange = (exchange == null || exchange.isBlank()) ? "NSE" : exchange;
+            String effectiveSegment = (segment == null || segment.isBlank()) ? "INDICES" : segment;
+
+            List<Map<String, Object>> instruments = repository.getInstrumentsByExchangeAndSegment(
+                    effectiveExchange,
+                    effectiveSegment
+            );
+
+            // Map to IndexResponseDto-like structure
+            List<Map<String, Object>> response = instruments.stream()
+                    .map(instrument -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("id", String.valueOf(instrument.getOrDefault("instrument_token", "")));
+                        item.put("indexName", instrument.getOrDefault("name", instrument.get("tradingsymbol")));
+                        item.put("indexSymbol", instrument.getOrDefault("tradingsymbol", instrument.get("name")));
+                        item.put("lastPrice", instrument.getOrDefault("last_price", 0));
+                        item.put("keyCategory", "Index");
+                        item.put("createdAt", java.time.Instant.now().toString());
+                        item.put("updatedAt", java.time.Instant.now().toString());
+                        return item;
+                    })
+                    .toList();
+
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            log.error("Error listing indices for exchange {} segment {}", exchange, segment, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Internal error listing indices"));
+        }
+    }
+
 }
 

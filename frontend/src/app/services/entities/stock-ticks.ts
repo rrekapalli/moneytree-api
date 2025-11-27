@@ -52,6 +52,8 @@ export interface MetaDto {
 export interface StockDataDto {
     priority?: number;
     symbol?: string;
+    id?: string;
+    tradingsymbol?: string;
     identifier?: string;
     series?: string;
     openPrice?: number;

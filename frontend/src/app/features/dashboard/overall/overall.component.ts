@@ -140,12 +140,12 @@ import { BaseDashboardComponent, IFilterValues } from '@dashboards/public-api';
 import { ComponentCommunicationService, SelectedIndexData } from '../../../services/component-communication.service';
 
 // Import stock ticks service and entities
-import { StockTicksService } from '../../../services/apis/stock-ticks.api';
 import {StockDataDto, StockTicksDto} from '../../../services/entities/stock-ticks';
 
 // Import indices service and historical data entities
 import { IndicesService } from '../../../services/apis/indices.api';
 import { IndexHistoricalData } from '../../../services/entities/index-historical-data';
+import { IndexResponseDto } from '../../../services/entities/indices';
 
 // Import NSE Indices service and entities
 
@@ -157,7 +157,7 @@ import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/we
  * Filter criteria interface for centralized filtering system
  */
 interface FilterCriteria {
-  type: 'industry' | 'sector' | 'symbol' | 'custom' | 'macro';
+  type: 'industry' | 'sector' | 'symbol' | 'custom' | 'macro' | 'tradingsymbol';
   field: string; // The field name in StockDataDto to filter on
   value: string | number; // The value to filter by
   operator?: 'equals' | 'contains' | 'greaterThan' | 'lessThan'; // Comparison operator
@@ -225,7 +225,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   private historicalData: IndexHistoricalData[] = [];
   
   // Selected time range for candlestick chart
-  private selectedTimeRange: string = '1Y';
+  private selectedTimeRange: string = 'YTD';
 
   // WebSocket connection state tracking
   private isWebSocketConnected: boolean = false;
@@ -244,7 +244,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     excelExportService: ExcelExportService,
     filterService: FilterService,
     private componentCommunicationService: ComponentCommunicationService,
-    private stockTicksService: StockTicksService,
     private indicesService: IndicesService,
     private webSocketService: WebSocketService
 
@@ -362,33 +361,28 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.subscribedTopics.clear();
   }
 
+  private indicesLoaded = false;
+
   private loadDefaultNifty50Data(): void {
-    this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
-    
-    // Try to get actual NIFTY 50 data from the indices service
-    this.indicesService.getIndexByName('NIFTY 50').subscribe({
-      next: (indexResponse) => {
-        if (indexResponse && indexResponse.lastPrice !== undefined && indexResponse.lastPrice !== null) {
-          // Use actual data from the service
-          const defaultNifty50Data: SelectedIndexData = {
-            id: 'NIFTY50',
-            symbol: 'NIFTY 50',
-            name: 'NIFTY 50',
-            lastPrice: indexResponse.lastPrice || 0,
-            variation: indexResponse.variation || 0,
-            percentChange: indexResponse.percentChange || 0,
-            keyCategory: 'Index'
-          };
-          
-          this.updateDashboardWithSelectedIndex(defaultNifty50Data);
-        } else {
-          // Fallback to hardcoded data if service doesn't return valid data
+    if (this.indicesLoaded && this.dashboardData.length > 0) {
+      this.setDefaultIndexFromData(this.dashboardData);
+      return;
+    }
+
+    this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').subscribe({
+      next: (indices) => {
+        const mappedData = this.mapIndicesToStockData(indices || []);
+        if (mappedData.length === 0) {
           this.loadDefaultNifty50DataFallback();
+          return;
         }
+
+        this.updateIndexListData(mappedData);
+        this.indicesLoaded = true;
+        this.setDefaultIndexFromData(mappedData);
       },
       error: (error) => {
-        console.warn('Failed to get NIFTY 50 data from service, using fallback:', error);
-        // Fallback to hardcoded data if service fails
+        console.warn('Failed to list indices, using fallback:', error);
         this.loadDefaultNifty50DataFallback();
       }
     });
@@ -409,30 +403,85 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.updateDashboardWithSelectedIndex(defaultNifty50Data);
   }
 
-  private loadStockTicksData(indexSymbol: string): void {
-    if (indexSymbol && indexSymbol.trim()) {
-      this.stockTicksService.getStockTicksByIndex(indexSymbol).subscribe({
-        next: (stockTicksData: StockDataDto[]) => {
-          this.dashboardData = stockTicksData || [];
-          this.appliedFilters = [];
-          this.filteredDashboardData = this.dashboardData;
+  private mapIndicesToStockData(indices: IndexResponseDto[]): StockDataDto[] {
+    return indices.map(index => ({
+      tradingsymbol: index.indexSymbol || index.indexName || 'N/A',
+      symbol: index.indexSymbol || index.indexName || 'N/A',
+      companyName: index.indexName || index.indexSymbol || 'Unknown Index',
+      lastPrice: index.lastPrice || 0,
+      percentChange: (index as any).percentChange || 0,
+      totalTradedValue: 0,
+      sector: 'Indices',
+      industry: 'Indices'
+    }));
+  }
 
-          this.updateMetricTilesWithFilters([]);
-          this.populateWidgetsWithInitialData();
-          this.updateAllChartsWithFilteredData();
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.dashboardData = [];
-          this.filteredDashboardData = [];
-          this.appliedFilters = [];
-          
-          this.updateMetricTilesWithFilters([]);
-          this.updateAllChartsWithFilteredData();
-          this.cdr.detectChanges();
-        }
-      });
+  private updateIndexListData(data: StockDataDto[]): void {
+    this.initialDashboardData.length = 0;
+    this.initialDashboardData.push(...data);
+
+    this.dashboardData = [...data];
+    this.filteredDashboardData = [...data];
+    this.appliedFilters = [];
+
+    this.updateStockListWithFilteredData();
+    this.updateMetricTilesWithFilters([]);
+    this.cdr.detectChanges();
+  }
+
+  private setDefaultIndexFromData(data: StockDataDto[]): void {
+    this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
+
+    const targetIndex = data.find(
+      index => index.companyName?.toUpperCase().includes('NIFTY 50') ||
+        index.tradingsymbol?.toUpperCase().includes('NIFTY 50')
+    ) || (data.length > 0 ? data[0] : null);
+
+    if (!targetIndex) {
+      this.loadDefaultNifty50DataFallback();
+      return;
     }
+
+    const defaultNifty50Data: SelectedIndexData = {
+      id: targetIndex.id || targetIndex.tradingsymbol || 'NIFTY50',
+      symbol: targetIndex.tradingsymbol || targetIndex.symbol || 'NIFTY 50',
+      name: targetIndex.companyName || targetIndex.tradingsymbol || 'NIFTY 50',
+      lastPrice: targetIndex.lastPrice || 0,
+      variation: (targetIndex as any).variation || 0,
+      percentChange: targetIndex.percentChange || 0,
+      keyCategory: 'Index'
+    };
+
+    this.updateDashboardWithSelectedIndex(defaultNifty50Data);
+  }
+
+  /**
+   * Handle double-click events from the Index List widget.
+   * Loads the selected index into the dashboard and refreshes the candlestick chart.
+   */
+  public onIndexDoubleClicked(selectedIndex: any): void {
+    if (!selectedIndex) {
+      return;
+    }
+
+    const symbol = selectedIndex.tradingsymbol || selectedIndex.symbol;
+    const name = selectedIndex.companyName || selectedIndex.name || symbol;
+
+    if (!symbol && !name) {
+      return;
+    }
+
+    const selectedIndexData: SelectedIndexData = {
+      id: selectedIndex.id || symbol || name,
+      symbol: symbol || name,
+      name: name || symbol,
+      lastPrice: selectedIndex.lastPrice || 0,
+      variation: selectedIndex.variation || selectedIndex.priceChange || 0,
+      percentChange: selectedIndex.percentChange || selectedIndex.changePercent || 0,
+      keyCategory: 'Index'
+    };
+
+    this.updateDashboardWithSelectedIndex(selectedIndexData);
   }
 
   /**
@@ -443,7 +492,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     if (indexName && indexName.trim()) {
       this.indicesService.getIndexHistoricalData(indexName).subscribe({
         next: (historicalData: IndexHistoricalData[]) => {
-          this.historicalData = historicalData || [];
+          this.historicalData = this.normalizeHistoricalData(historicalData || []);
           this.updateCandlestickChartWithHistoricalData();
           this.cdr.detectChanges();
         },
@@ -455,6 +504,21 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       });
     }
+  }
+
+  /**
+   * Normalize historical data to ensure dates and numeric fields are usable by charts.
+   */
+  private normalizeHistoricalData(data: IndexHistoricalData[]): IndexHistoricalData[] {
+    return data.map(item => ({
+      ...item,
+      date: item.date ? item.date.replace(' ', 'T') : item.date,
+      open: Number(item.open) || 0,
+      high: Number(item.high) || 0,
+      low: Number(item.low) || 0,
+      close: Number(item.close) || 0,
+      volume: Number(item.volume) || 0
+    }));
   }
 
   /**
@@ -511,12 +575,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Transform the selected index data to dashboard data format
     const dashboardDataRow = this.componentCommunicationService.transformToDashboardData(selectedIndex);
     
-    // Add the new data to the existing dashboard data
-    // First, remove any existing data for the same symbol to avoid duplicates
-    this.dashboardData = this.dashboardData.filter(row => row.symbol !== dashboardDataRow.symbol);
-    
-    // Add the new data row
-    this.dashboardData = [dashboardDataRow, ...this.dashboardData];
+    // Remove duplicates and insert latest selection to top for display
+    this.dashboardData = [
+      dashboardDataRow,
+      ...this.dashboardData.filter(row => row.symbol !== dashboardDataRow.symbol)
+    ];
     
     // Set initial selected index data for immediate display
     this.currentSelectedIndexData = {
@@ -526,11 +589,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       variation: selectedIndex.variation || 0,
       percentChange: selectedIndex.percentChange || 0
     };
-    
-    // Fetch stock ticks data for the selected index
-    // Extract symbol from selectedIndex object
-    const indexSymbol = selectedIndex.symbol;
-    this.loadStockTicksData(indexSymbol);
     
     // Load historical data for the selected index
     const indexName = selectedIndex.name || selectedIndex.symbol;
@@ -751,65 +809,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected initializeDashboardConfig(): void {
-    // Stock Industry Horizontal Bar Chart
-    const barStockIndustry = HorizontalBarChartBuilder.create()
-        .setData(this.filteredDashboardData || []) // Start with current filtered data or empty array
-        .setHeader('Industry')
-        .setCurrencyFormatter('INR', 'en-US')
-        .setPredefinedPalette('business')
-        .setTooltip('item', (params: any) => {
-          const formatter = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'INR'
-          });
-          return `${params.name}: ${formatter.format(params.value)}`;
-        })
-        .setAccessor('industry')
-        .setFilterColumn('industry', FilterBy.Value)
-        .setEvents((widget, chart) => {
-          if (chart) {
-            chart.off('click');
-            chart.on('click', (params: any) => {
-              params.event?.stop?.();
-              const industryName = params.name || (params.data && params.data.name);
-              if (industryName && typeof industryName === 'string' && isNaN(Number(industryName))) {
-                this.filterChartsByIndustry(industryName);
-              }
-              return false;
-            });
-          }
-        })
-        .setId('industry-bar-chart')
-        .setSkipDefaultFiltering(true)
-        .build();
-    
-    // Stock Sector Allocation Pie Chart with financial display
-    const pieStockSector = PieChartBuilder.create()
-      .setData(this.filteredDashboardData) // Use filtered data for consistent filtering
-      .setHeader('Sector Allocation')
-      .setShowLegend(false)
-      .setDonutStyle('40%', '70%')
-      .setFinancialDisplay('INR', 'en-US')
-      .setPredefinedPalette('finance')
-      .setAccessor('sector')
-      .setFilterColumn('sector', FilterBy.Value)
-      .setEvents((widget, chart) => {
-          if (chart) {
-            chart.off('click');
-            chart.on('click', (params: any) => {
-              params.event?.stop?.();
-              const sectorName = params.name || (params.data && params.data.name);
-              if (sectorName && typeof sectorName === 'string' && isNaN(Number(sectorName))) {
-                this.filterChartsBySector(sectorName);
-              }
-              return false;
-            });
-        }
-      })
-      .setId('sector-pie-chart')
-      .setSkipDefaultFiltering(true)
-      .build();
-
     // Stock Price Candlestick Chart - Enhanced with volume bars and timeline legend
     const candlestickChart = CandlestickChartBuilder.create()
       .setData([]) // Use empty array initially, will be populated with historical data
@@ -834,7 +833,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       .enableBrush()  // Enable brush selection for technical analysis
       .setLargeMode(100)  // Enable large mode for datasets with 100+ points
       .setTooltipType('axis')  // Enable crosshair tooltip for better analysis
-      .enableTimeRangeFilters(['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'], '1Y')  // Enable time range filters with 1Y as default
+      .enableTimeRangeFilters(['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'], 'YTD')  // Enable time range filters with YTD as default
       .enableAreaSeries(true, 0.4)  // Enable area series with close price data and higher opacity
       .setAreaSeriesOpacity(0.5)  // Set area series opacity to 50% for better visibility
       .enableVolume(false)  // Disable volume bars to avoid dual-axis issues
@@ -1031,11 +1030,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const stockListWidget = StockListChartBuilder.create()
       .setData(this.filteredDashboardData)
       .setStockPerformanceConfiguration()
-      .setHeader('Stock List')
+      .setHeader('Index List')
       .setCurrencyFormatter('INR', 'en-IN')
       .setPredefinedPalette('finance')
-      .setAccessor('symbol')
-      .setFilterColumn('symbol', FilterBy.Value)
+      .setAccessor('tradingsymbol')
+      .setFilterColumn('tradingsymbol', FilterBy.Value)
       .setId('stock-list-widget')
       .build();
 
@@ -1046,12 +1045,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     filterWidget.position = { x: 0, y: 2, cols: 12, rows: 1 };
 
     // Position charts with proper spacing - adjusted candlestick chart height for time range filters
-    candlestickChart.position = { x: 0, y: 3, cols: 8, rows: 12 }; // Increased height for time range filters
-    stockListWidget.position = { x: 8, y: 3, cols: 4, rows: 16 };
+    stockListWidget.position = { x: 0, y: 3, cols: 4, rows: 16 };
+    candlestickChart.position = { x: 4, y: 3, cols: 8, rows: 16 };
 
-    barStockIndustry.position = { x: 0, y: 15, cols: 4, rows: 8 }; // Moved down to accommodate larger candlestick chart
-    pieStockSector.position = { x: 4, y: 15, cols: 4, rows: 8 }; // Moved down to accommodate larger candlestick chart
-    
     // Use the Fluent API to build the dashboard config with filter highlighting enabled
     this.dashboardConfig = StandardDashboardBuilder.createStandard()
       .setDashboardId('overall-dashboard')
@@ -1066,10 +1062,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         ...metricTiles,
         filterWidget,
 
-        barStockIndustry,
-        pieStockSector,
-        candlestickChart,
         stockListWidget,
+        candlestickChart,
       ])
       .setEditMode(false)
       .build();
@@ -1241,12 +1235,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     // Detect chart type and provide appropriate data
     switch (widgetTitle) {
-      case 'Sector Allocation':
-        // This is a pie chart - provide asset allocation data
-        return this.groupByAndSum(this.filteredDashboardData || this.dashboardData, 'sector', 'totalTradedValue');
-      case 'Industry':
-        // This is a pie chart - provide asset allocation data
-        return this.groupByAndSum(this.filteredDashboardData || this.dashboardData, 'industry', 'totalTradedValue');
       case 'Portfolio Distribution':
         // This is a pie chart - provide asset allocation data
         return this.groupByAndSum(this.filteredDashboardData || this.dashboardData, 'industry', 'totalTradedValue');
@@ -1280,7 +1268,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
             stock.dayLow || 0,
             stock.dayHigh || 0
           ]);
-          const xAxisLabels = stockData.map(stock => stock.symbol || 'Unknown');
+          const xAxisLabels = stockData.map(stock => stock.tradingsymbol || stock.symbol || 'Unknown');
           return {
             data: candlestickData,
             xAxisLabels: xAxisLabels
@@ -1298,65 +1286,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const sourceData = data || this.filteredDashboardData || this.dashboardData;
 
     switch (widgetTitle) {
-      case 'Sector Allocation':
-        // Use stock ticks data grouped by sector with totalTradedValue
-        if (!sourceData) {
-          return [];
-        }
-        
-        // Group by sector and sum totalTradedValue
-        const sectorData = sourceData.reduce((acc, stock) => {
-          const sector = stock.sector || 'Unknown';
-          const tradedValue = stock.totalTradedValue || 0;
-          
-          if (!acc[sector]) {
-            acc[sector] = 0;
-          }
-          acc[sector] += tradedValue;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        // Transform to pie chart format
-        return Object.entries(sectorData).map(([sector, value]) => ({
-          name: sector,
-          value: value
-        })).sort((a, b) => b.value - a.value);
-        
-      case 'Industry':
-        // Use stock ticks data grouped by industry with totalTradedValue
-        if (!sourceData) {
-          return [];
-        }
-        
-        // Group by industry and sum totalTradedValue
-        const industryData = sourceData.reduce((acc, stock) => {
-          const industry = stock.industry || 'Unknown';
-          const tradedValue = stock.totalTradedValue || 0;
-          
-          if (!acc[industry]) {
-            acc[industry] = 0;
-          }
-          acc[industry] += tradedValue;
-          return acc;
-        }, {} as Record<string, number>);
-        
-        // Business color palette for individual bars
-        const businessColors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'];
-        
-        // Transform to bar chart format with individual colors and descending sort
-        return Object.entries(industryData)
-          .map(([industry, value]) => ({
-            name: industry,
-            value: value
-          }))
-          .sort((a, b) => b.value - a.value)
-          .map((item, index) => ({
-            ...item,
-            itemStyle: {
-              color: businessColors[index % businessColors.length]
-            }
-          }));
-        
       case 'Portfolio Distribution':
         // Use stock ticks data with macro, industry, and sector hierarchy
         if (!sourceData) {
@@ -1457,7 +1386,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
                 // Fall back to symbol if date parsing fails
               }
             }
-            return stock.symbol || 'Unknown';
+            return stock.tradingsymbol || stock.symbol || 'Unknown';
           });
           
           return {
@@ -1670,7 +1599,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       case 'industry': return 'Industry';
       case 'sector': return 'Sector';
       case 'macro': return 'Macro';
-      case 'symbol': return 'Symbol';
+      case 'symbol':
+      case 'tradingsymbol':
+        return 'Symbol';
       default: return field.charAt(0).toUpperCase() + field.slice(1);
     }
   }
@@ -1827,11 +1758,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           operator: 'equals',
           source: 'Filter Widget'
         });
-      } else if (filter.filterColumn === 'symbol' && categoryName && 
+      } else if (filter.filterColumn === 'tradingsymbol' && categoryName && 
                  typeof categoryName === 'string' && isNaN(Number(categoryName))) {
         newAppliedFilters.push({
-          type: 'symbol',
-          field: 'symbol',
+          type: 'tradingsymbol',
+          field: 'tradingsymbol',
           value: categoryName,
           operator: 'equals',
           source: 'Filter Widget'
@@ -1857,14 +1788,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
     
     this.chartUpdateTimer = setTimeout(() => {
-      this.updateBarChartWithFilteredData();
-      this.updatePieChartWithFilteredData();
-      // Use historical data for candlestick chart if available, otherwise use filtered data
-      if (this.historicalData.length > 0) {
-        this.updateCandlestickChartWithHistoricalData();
-      } else {
-        this.updateCandlestickChartWithFilteredData();
-      }
+      this.updateCandlestickChartWithHistoricalData();
       this.updateStockListWithFilteredData();
       
       // Update metric tiles with filtered data
@@ -1873,185 +1797,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.cdr.detectChanges();
       this.chartUpdateTimer = null;
     }, 150); // Increased delay and debounce to reduce chart reinitialization
-  }
-
-  private filterChartsByIndustry(industry: string): void {
-    if (!this.dashboardData || this.dashboardData.length === 0 || 
-        typeof industry !== 'string' || !isNaN(Number(industry))) {
-      return;
-    }
-
-    const availableIndustries = [...new Set(this.dashboardData.map(s => s.industry))];
-    if (!availableIndustries.includes(industry)) {
-      return;
-    }
-
-    this.addFilter({
-      type: 'industry',
-      field: 'industry',
-      value: industry,
-      operator: 'equals',
-      source: 'Industry Chart'
-    });
-  }
-
-  private filterChartsBySector(sector: string): void {
-    if (!this.dashboardData || this.dashboardData.length === 0 || 
-        typeof sector !== 'string' || !isNaN(Number(sector))) {
-      return;
-    }
-
-    const availableSectors = [...new Set(this.dashboardData.map(s => s.sector))];
-    if (!availableSectors.includes(sector)) {
-      return;
-    }
-
-    this.addFilter({
-      type: 'sector',
-      field: 'sector',
-      value: sector,
-      operator: 'equals',
-      source: 'Sector Chart'
-    });
-  }
-
-  /**
-   * Filter charts by macro category (called when treemap is clicked)
-   */
-  private filterChartsByMacro(macro: string): void {
-    if (!this.dashboardData || this.dashboardData.length === 0) return;
-
-    // Use centralized filter system
-    this.addFilter({
-      type: 'macro',
-      field: 'macro',
-      value: macro,
-      operator: 'equals',
-      source: 'Treemap Chart'
-    });
-  }
-
-  private filterChartsBySymbol(symbol: string): void {
-    if (!this.dashboardData || this.dashboardData.length === 0 || 
-        typeof symbol !== 'string' || !isNaN(Number(symbol))) {
-      return;
-    }
-
-    const availableSymbols = [...new Set(this.dashboardData.map(s => s.symbol))];
-    if (!availableSymbols.includes(symbol)) {
-      return;
-    }
-
-    this.addFilter({
-      type: 'symbol',
-      field: 'symbol',
-      value: symbol,
-      operator: 'equals',
-      source: 'Candlestick Chart'
-    });
-  }
-
-  private updatePieChartWithFilteredData(): void {
-    if (!this.dashboardConfig?.widgets || !this.filteredDashboardData) {
-      return;
-    }
-
-    const pieWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Sector Allocation'
-    );
-
-    if (pieWidget) {
-      const sectorData = this.filteredDashboardData.reduce((acc, stock) => {
-        const sector = stock.sector || 'Unknown';
-        if (!acc[sector]) {
-          acc[sector] = 0;
-        }
-        acc[sector] += stock.totalTradedValue || 0;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const pieData = Object.entries(sectorData)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-      
-      try {
-        PieChartBuilder.updateData(pieWidget, pieData);
-        
-        if (pieWidget.chartInstance && typeof pieWidget.chartInstance.setOption === 'function') {
-          const newOptions = {
-            ...pieWidget.config?.options,
-            series: [{
-              ...((pieWidget.config?.options as any)?.series?.[0] || {}),
-              data: pieData
-            }]
-          };
-          pieWidget.chartInstance.setOption(newOptions, true);
-        }
-        
-        this.updateEchartWidget(pieWidget, pieData);
-      } catch (error) {
-        // Silent error handling
-      }
-    }
-  }
-
-  private updateBarChartWithFilteredData(): void {
-    if (!this.dashboardConfig?.widgets || !this.filteredDashboardData) {
-      return;
-    }
-
-    const barWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Industry'
-    );
-
-    if (barWidget) {
-      const industryData = this.filteredDashboardData.reduce((acc, stock) => {
-        const industry = stock.industry || 'Unknown';
-        if (!acc[industry]) {
-          acc[industry] = 0;
-        }
-        acc[industry] += stock.totalTradedValue || 0;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const businessColors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'];
-      
-      const barData = Object.entries(industryData)
-        .map(([industry, value]) => ({
-          name: industry,
-          value: value
-        }))
-        .sort((a, b) => b.value - a.value)
-        .map((item, index) => ({
-          ...item,
-          itemStyle: {
-            color: businessColors[index % businessColors.length]
-          }
-        }));
-      
-      try {
-        HorizontalBarChartBuilder.updateData(barWidget, barData);
-        
-        if (barWidget.chartInstance && typeof barWidget.chartInstance.setOption === 'function') {
-          const newOptions = {
-            ...barWidget.config?.options,
-            series: [{
-              ...((barWidget.config?.options as any)?.series?.[0] || {}),
-              data: barData
-            }],
-            yAxis: {
-              ...((barWidget.config?.options as any)?.yAxis || {}),
-              data: barData.map(item => item.name)
-            }
-          };
-          barWidget.chartInstance.setOption(newOptions, true);
-        }
-        
-        this.updateEchartWidget(barWidget, barData);
-      } catch (error) {
-        // Silent error handling
-      }
-    }
   }
 
   /**
@@ -2075,131 +1820,125 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     if (!this.dashboardConfig?.widgets) return;
 
     const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Index Historical Price Movement with Volume'
+      widget.config?.header?.title === 'Index Historical Price Movement'
     );
 
-    if (candlestickWidget && this.historicalData.length > 0) {
-      // Safely dispose of existing chart instance to prevent reinitialization errors
-      this.safelyDisposeChartInstance(candlestickWidget);
-      
-      // Use CandlestickChartBuilder.updateData to properly update the chart with volume data
-      CandlestickChartBuilder.updateData(candlestickWidget, this.historicalData);
-      
-      // Also update the widget's config options for consistency
-      if (candlestickWidget.config?.options) {
-        const options = candlestickWidget.config.options as any;
-        
-        // Update X-axis labels (single-axis configuration)
-        if (options.xAxis) {
-          const xAxisLabels = this.historicalData.map(item => {
-            const date = new Date(item.date);
-            return date.toISOString().split('T')[0];
-          });
-          
-          // Single-axis configuration
-          options.xAxis.data = xAxisLabels;
-        }
-        
-        // Update series data (without volume)
-        if (options.series && options.series[0]) {
-          const candlestickData = this.historicalData.map(item => [
-            item.open,
-            item.close,
-            item.low,
-            item.high
-          ]);
-          options.series[0].data = candlestickData;
-        }
-      }
-      
-      // Force chart refresh if chart instance exists
-      if (candlestickWidget.chartInstance && typeof candlestickWidget.chartInstance.setOption === 'function') {
-        setTimeout(() => {
-          if (candlestickWidget.chartInstance && typeof candlestickWidget.chartInstance.resize === 'function') {
-            candlestickWidget.chartInstance.resize();
-          }
-        }, 100);
-      }
+    if (!candlestickWidget) {
+      return;
     }
+
+    if (!this.historicalData || this.historicalData.length === 0) {
+      this.clearCandlestickChart();
+      return;
+    }
+
+    const filteredData = this.filterHistoricalDataByTimeRange(this.selectedTimeRange);
+    this.applyCandlestickData(candlestickWidget, filteredData);
+  }
+
+  private clearCandlestickChart(): void {
+    if (!this.dashboardConfig?.widgets) return;
+    const candlestickWidget = this.dashboardConfig.widgets.find(widget =>
+      widget.config?.header?.title === 'Index Historical Price Movement'
+    );
+    if (!candlestickWidget) return;
+
+    this.applyCandlestickData(candlestickWidget, []);
   }
 
   /**
-   * Update candlestick chart with filtered data (fallback to stock data)
+   * Apply candlestick data to the widget and update its ECharts options.
    */
-  private updateCandlestickChartWithFilteredData(): void {
-    if (!this.dashboardConfig?.widgets || !this.filteredDashboardData) return;
+  private applyCandlestickData(widget: IWidget, dataset: IndexHistoricalData[]): void {
+    const candlestickData = dataset.map(item => [
+      Number(item.open) || 0,
+      Number(item.close) || 0,
+      Number(item.low) || 0,
+      Number(item.high) || 0
+    ]);
 
-    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Index Historical Price Movement with Volume'
-    );
+    const closeSeriesData = dataset.map(item => Number(item.close) || 0);
+    const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
 
-    if (candlestickWidget) {
-      // Safely dispose of existing chart instance to prevent reinitialization errors
-      this.safelyDisposeChartInstance(candlestickWidget);
-      // Create candlestick data from filtered stock data (without volume since stock data doesn't have volume)
-      const candlestickData = this.filteredDashboardData.map(stock => [
-        stock.openPrice || 0,
-        stock.lastPrice || 0,
-        stock.dayLow || 0,
-        stock.dayHigh || 0
-      ]);
-      
-      // Create X-axis labels (symbols or dates if available)
-      const xAxisLabels = this.filteredDashboardData.map(stock => {
-        // Try to use lastUpdateTime if available, otherwise fall back to symbol
-        if (stock.lastUpdateTime) {
-          try {
-            const date = new Date(stock.lastUpdateTime);
-            if (!isNaN(date.getTime())) {
-              return date.toISOString().split('T')[0];
-            }
-          } catch (e) {
-            // Fall back to symbol if date parsing fails
-          }
-        }
-        return stock.symbol || 'Unknown';
-      });
-      
-      // Update the widget with new data and X-axis labels
-      this.updateEchartWidget(candlestickWidget, candlestickData);
-      
-      // Update X-axis labels and chart options if chart instance exists
-      if (candlestickWidget.chartInstance && typeof candlestickWidget.chartInstance.setOption === 'function') {
-        const currentOptions = candlestickWidget.chartInstance.getOption();
-        const newOptions = {
-          ...currentOptions,
-          xAxis: {
-            ...((currentOptions as any)?.xAxis || {}),
-            data: xAxisLabels
-          },
-          series: [{
-            ...((currentOptions as any)?.series?.[0] || {}),
-            data: candlestickData
-          }]
-        };
-        
-        // Apply the new options
-        candlestickWidget.chartInstance.setOption(newOptions, true);
-        
-        // Force a resize to ensure proper rendering
-        setTimeout(() => {
-          if (candlestickWidget.chartInstance && typeof candlestickWidget.chartInstance.resize === 'function') {
-            candlestickWidget.chartInstance.resize();
-          }
-        }, 100);
-      }
-      
-      // Also update the widget's config options for consistency
-      if (candlestickWidget.config?.options) {
-        const options = candlestickWidget.config.options as any;
-        if (options.xAxis) {
-          options.xAxis.data = xAxisLabels;
-        }
-        if (options.series && options.series[0]) {
-          options.series[0].data = candlestickData;
-        }
-      }
+    const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, closeSeriesData, xAxisData);
+
+    widget.data = dataset;
+
+    if (widget.config) {
+      widget.config.options = updatedOptions;
+    } else {
+      widget.config = { options: updatedOptions };
     }
+
+    if (widget.chartInstance && typeof widget.chartInstance.setOption === 'function') {
+      widget.chartInstance.setOption(updatedOptions, true);
+      setTimeout(() => widget.chartInstance?.resize?.(), 50);
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  private buildUpdatedCandlestickOptions(
+    widget: IWidget,
+    candlestickData: number[][],
+    closeSeriesData: number[],
+    xAxisData: string[]
+  ): any {
+    const baseOptions: any = (widget.chartInstance?.getOption?.() || widget.config?.options || {});
+    const options = { ...baseOptions };
+
+    // Update x-axis labels (first axis only)
+    if (Array.isArray(options.xAxis)) {
+      options.xAxis = options.xAxis.map((axis: any, index: number) =>
+        index === 0 ? { ...axis, data: xAxisData } : axis
+      );
+    } else if (options.xAxis) {
+      options.xAxis = { ...options.xAxis, data: xAxisData };
+    } else {
+      options.xAxis = [{ type: 'category', data: xAxisData }];
+    }
+
+    // Update series data (candlestick and area series if present)
+    if (Array.isArray(options.series)) {
+      options.series = options.series.map((series: any) => {
+        if (series?.type === 'candlestick') {
+          return {
+            ...series,
+            data: candlestickData
+          };
+        }
+
+        if (series?.type === 'line') {
+          return {
+            ...series,
+            data: closeSeriesData
+          };
+        }
+
+        return series;
+      });
+    } else {
+      options.series = [{
+        type: 'candlestick',
+        data: candlestickData
+      }];
+    }
+
+    return options;
+  }
+
+  private formatHistoricalDate(dateValue?: string): string {
+    if (!dateValue) {
+      return '';
+    }
+
+    const normalized = dateValue.replace(' ', 'T');
+    const date = new Date(normalized);
+    if (isNaN(date.getTime())) {
+      return dateValue;
+    }
+
+    return date.toISOString().split('T')[0];
   }
 
   /**
@@ -2758,7 +2497,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     // Filter data based on date range
     return this.historicalData.filter(item => {
-      const itemDate = new Date(item.date);
+      const itemDate = item.date ? new Date(item.date) : new Date();
       return itemDate >= startDate && itemDate <= endDate;
     });
   }

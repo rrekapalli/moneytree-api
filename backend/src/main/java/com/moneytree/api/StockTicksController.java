@@ -1,5 +1,6 @@
 package com.moneytree.api;
 
+import com.moneytree.api.dto.StockFilterRequest;
 import com.moneytree.marketdata.kite.KiteMarketDataRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -10,9 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +77,8 @@ public class StockTicksController {
             List<Map<String, Object>> stockTicks = repository.getStockTicksByIndex(tradingsymbol);
             
             if (stockTicks.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Stock ticks not found for index: " + indexName));
+                log.warn("Stock ticks not found for index {}, returning empty list", indexName);
+                return ResponseEntity.ok(Collections.emptyList());
             }
             
             // Map to StockDataDto format expected by frontend
@@ -99,6 +106,36 @@ public class StockTicksController {
             log.error("Error getting stock ticks for index: {}", indexName, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Internal error fetching stock ticks"));
+        }
+    }
+
+    @PostMapping("/")
+    @Operation(summary = "List stocks by filters", description = "Retrieve stocks from kite_instrument_master with optional filters")
+    public ResponseEntity<?> getStocks(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Stock filter request payload")
+            @RequestBody(required = false) StockFilterRequest request) {
+        try {
+            String exchange = request != null ? request.getExchange() : null;
+            String segment = request != null ? request.getSegment() : null;
+            String instrumentType = request != null ? request.getInstrumentType() : null;
+
+            // Defaults
+            if (exchange == null || exchange.isBlank()) {
+                exchange = "NSE";
+            }
+            if (segment == null || segment.isBlank()) {
+                segment = "NSE";
+            }
+            if (instrumentType == null || instrumentType.isBlank()) {
+                instrumentType = "EQ";
+            }
+
+            List<Map<String, Object>> stocks = repository.getStocksByFilters(exchange, segment, instrumentType);
+            return ResponseEntity.ok(stocks);
+        } catch (Exception ex) {
+            log.error("Error retrieving stocks by filters", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal error fetching stocks"));
         }
     }
 }

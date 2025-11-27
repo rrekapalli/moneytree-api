@@ -7,7 +7,7 @@ import { Stock } from '../entities/stock';
   providedIn: 'root'
 })
 export class StockService {
-  private readonly endpoint = '/api/v1/stock';
+  private readonly endpoint = '/v1/stock';
 
   constructor(private apiService: ApiService) {}
 
