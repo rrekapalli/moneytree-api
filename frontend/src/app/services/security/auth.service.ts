@@ -185,7 +185,13 @@ export class AuthService {
     localStorage.removeItem('auth_token');
     this.currentUserSubject.next(null);
     this.isAuthenticatedSubject.next(false);
-    this.router.navigate(['/login']);
+    
+    // AUTHENTICATION DISABLED - Don't redirect to login
+    // TODO: Re-enable redirect by uncommenting the line below when authentication is needed
+    // this.router.navigate(['/login']);
+    
+    // Instead, redirect to dashboard when authentication is disabled
+    this.router.navigate(['/dashboard']);
   }
 
   getToken(): string | null {

@@ -82,11 +82,12 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   constructor(private portfolioApiService: PortfolioApiService) {}
 
   ngOnInit(): void {
-    // Check if user has a valid token
-    if (!this.hasValidToken()) {
-      this.goToLogin();
-      return;
-    }
+    // AUTHENTICATION DISABLED - Skip token check
+    // TODO: Re-enable authentication check by uncommenting below when authentication is needed
+    // if (!this.hasValidToken()) {
+    //   this.goToLogin();
+    //   return;
+    // }
     
     this.loadPortfolios();
   }
@@ -401,7 +402,12 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   }
 
   goToLogin(): void {
-    window.location.href = '/login';
+    // AUTHENTICATION DISABLED - Redirect to dashboard instead
+    // TODO: Re-enable login redirect by uncommenting below when authentication is needed
+    // window.location.href = '/login';
+    
+    // Redirect to dashboard when authentication is disabled
+    window.location.href = '/dashboard';
   }
 
 

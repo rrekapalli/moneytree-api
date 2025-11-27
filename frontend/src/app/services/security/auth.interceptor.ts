@@ -84,10 +84,14 @@ function handle401Error(request: HttpRequest<unknown>, next: HttpHandlerFn): Obs
       catchError((error) => {
         isRefreshing = false;
         refreshTokenSubject.next(null);
-        // Clear invalid token and redirect to login
+        // Clear invalid token
         localStorage.removeItem('auth_token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        
+        // AUTHENTICATION DISABLED - Don't redirect to login
+        // TODO: Re-enable redirect by uncommenting the line below when authentication is needed
+        // window.location.href = '/login';
+        
         return throwError(() => error);
       })
     );
