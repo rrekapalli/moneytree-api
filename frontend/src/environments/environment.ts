@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8080',
+  apiUrl: '/api',
   enginesApiUrl: 'http://localhost:8081/engines',
   enginesWebSocketUrl: 'ws://localhost:8081/engines',
   enginesHttpUrl: 'http://localhost:8081/engines', // HTTP URL for SockJS connections
