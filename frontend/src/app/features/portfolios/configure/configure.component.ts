@@ -112,7 +112,7 @@ export class PortfolioConfigureComponent implements OnInit {
   ngOnChanges(): void {
     if (this.selectedPortfolio) {
       // Check if this is a new portfolio (creation mode)
-      this.isCreationMode = this.selectedPortfolio.id === 0;
+      this.isCreationMode = !this.selectedPortfolio.id || this.selectedPortfolio.id === '';
       // Create a deep copy for editing
       this.editingPortfolio = { ...this.selectedPortfolio };
       
@@ -122,7 +122,7 @@ export class PortfolioConfigureComponent implements OnInit {
       }
 
       // Load holdings for existing portfolios
-      if (!this.isCreationMode && this.selectedPortfolio.id > 0) {
+      if (!this.isCreationMode && this.selectedPortfolio.id && this.selectedPortfolio.id !== '') {
         this.loadPortfolioHoldings(this.selectedPortfolio.id);
       }
     } else {
@@ -134,7 +134,7 @@ export class PortfolioConfigureComponent implements OnInit {
   }
 
   // Load portfolio holdings
-  loadPortfolioHoldings(portfolioId: number): void {
+  loadPortfolioHoldings(portfolioId: string): void {
     this.isLoadingHoldings = true;
     this.portfolioApiService.getHoldings(portfolioId).subscribe({
       next: (holdings) => {
@@ -434,7 +434,7 @@ export class PortfolioConfigureComponent implements OnInit {
 
   // Add selected stock to portfolio using PUT endpoint
   addSelectedStock(): void {
-    if (!this.selectedStock || !this.editingPortfolio || this.editingPortfolio.id <= 0) {
+    if (!this.selectedStock || !this.editingPortfolio || !this.editingPortfolio.id || this.editingPortfolio.id === '') {
       return;
     }
 
@@ -483,7 +483,7 @@ export class PortfolioConfigureComponent implements OnInit {
 
   // Refresh holdings data
   refreshHoldings(): void {
-    if (this.editingPortfolio && this.editingPortfolio.id > 0) {
+    if (this.editingPortfolio && this.editingPortfolio.id && this.editingPortfolio.id !== '') {
       this.loadPortfolioHoldings(this.editingPortfolio.id);
     }
   }
@@ -530,7 +530,7 @@ export class PortfolioConfigureComponent implements OnInit {
           baseCurrency: this.editingPortfolio.baseCurrency,
           riskProfile: this.editingPortfolio.riskProfile,
           isActive: true,
-          userId: parseInt(currentUser.id, 10) // Convert string ID to number
+          userId: currentUser.id // User ID is now a string (UUID)
         };
 
 

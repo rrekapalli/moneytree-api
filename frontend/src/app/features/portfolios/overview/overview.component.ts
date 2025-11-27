@@ -53,7 +53,7 @@ export class PortfolioOverviewComponent {
   @Output() goToLogin = new EventEmitter<void>();
 
   // Track function for ngFor
-  trackPortfolioById(index: number, portfolio: PortfolioWithMetrics): number {
+  trackPortfolioById(index: number, portfolio: PortfolioWithMetrics): string {
     return portfolio.id;
   }
 

@@ -1,8 +1,8 @@
 // Screener Entities and DTOs
 
 export interface Screener {
-  screenerId: number;
-  ownerUserId: number;
+  screenerId: string;
+  ownerUserId: string;
   name: string;
   description?: string;
   isPublic: boolean;
@@ -20,8 +20,8 @@ export interface ScreenerCreateReq {
 }
 
 export interface ScreenerResp {
-  screenerId: number;
-  ownerUserId: number;
+  screenerId: string;
+  ownerUserId: string;
   name: string;
   description?: string;
   isPublic: boolean;
@@ -32,8 +32,8 @@ export interface ScreenerResp {
 }
 
 export interface ScreenerVersion {
-  screenerVersionId: number;
-  screenerId: number;
+  screenerVersionId: string;
+  screenerId: string;
   versionNumber: number;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   engine: 'SQL' | 'DSL' | 'EXPR';
@@ -52,8 +52,8 @@ export interface ScreenerVersionCreateReq {
 }
 
 export interface ScreenerVersionResp {
-  screenerVersionId: number;
-  screenerId: number;
+  screenerVersionId: string;
+  screenerId: string;
   versionNumber: number;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   engine: 'SQL' | 'DSL' | 'EXPR';
@@ -64,11 +64,11 @@ export interface ScreenerVersionResp {
 }
 
 export interface ScreenerParamset {
-  paramsetId: number;
-  screenerVersionId: number;
+  paramsetId: string;
+  screenerVersionId: string;
   name: string;
   paramsJson: any;
-  createdByUserId: number;
+  createdByUserId: string;
   createdAt: string;
 }
 
@@ -78,17 +78,17 @@ export interface ParamsetCreateReq {
 }
 
 export interface ParamsetResp {
-  paramsetId: number;
-  screenerVersionId: number;
+  paramsetId: string;
+  screenerVersionId: string;
   name: string;
   paramsJson: any;
-  createdByUserId: number;
+  createdByUserId: string;
   createdAt: string;
 }
 
 export interface ScreenerSchedule {
-  scheduleId: number;
-  screenerId: number;
+  scheduleId: string;
+  screenerId: string;
   cronExpr: string;
   timezone: string;
   isEnabled: boolean;
@@ -102,8 +102,8 @@ export interface ScheduleCreateReq {
 }
 
 export interface ScheduleResp {
-  scheduleId: number;
-  screenerId: number;
+  scheduleId: string;
+  screenerId: string;
   cronExpr: string;
   timezone: string;
   isEnabled: boolean;
@@ -111,8 +111,8 @@ export interface ScheduleResp {
 }
 
 export interface ScreenerAlert {
-  alertId: number;
-  screenerId: number;
+  alertId: string;
+  screenerId: string;
   conditionJson: any;
   deliveryChannels: string[];
   isEnabled: boolean;
@@ -126,8 +126,8 @@ export interface AlertCreateReq {
 }
 
 export interface AlertResp {
-  alertId: number;
-  screenerId: number;
+  alertId: string;
+  screenerId: string;
   conditionJson: any;
   deliveryChannels: string[];
   isEnabled: boolean;
@@ -135,10 +135,10 @@ export interface AlertResp {
 }
 
 export interface ScreenerRun {
-  screenerRunId: number;
-  screenerId: number;
-  screenerVersionId: number;
-  paramsetId?: number;
+  screenerRunId: string;
+  screenerId: string;
+  screenerVersionId: string;
+  paramsetId?: string;
   paramsJson?: any;
   universeSnapshot?: number[];
   runForTradingDay: string;
@@ -147,23 +147,23 @@ export interface ScreenerRun {
   finishedAt?: string;
   totals?: any;
   errorMessage?: string;
-  triggeredByUserId: number;
+  triggeredByUserId: string;
   createdAt: string;
 }
 
 export interface RunCreateReq {
-  screenerVersionId: number;
-  paramsetId?: number;
+  screenerVersionId: string;
+  paramsetId?: string;
   paramsJson?: any;
   runForTradingDay: string;
   universeSymbolIds?: number[];
 }
 
 export interface RunResp {
-  screenerRunId: number;
-  screenerId: number;
-  screenerVersionId: number;
-  paramsetId?: number;
+  screenerRunId: string;
+  screenerId: string;
+  screenerVersionId: string;
+  paramsetId?: string;
   paramsJson?: any;
   universeSnapshot?: number[];
   runForTradingDay: string;
@@ -172,12 +172,12 @@ export interface RunResp {
   finishedAt?: string;
   totals?: any;
   errorMessage?: string;
-  triggeredByUserId: number;
+  triggeredByUserId: string;
   createdAt: string;
 }
 
 export interface ScreenerResult {
-  screenerRunId: number;
+  screenerRunId: string;
   symbol: string;
   matched: boolean;
   score0To1: number;
@@ -188,7 +188,7 @@ export interface ScreenerResult {
 }
 
 export interface ResultResp {
-  symbolId: number;
+  symbolId: string;
   matched: boolean;
   score0To1: number;
   rankInRun: number;
@@ -197,8 +197,8 @@ export interface ResultResp {
 }
 
 export interface ScreenerResultDiff {
-  screenerRunId: number;
-  prevScreenerRunId: number;
+  screenerRunId: string;
+  prevScreenerRunId: string;
   symbol: string;
   changeType: 'ADDED' | 'REMOVED' | 'RANK_CHANGED';
   prevRank?: number;
@@ -207,15 +207,15 @@ export interface ScreenerResultDiff {
 }
 
 export interface ResultDiffResp {
-  symbolId: number;
+  symbolId: string;
   changeType: 'ADDED' | 'REMOVED' | 'RANK_CHANGED';
   prevRank?: number;
   newRank?: number;
 }
 
 export interface ScreenerStar {
-  screenerId: number;
-  userId: number;
+  screenerId: string;
+  userId: string;
   createdAt: string;
 }
 
@@ -224,11 +224,11 @@ export interface StarToggleReq {
 }
 
 export interface ScreenerSavedView {
-  savedViewId: number;
-  screenerId: number;
+  savedViewId: string;
+  screenerId: string;
   name: string;
   tablePrefs: any;
-  createdByUserId: number;
+  createdByUserId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -239,11 +239,11 @@ export interface SavedViewCreateReq {
 }
 
 export interface SavedViewResp {
-  savedViewId: number;
-  screenerId: number;
+  savedViewId: string;
+  screenerId: string;
   name: string;
   tablePrefs: any;
-  createdByUserId: number;
+  createdByUserId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -258,7 +258,7 @@ export interface PageResp<T> {
 }
 
 export interface Symbol {
-  symbolId: number;
+  symbolId: string;
   symbol: string;
   name?: string;
   exchange?: string;
@@ -280,7 +280,7 @@ export interface RunListParams {
 export interface ResultListParams {
   matched?: boolean;
   minScore?: number;
-  symbolId?: number;
+  symbolId?: string;
   page?: number;
   size?: number;
   sort?: 'rank' | 'score';

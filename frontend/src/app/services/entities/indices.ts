@@ -3,7 +3,7 @@
  * Based on the Java Index entity from com.moneyplant.core.entities.Index
  */
 export interface Index {
-    id?: number;
+    id?: string;
     keyCategory?: string;
     indexName?: string;
     indexSymbol?: string;
@@ -78,7 +78,7 @@ export interface IndexCreateDto {
  * Interface for Index response (same as Index but ensures all fields are present)
  */
 export interface IndexResponseDto extends Index {
-    id: number;
+    id: string;
     createdAt: string;
     updatedAt: string;
 }

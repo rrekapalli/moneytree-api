@@ -237,7 +237,7 @@ export class ScreenersListComponent implements OnInit, OnDestroy {
     this.updateFilteredScreeners();
   }
 
-  trackScreenerById(_index: number, screener: ScreenerResp): number {
+  trackScreenerById(_index: number, screener: ScreenerResp): string {
     return screener.screenerId;
   }
 

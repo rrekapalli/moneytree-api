@@ -90,7 +90,7 @@ export class ScreenerFormComponent implements OnInit, OnDestroy {
    */
   private loadScreener(screenerId: string): void {
     this.loading = true;
-    this.screenerStateService.loadScreener(parseInt(screenerId))
+    this.screenerStateService.loadScreener(screenerId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (screener: ScreenerResp) => {

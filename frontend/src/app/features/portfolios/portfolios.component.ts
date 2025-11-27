@@ -150,7 +150,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   private createMockPortfolios(): PortfolioWithMetrics[] {
     const mockPortfolios: PortfolioDto[] = [
       {
-        id: 1,
+        id: '1',
         name: 'Tech Portfolio',
         description: 'Technology-focused growth portfolio with high-growth potential stocks',
         baseCurrency: 'INR',
@@ -159,7 +159,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         isActive: true
       },
       {
-        id: 2,
+        id: '2',
         name: 'Dividend Portfolio',
         description: 'Income-generating portfolio focused on dividend-paying stocks',
         baseCurrency: 'INR',
@@ -168,7 +168,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         isActive: true
       },
       {
-        id: 3,
+        id: '3',
         name: 'Momentum Portfolio',
         description: 'High-momentum trading portfolio with aggressive growth strategy',
         baseCurrency: 'INR',
@@ -337,7 +337,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   createPortfolio(): void {
     // Create a new empty portfolio for creation mode
     this.selectedPortfolio = {
-      id: 0, // Temporary ID for new portfolio
+      id: '', // Temporary ID for new portfolio
       name: '',
       description: '',
       baseCurrency: 'INR',
@@ -407,7 +407,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
 
   // Track function for ngFor
-  trackPortfolioById(index: number, portfolio: PortfolioWithMetrics): number {
+  trackPortfolioById(index: number, portfolio: PortfolioWithMetrics): string {
     return portfolio.id;
   }
 
@@ -534,13 +534,13 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
   // Methods for child component communication
   onSaveChanges(portfolio: PortfolioWithMetrics): void {
-    if (portfolio.id === 0) {
+    if (!portfolio.id || portfolio.id === '') {
       // This is a new portfolio creation
       // TODO: Implement API call to create portfolio
       // For now, simulate creation by adding to local array
       const newPortfolio = {
         ...portfolio,
-        id: Date.now(), // Generate a unique ID
+        id: Date.now().toString(), // Generate a unique ID
         inceptionDate: new Date().toISOString().split('T')[0]
       };
       this.portfolios.push(newPortfolio);

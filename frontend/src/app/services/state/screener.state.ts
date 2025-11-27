@@ -226,7 +226,7 @@ export class ScreenerStateService {
     );
   }
 
-  loadScreener(id: number): Observable<ScreenerResp> {
+  loadScreener(id: string): Observable<ScreenerResp> {
     this.setLoading(true);
     this.setError(null);
 
@@ -273,7 +273,7 @@ export class ScreenerStateService {
     );
   }
 
-  updateScreener(id: number, request: any): Observable<ScreenerResp> {
+  updateScreener(id: string, request: any): Observable<ScreenerResp> {
     // Validate criteria before API call
     const validationResult = this.validateScreenerRequest(request);
     if (!validationResult.isValid) {
@@ -308,7 +308,7 @@ export class ScreenerStateService {
     );
   }
 
-  deleteScreener(id: number): Observable<void> {
+  deleteScreener(id: string): Observable<void> {
     this.setLoading(true);
     this.setError(null);
 
@@ -336,7 +336,7 @@ export class ScreenerStateService {
     );
   }
 
-  loadScreenerVersions(screenerId: number): Observable<ScreenerVersionResp[]> {
+  loadScreenerVersions(screenerId: string): Observable<ScreenerVersionResp[]> {
     this.setLoading(true);
     this.setError(null);
 
@@ -356,7 +356,7 @@ export class ScreenerStateService {
     );
   }
 
-  loadScreenerRuns(screenerId: number, params: RunListParams = {}): Observable<PageResp<RunResp>> {
+  loadScreenerRuns(screenerId: string, params: RunListParams = {}): Observable<PageResp<RunResp>> {
     this.setLoading(true);
     this.setError(null);
 
@@ -382,7 +382,7 @@ export class ScreenerStateService {
     );
   }
 
-  loadRunResults(runId: number, params: ResultListParams = {}): Observable<PageResp<ResultResp>> {
+  loadRunResults(runId: string, params: ResultListParams = {}): Observable<PageResp<ResultResp>> {
     this.setLoading(true);
     this.setError(null);
 
@@ -408,7 +408,7 @@ export class ScreenerStateService {
     );
   }
 
-  toggleStar(screenerId: number, starred: boolean): Observable<void> {
+  toggleStar(screenerId: string, starred: boolean): Observable<void> {
     this.setLoading(true);
     this.setError(null);
 

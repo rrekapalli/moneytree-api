@@ -28,7 +28,7 @@ export class ScreenersOverviewComponent {
   @Output() deleteScreener = new EventEmitter<ScreenerResp>();
   @Output() toggleStar = new EventEmitter<ScreenerResp>();
 
-  trackScreenerById(index: number, screener: ScreenerResp): number {
+  trackScreenerById(index: number, screener: ScreenerResp): string {
     return screener.screenerId;
   }
 

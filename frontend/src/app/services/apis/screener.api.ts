@@ -36,19 +36,19 @@ export class ScreenerApiService {
 
   // Screener CRUD operations
   createScreener(request: ScreenerCreateReq): Observable<ScreenerResp> {
-    return this.apiService.post<ScreenerResp>('/api/screeners', request);
+    return this.apiService.post<ScreenerResp>('/screeners', request);
   }
 
-  getScreener(id: number): Observable<ScreenerResp> {
-    return this.apiService.get<ScreenerResp>(`/api/screeners/${id}`);
+  getScreener(id: string): Observable<ScreenerResp> {
+    return this.apiService.get<ScreenerResp>(`/screeners/${id}`);
   }
 
-  updateScreener(id: number, request: ScreenerCreateReq): Observable<ScreenerResp> {
-    return this.apiService.patch<ScreenerResp>(`/api/screeners/${id}`, request);
+  updateScreener(id: string, request: ScreenerCreateReq): Observable<ScreenerResp> {
+    return this.apiService.patch<ScreenerResp>(`/screeners/${id}`, request);
   }
 
-  deleteScreener(id: number): Observable<void> {
-    return this.apiService.delete<void>(`/api/screeners/${id}`);
+  deleteScreener(id: string): Observable<void> {
+    return this.apiService.delete<void>(`/screeners/${id}`);
   }
 
   listScreeners(params: ScreenerListParams = {}): Observable<PageResp<ScreenerResp>> {
@@ -59,117 +59,117 @@ export class ScreenerApiService {
     if (params.size !== undefined) httpParams = httpParams.set('size', params.size.toString());
     if (params.sort) httpParams = httpParams.set('sort', params.sort);
 
-    return this.apiService.get<PageResp<ScreenerResp>>('/api/screeners', httpParams);
+    return this.apiService.get<PageResp<ScreenerResp>>('/screeners', httpParams);
   }
 
   listMyScreeners(): Observable<ScreenerResp[]> {
-    return this.apiService.get<ScreenerResp[]>('/api/screeners/my');
+    return this.apiService.get<ScreenerResp[]>('/screeners/my');
   }
 
   listPublicScreeners(): Observable<ScreenerResp[]> {
-    return this.apiService.get<ScreenerResp[]>('/api/screeners/public');
+    return this.apiService.get<ScreenerResp[]>('/screeners/public');
   }
 
   // Screener Versions
-  createVersion(screenerId: number, request: ScreenerVersionCreateReq): Observable<ScreenerVersionResp> {
-    return this.apiService.post<ScreenerVersionResp>(`/api/screeners/${screenerId}/versions`, request);
+  createVersion(screenerId: string, request: ScreenerVersionCreateReq): Observable<ScreenerVersionResp> {
+    return this.apiService.post<ScreenerVersionResp>(`/screeners/${screenerId}/versions`, request);
   }
 
-  listVersions(screenerId: number): Observable<ScreenerVersionResp[]> {
-    return this.apiService.get<ScreenerVersionResp[]>(`/api/screeners/${screenerId}/versions`);
+  listVersions(screenerId: string): Observable<ScreenerVersionResp[]> {
+    return this.apiService.get<ScreenerVersionResp[]>(`/screeners/${screenerId}/versions`);
   }
 
-  getVersion(versionId: number): Observable<ScreenerVersionResp> {
-    return this.apiService.get<ScreenerVersionResp>(`/api/versions/${versionId}`);
+  getVersion(versionId: string): Observable<ScreenerVersionResp> {
+    return this.apiService.get<ScreenerVersionResp>(`/versions/${versionId}`);
   }
 
-  updateVersion(versionId: number, request: Partial<ScreenerVersionCreateReq>): Observable<ScreenerVersionResp> {
-    return this.apiService.patch<ScreenerVersionResp>(`/api/versions/${versionId}`, request);
+  updateVersion(versionId: string, request: Partial<ScreenerVersionCreateReq>): Observable<ScreenerVersionResp> {
+    return this.apiService.patch<ScreenerVersionResp>(`/versions/${versionId}`, request);
   }
 
   // Paramsets
-  createParamset(versionId: number, request: ParamsetCreateReq): Observable<ParamsetResp> {
-    return this.apiService.post<ParamsetResp>(`/api/versions/${versionId}/paramsets`, request);
+  createParamset(versionId: string, request: ParamsetCreateReq): Observable<ParamsetResp> {
+    return this.apiService.post<ParamsetResp>(`/versions/${versionId}/paramsets`, request);
   }
 
-  listParamsets(versionId: number): Observable<ParamsetResp[]> {
-    return this.apiService.get<ParamsetResp[]>(`/api/versions/${versionId}/paramsets`);
+  listParamsets(versionId: string): Observable<ParamsetResp[]> {
+    return this.apiService.get<ParamsetResp[]>(`/versions/${versionId}/paramsets`);
   }
 
-  deleteParamset(paramsetId: number): Observable<void> {
-    return this.apiService.delete<void>(`/api/paramsets/${paramsetId}`);
+  deleteParamset(paramsetId: string): Observable<void> {
+    return this.apiService.delete<void>(`/paramsets/${paramsetId}`);
   }
 
   // Schedules
-  createSchedule(screenerId: number, request: ScheduleCreateReq): Observable<ScheduleResp> {
-    return this.apiService.post<ScheduleResp>(`/api/screeners/${screenerId}/schedules`, request);
+  createSchedule(screenerId: string, request: ScheduleCreateReq): Observable<ScheduleResp> {
+    return this.apiService.post<ScheduleResp>(`/screeners/${screenerId}/schedules`, request);
   }
 
-  listSchedules(screenerId: number): Observable<ScheduleResp[]> {
-    return this.apiService.get<ScheduleResp[]>(`/api/screeners/${screenerId}/schedules`);
+  listSchedules(screenerId: string): Observable<ScheduleResp[]> {
+    return this.apiService.get<ScheduleResp[]>(`/screeners/${screenerId}/schedules`);
   }
 
   updateSchedule(scheduleId: number, request: Partial<ScheduleCreateReq>): Observable<ScheduleResp> {
-    return this.apiService.patch<ScheduleResp>(`/api/schedules/${scheduleId}`, request);
+    return this.apiService.patch<ScheduleResp>(`/schedules/${scheduleId}`, request);
   }
 
   deleteSchedule(scheduleId: number): Observable<void> {
-    return this.apiService.delete<void>(`/api/schedules/${scheduleId}`);
+    return this.apiService.delete<void>(`/schedules/${scheduleId}`);
   }
 
   // Alerts
-  createAlert(screenerId: number, request: AlertCreateReq): Observable<AlertResp> {
-    return this.apiService.post<AlertResp>(`/api/screeners/${screenerId}/alerts`, request);
+  createAlert(screenerId: string, request: AlertCreateReq): Observable<AlertResp> {
+    return this.apiService.post<AlertResp>(`/screeners/${screenerId}/alerts`, request);
   }
 
-  listAlerts(screenerId: number): Observable<AlertResp[]> {
-    return this.apiService.get<AlertResp[]>(`/api/screeners/${screenerId}/alerts`);
+  listAlerts(screenerId: string): Observable<AlertResp[]> {
+    return this.apiService.get<AlertResp[]>(`/screeners/${screenerId}/alerts`);
   }
 
   updateAlert(alertId: number, request: Partial<AlertCreateReq>): Observable<AlertResp> {
-    return this.apiService.patch<AlertResp>(`/api/alerts/${alertId}`, request);
+    return this.apiService.patch<AlertResp>(`/alerts/${alertId}`, request);
   }
 
   deleteAlert(alertId: number): Observable<void> {
-    return this.apiService.delete<void>(`/api/alerts/${alertId}`);
+    return this.apiService.delete<void>(`/alerts/${alertId}`);
   }
 
   // Runs
-  createRun(screenerId: number, request: RunCreateReq): Observable<RunResp> {
-    return this.apiService.post<RunResp>(`/api/screeners/${screenerId}/runs`, request);
+  createRun(screenerId: string, request: RunCreateReq): Observable<RunResp> {
+    return this.apiService.post<RunResp>(`/screeners/${screenerId}/runs`, request);
   }
 
-  listRuns(screenerId: number, params: RunListParams = {}): Observable<PageResp<RunResp>> {
+  listRuns(screenerId: string, params: RunListParams = {}): Observable<PageResp<RunResp>> {
     let httpParams = new HttpParams();
     
     if (params.page !== undefined) httpParams = httpParams.set('page', params.page.toString());
     if (params.size !== undefined) httpParams = httpParams.set('size', params.size.toString());
 
-    return this.apiService.get<PageResp<RunResp>>(`/api/screeners/${screenerId}/runs`, httpParams);
+    return this.apiService.get<PageResp<RunResp>>(`/screeners/${screenerId}/runs`, httpParams);
   }
 
-  getRun(runId: number): Observable<RunResp> {
-    return this.apiService.get<RunResp>(`/api/runs/${runId}`);
+  getRun(runId: string): Observable<RunResp> {
+    return this.apiService.get<RunResp>(`/runs/${runId}`);
   }
 
-  retryRun(runId: number): Observable<RunResp> {
-    return this.apiService.post<RunResp>(`/api/runs/${runId}/retry`, {});
+  retryRun(runId: string): Observable<RunResp> {
+    return this.apiService.post<RunResp>(`/runs/${runId}/retry`, {});
   }
 
-  getLatestSuccessfulRun(screenerId: number): Observable<RunResp> {
-    return this.apiService.get<RunResp>(`/api/screeners/${screenerId}/last-run`);
+  getLatestSuccessfulRun(screenerId: string): Observable<RunResp> {
+    return this.apiService.get<RunResp>(`/screeners/${screenerId}/last-run`);
   }
 
   getRunsByStatus(status: string): Observable<RunResp[]> {
-    return this.apiService.get<RunResp[]>(`/api/runs/status/${status}`);
+    return this.apiService.get<RunResp[]>(`/runs/status/${status}`);
   }
 
   getRunsByUser(userId: number): Observable<RunResp[]> {
-    return this.apiService.get<RunResp[]>(`/api/runs/user/${userId}`);
+    return this.apiService.get<RunResp[]>(`/runs/user/${userId}`);
   }
 
   // Results
-  getRunResults(runId: number, params: ResultListParams = {}): Observable<PageResp<ResultResp>> {
+  getRunResults(runId: string, params: ResultListParams = {}): Observable<PageResp<ResultResp>> {
     let httpParams = new HttpParams();
     
     if (params.matched !== undefined) httpParams = httpParams.set('matched', params.matched.toString());
@@ -179,14 +179,14 @@ export class ScreenerApiService {
     if (params.size !== undefined) httpParams = httpParams.set('size', params.size.toString());
     if (params.sort) httpParams = httpParams.set('sort', params.sort);
 
-    return this.apiService.get<PageResp<ResultResp>>(`/api/runs/${runId}/results`, httpParams);
+    return this.apiService.get<PageResp<ResultResp>>(`/runs/${runId}/results`, httpParams);
   }
 
-  getRunDiffs(runId: number): Observable<ResultDiffResp[]> {
-    return this.apiService.get<ResultDiffResp[]>(`/api/runs/${runId}/diffs`);
+  getRunDiffs(runId: string): Observable<ResultDiffResp[]> {
+    return this.apiService.get<ResultDiffResp[]>(`/runs/${runId}/diffs`);
   }
 
-  getLastResults(screenerId: number, params: ResultListParams = {}): Observable<PageResp<ResultResp>> {
+  getLastResults(screenerId: string, params: ResultListParams = {}): Observable<PageResp<ResultResp>> {
     let httpParams = new HttpParams();
     
     if (params.matched !== undefined) httpParams = httpParams.set('matched', params.matched.toString());
@@ -196,38 +196,38 @@ export class ScreenerApiService {
     if (params.size !== undefined) httpParams = httpParams.set('size', params.size.toString());
     if (params.sort) httpParams = httpParams.set('sort', params.sort);
 
-    return this.apiService.get<PageResp<ResultResp>>(`/api/screeners/${screenerId}/last-results`, httpParams);
+    return this.apiService.get<PageResp<ResultResp>>(`/screeners/${screenerId}/last-results`, httpParams);
   }
 
   // Stars
-  toggleStar(screenerId: number, request: StarToggleReq): Observable<void> {
-    return this.apiService.put<void>(`/api/screeners/${screenerId}/star`, request);
+  toggleStar(screenerId: string, request: StarToggleReq): Observable<void> {
+    return this.apiService.put<void>(`/screeners/${screenerId}/star`, request);
   }
 
   getStarredScreeners(): Observable<ScreenerResp[]> {
-    return this.apiService.get<ScreenerResp[]>('/api/screeners/starred');
+    return this.apiService.get<ScreenerResp[]>('/screeners/starred');
   }
 
   // Saved Views
-  createSavedView(screenerId: number, request: SavedViewCreateReq): Observable<SavedViewResp> {
-    return this.apiService.post<SavedViewResp>(`/api/screeners/${screenerId}/saved-views`, request);
+  createSavedView(screenerId: string, request: SavedViewCreateReq): Observable<SavedViewResp> {
+    return this.apiService.post<SavedViewResp>(`/screeners/${screenerId}/saved-views`, request);
   }
 
-  listSavedViews(screenerId: number): Observable<SavedViewResp[]> {
-    return this.apiService.get<SavedViewResp[]>(`/api/screeners/${screenerId}/saved-views`);
+  listSavedViews(screenerId: string): Observable<SavedViewResp[]> {
+    return this.apiService.get<SavedViewResp[]>(`/screeners/${screenerId}/saved-views`);
   }
 
   updateSavedView(savedViewId: number, request: Partial<SavedViewCreateReq>): Observable<SavedViewResp> {
-    return this.apiService.patch<SavedViewResp>(`/api/saved-views/${savedViewId}`, request);
+    return this.apiService.patch<SavedViewResp>(`/saved-views/${savedViewId}`, request);
   }
 
   deleteSavedView(savedViewId: number): Observable<void> {
-    return this.apiService.delete<void>(`/api/saved-views/${savedViewId}`);
+    return this.apiService.delete<void>(`/saved-views/${savedViewId}`);
   }
 
   // Utility
   searchSymbols(query: string): Observable<Symbol[]> {
     const params = new HttpParams().set('q', query);
-    return this.apiService.get<Symbol[]>('/api/symbols', params);
+    return this.apiService.get<Symbol[]>('/symbols', params);
   }
 }

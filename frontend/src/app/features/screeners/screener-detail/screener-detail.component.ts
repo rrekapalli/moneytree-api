@@ -74,7 +74,7 @@ export class ScreenerDetailComponent implements OnInit, OnDestroy {
   };
   
   runForm: RunCreateReq = {
-    screenerVersionId: 0,
+    screenerVersionId: '',
     runForTradingDay: new Date().toISOString().split('T')[0],
     universeSymbolIds: []
   };
@@ -130,7 +130,7 @@ export class ScreenerDetailComponent implements OnInit, OnDestroy {
   private loadScreener() {
     const screenerId = this.route.snapshot.paramMap.get('id');
     if (screenerId) {
-      this.screenerState.loadScreener(+screenerId).subscribe({
+      this.screenerState.loadScreener(screenerId).subscribe({
         next: () => {
           this.loadVersions();
           this.loadRuns();

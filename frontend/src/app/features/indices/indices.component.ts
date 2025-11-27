@@ -387,7 +387,7 @@ export class IndicesComponent implements OnInit, OnDestroy {
     }
 
     return {
-      id: 0, // Will be assigned by backend, using 0 as placeholder
+      id: '', // Will be assigned by backend, using empty string as placeholder
       indexSymbol: indexSymbol,
       indexName: indexName,
       lastPrice: webSocketIndex.lastPrice || webSocketIndex.last || 0,

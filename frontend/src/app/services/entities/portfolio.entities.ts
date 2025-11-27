@@ -1,5 +1,5 @@
 export interface PortfolioDto {
-  id: number;
+  id: string;
   name: string;
   description: string;
   baseCurrency?: string;
@@ -9,7 +9,7 @@ export interface PortfolioDto {
 }
 
 export interface PortfolioCreateRequest {
-  userId?: number; // required in backend
+  userId?: string; // required in backend
   name: string;
   description?: string;
   baseCurrency?: string;
@@ -50,8 +50,8 @@ export interface TransactionCreateRequest {
 }
 
 export interface PortfolioTransactionDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   symbol: string;
   tradeDate: string;
   tradeTime: string; // OffsetDateTime in backend
@@ -75,8 +75,8 @@ export interface HoldingUpdateRequest {
 }
 
 export interface PortfolioHoldingDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   symbol: string;
   quantity: number;
   avgCost: number;
@@ -86,8 +86,8 @@ export interface PortfolioHoldingDto {
 
 // Cash Flow DTOs
 export interface PortfolioCashFlowDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   date: string;
   type: string;
   amount: number;
@@ -96,8 +96,8 @@ export interface PortfolioCashFlowDto {
 
 // Valuation DTOs
 export interface PortfolioValuationDailyDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   date: string;
   totalValue: number;
   cashValue: number;
@@ -110,8 +110,8 @@ export interface PortfolioValuationDailyDto {
 }
 
 export interface PortfolioHoldingValuationDailyDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   symbol: string;
   date: string;
   quantity: number;
@@ -125,8 +125,8 @@ export interface PortfolioHoldingValuationDailyDto {
 
 // Metrics DTOs
 export interface PortfolioMetricsDailyDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   date: string;
   nav: number;
   twrDailyPct: number;
@@ -166,8 +166,8 @@ export interface PortfolioMetricsDailyDto {
 
 // Benchmark DTOs
 export interface PortfolioBenchmarkDto {
-  id: number;
-  portfolioId: number;
+  id: string;
+  portfolioId: string;
   benchmarkSymbol: string;
   benchmarkName: string;
   correlation: number;

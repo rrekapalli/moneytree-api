@@ -29,42 +29,42 @@ export class PortfolioApiService extends ApiService {
    * Get all portfolios
    */
   getPortfolios(): Observable<PortfolioDto[]> {
-    return this.get<PortfolioDto[]>('/api/v1/portfolio');
+    return this.get<PortfolioDto[]>('/portfolio');
   }
 
   /**
    * Get a specific portfolio by ID
    */
-  getPortfolio(id: number): Observable<PortfolioDto> {
-    return this.get<PortfolioDto>(`/api/v1/portfolio/${id}`);
+  getPortfolio(id: string): Observable<PortfolioDto> {
+    return this.get<PortfolioDto>(`/portfolio/${id}`);
   }
 
   /**
    * Create a new portfolio
    */
   createPortfolio(request: PortfolioCreateRequest): Observable<PortfolioDto> {
-    return this.post<PortfolioDto>('/api/v1/portfolio', request);
+    return this.post<PortfolioDto>('/portfolio', request);
   }
 
   /**
    * Update a portfolio
    */
-  updatePortfolio(id: number, request: PortfolioUpdateRequest): Observable<PortfolioDto> {
-    return this.put<PortfolioDto>(`/api/v1/portfolio/${id}`, request);
+  updatePortfolio(id: string, request: PortfolioUpdateRequest): Observable<PortfolioDto> {
+    return this.put<PortfolioDto>(`/portfolio/${id}`, request);
   }
 
   /**
    * Partially update a portfolio
    */
-  patchPortfolio(id: number, request: PortfolioPatchRequest): Observable<PortfolioDto> {
-    return this.patch<PortfolioDto>(`/api/v1/portfolio/${id}`, request);
+  patchPortfolio(id: string, request: PortfolioPatchRequest): Observable<PortfolioDto> {
+    return this.patch<PortfolioDto>(`/portfolio/${id}`, request);
   }
 
   /**
    * Delete a portfolio
    */
-  deletePortfolio(id: number): Observable<void> {
-    return this.delete<void>(`/api/v1/portfolio/${id}`);
+  deletePortfolio(id: string): Observable<void> {
+    return this.delete<void>(`/portfolio/${id}`);
   }
 
   // ===== TRANSACTIONS ENDPOINTS =====
@@ -73,12 +73,12 @@ export class PortfolioApiService extends ApiService {
    * Get portfolio transactions with optional filters
    */
   getTransactions(
-    id: number, 
+    id: string, 
     start?: string, 
     end?: string, 
     symbol?: string
   ): Observable<PortfolioTransactionDto[]> {
-    let url = `/api/v1/portfolio/${id}/transactions`;
+    let url = `/portfolio/${id}/transactions`;
     const params = new URLSearchParams();
     
     if (start) params.append('start', start);
@@ -95,8 +95,8 @@ export class PortfolioApiService extends ApiService {
   /**
    * Add a new transaction to the portfolio
    */
-  addTransaction(id: number, request: TransactionCreateRequest): Observable<PortfolioTransactionDto> {
-    return this.post<PortfolioTransactionDto>(`/api/v1/portfolio/${id}/transactions`, request);
+  addTransaction(id: string, request: TransactionCreateRequest): Observable<PortfolioTransactionDto> {
+    return this.post<PortfolioTransactionDto>(`/portfolio/${id}/transactions`, request);
   }
 
   // ===== HOLDINGS ENDPOINTS =====
@@ -104,8 +104,8 @@ export class PortfolioApiService extends ApiService {
   /**
    * Get portfolio holdings with optional symbol filter
    */
-  getHoldings(id: number, symbol?: string): Observable<PortfolioHoldingDto[]> {
-    let url = `/api/v1/portfolio/${id}/holdings`;
+  getHoldings(id: string, symbol?: string): Observable<PortfolioHoldingDto[]> {
+    let url = `/portfolio/${id}/holdings`;
     if (symbol) {
       url += `?symbol=${symbol}`;
     }
@@ -115,22 +115,22 @@ export class PortfolioApiService extends ApiService {
   /**
    * Create holdings for a portfolio (one or more symbols)
    */
-  addHoldings(id: number, request: HoldingsCreateRequest): Observable<PortfolioHoldingDto[]> {
-    return this.post<PortfolioHoldingDto[]>(`/api/v1/portfolio/${id}/holdings`, request);
+  addHoldings(id: string, request: HoldingsCreateRequest): Observable<PortfolioHoldingDto[]> {
+    return this.post<PortfolioHoldingDto[]>(`/portfolio/${id}/holdings`, request);
   }
 
   /**
    * Replace or create a single holding for a symbol
    */
-  putHolding(id: number, symbol: string, request: HoldingUpdateRequest): Observable<PortfolioHoldingDto> {
-    return this.put<PortfolioHoldingDto>(`/api/v1/portfolio/${id}/holdings/${symbol}`, request);
+  putHolding(id: string, symbol: string, request: HoldingUpdateRequest): Observable<PortfolioHoldingDto> {
+    return this.put<PortfolioHoldingDto>(`/portfolio/${id}/holdings/${symbol}`, request);
   }
 
   /**
    * Partially update a holding for a symbol
    */
-  patchHolding(id: number, symbol: string, request: HoldingUpdateRequest): Observable<PortfolioHoldingDto> {
-    return this.patch<PortfolioHoldingDto>(`/api/v1/portfolio/${id}/holdings/${symbol}`, request);
+  patchHolding(id: string, symbol: string, request: HoldingUpdateRequest): Observable<PortfolioHoldingDto> {
+    return this.patch<PortfolioHoldingDto>(`/portfolio/${id}/holdings/${symbol}`, request);
   }
 
   // ===== CASH FLOWS ENDPOINTS =====
@@ -138,8 +138,8 @@ export class PortfolioApiService extends ApiService {
   /**
    * Get portfolio cash flows with optional date range
    */
-  getCashFlows(id: number, start?: string, end?: string): Observable<PortfolioCashFlowDto[]> {
-    let url = `/api/v1/portfolio/${id}/cashflows`;
+  getCashFlows(id: string, start?: string, end?: string): Observable<PortfolioCashFlowDto[]> {
+    let url = `/portfolio/${id}/cash-flows`;
     if (start && end) {
       url += `?start=${start}&end=${end}`;
     }
@@ -151,8 +151,8 @@ export class PortfolioApiService extends ApiService {
   /**
    * Get portfolio valuations with optional date range
    */
-  getValuations(id: number, start?: string, end?: string): Observable<PortfolioValuationDailyDto[]> {
-    let url = `/api/v1/portfolio/${id}/valuations/daily`;
+  getValuations(id: string, start?: string, end?: string): Observable<PortfolioValuationDailyDto[]> {
+    let url = `/portfolio/${id}/valuations-daily`;
     if (start && end) {
       url += `?start=${start}&end=${end}`;
     }
@@ -163,12 +163,12 @@ export class PortfolioApiService extends ApiService {
    * Get holding valuations with optional filters
    */
   getHoldingValuations(
-    id: number, 
+    id: string, 
     start?: string, 
     end?: string, 
     symbol?: string
   ): Observable<PortfolioHoldingValuationDailyDto[]> {
-    let url = `/api/v1/portfolio/${id}/holdings/valuations/daily`;
+    let url = `/portfolio/${id}/holding-valuations`;
     const params = new URLSearchParams();
     
     if (start) params.append('start', start);
@@ -187,8 +187,8 @@ export class PortfolioApiService extends ApiService {
   /**
    * Get portfolio metrics with optional date range
    */
-  getMetrics(id: number, start?: string, end?: string): Observable<PortfolioMetricsDailyDto[]> {
-    let url = `/api/v1/portfolio/${id}/metrics/daily`;
+  getMetrics(id: string, start?: string, end?: string): Observable<PortfolioMetricsDailyDto[]> {
+    let url = `/portfolio/${id}/metrics-daily`;
     if (start && end) {
       url += `?start=${start}&end=${end}`;
     }
@@ -200,7 +200,7 @@ export class PortfolioApiService extends ApiService {
   /**
    * Get portfolio benchmarks
    */
-  getBenchmarks(id: number): Observable<PortfolioBenchmarkDto[]> {
-    return this.get<PortfolioBenchmarkDto[]>(`/api/v1/portfolio/${id}/benchmarks`);
+  getBenchmarks(id: string): Observable<PortfolioBenchmarkDto[]> {
+    return this.get<PortfolioBenchmarkDto[]>(`/portfolio/${id}/benchmarks`);
   }
 }
