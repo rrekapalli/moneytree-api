@@ -91,20 +91,27 @@ export class PortfolioConfigureComponent implements OnInit {
 
   // All stocks for search validation (like stock-insights component)
   allStocks: Stock[] = [];
+  private stocksLoaded = false; // Track if stocks have been loaded
 
   ngOnInit(): void {
-    // Load all stocks for search functionality
-    this.loadAllStocksForSearch();
+    // Don't load stocks on init - only load when user opens Add Stock dialog
   }
 
   // Load all stocks for search functionality (like stock-insights component)
   private loadAllStocksForSearch(): void {
+    // Only load if not already loaded
+    if (this.stocksLoaded && this.allStocks.length > 0) {
+      return;
+    }
+    
     this.stockService.getAllStocks().subscribe({
       next: (stocks: Stock[]) => {
         this.allStocks = stocks || [];
+        this.stocksLoaded = true;
       },
       error: (error) => {
         this.allStocks = [];
+        this.stocksLoaded = false;
       }
     });
   }
@@ -253,6 +260,9 @@ export class PortfolioConfigureComponent implements OnInit {
     this.selectedStock = null;
     this.stockQuantity = 0;
     this.isSearchingStocks = false;
+    
+    // Load stocks only when dialog is opened (lazy loading)
+    this.loadAllStocksForSearch();
   }
 
   // Close Add Stock Dialog

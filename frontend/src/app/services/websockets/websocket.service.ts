@@ -16,8 +16,8 @@ import { environment } from '../../../environments/environment';
 })
 export class WebSocketService {
   
-  // STOMP client
-  private client: Client;
+  // STOMP client - lazy initialization (only created when connect() is called)
+  private client: Client | null = null;
   
   // Connection state management
   private connectionState$ = new BehaviorSubject<WebSocketConnectionState>(WebSocketConnectionState.DISCONNECTED);
@@ -46,7 +46,8 @@ export class WebSocketService {
   private isRetrying: boolean = false;
 
   constructor() {
-    this.client = this.createStompClient();
+    // Don't create client in constructor - lazy initialization when connect() is called
+    // This prevents SockJS from trying to connect automatically
   }
 
   /**
@@ -226,6 +227,11 @@ export class WebSocketService {
       return;
     }
 
+    // Lazy initialization - only create client when connect() is called
+    if (!this.client) {
+      this.client = this.createStompClient();
+    }
+
     try {
       await this.client.activate();
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -250,6 +256,9 @@ export class WebSocketService {
         this.client.deactivate();
       }
       
+      // Optionally destroy the client to prevent any lingering connections
+      // this.client = null;
+      
       this.connectionState$.next(WebSocketConnectionState.DISCONNECTED);
       this.isConnected = false;
     } catch (error) {
@@ -261,7 +270,7 @@ export class WebSocketService {
    * Subscribe to all indices data
    */
   subscribeToAllIndices(): Observable<IndicesDto> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.client) {
       // Return empty observable that never emits when WebSocket is not connected
       return new Observable(subscriber => {
         // This observable will never emit and will complete immediately
@@ -292,7 +301,7 @@ export class WebSocketService {
    * Normalizes incoming payloads (including flattened payloads) to IndexDataDto.
    */
   subscribeToIndex(indexName: string): Observable<IndexDataDto> {
-    if (!this.isConnected) {
+    if (!this.isConnected || !this.client) {
       // Return empty observable that never emits when WebSocket is not connected
       return new Observable<IndexDataDto>(subscriber => {
         // This observable will never emit and will complete immediately
@@ -393,7 +402,7 @@ export class WebSocketService {
    * Send message to WebSocket
    */
   sendMessage(destination: string, message: any): void {
-    if (this.isConnected) {
+    if (this.isConnected && this.client) {
       this.client.publish({
         destination: destination,
         body: JSON.stringify(message)

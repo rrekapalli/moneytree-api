@@ -264,9 +264,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Handle world map loading error silently
     });
 
-    // Initialize WebSocket connection and monitor connection state
-    this.initializeWebSocket();
-    this.monitorWebSocketConnectionState();
+    // WebSocket initialization disabled - WebSockets are not yet implemented
+    // TODO: Re-enable when WebSocket server is available
+    // this.initializeWebSocket();
+    // this.monitorWebSocketConnectionState();
 
     // Clear any existing subscription
     if (this.selectedIndexSubscription) {

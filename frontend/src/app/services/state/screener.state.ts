@@ -173,6 +173,19 @@ export class ScreenerStateService {
   }
 
   loadMyScreeners(): Observable<ScreenerResp[]> {
+    // Backend endpoint doesn't exist yet - return empty array silently
+    // TODO: Implement when backend endpoint is available
+    this.updateState({
+      myScreeners: [],
+      loading: false
+    });
+    return new Observable<ScreenerResp[]>(observer => {
+      observer.next([]);
+      observer.complete();
+    });
+    
+    // Original implementation - uncomment when backend endpoint is available
+    /*
     this.setLoading(true);
     this.setError(null);
 
@@ -194,9 +207,23 @@ export class ScreenerStateService {
         return throwError(() => error);
       })
     );
+    */
   }
 
   loadPublicScreeners(): Observable<ScreenerResp[]> {
+    // Backend endpoint doesn't exist yet - return empty array silently
+    // TODO: Implement when backend endpoint is available
+    this.updateState({
+      publicScreeners: [],
+      loading: false
+    });
+    return new Observable<ScreenerResp[]>(observer => {
+      observer.next([]);
+      observer.complete();
+    });
+    
+    // Original implementation - uncomment when backend endpoint is available
+    /*
     this.setLoading(true);
     this.setError(null);
 
@@ -218,9 +245,23 @@ export class ScreenerStateService {
         return throwError(() => error);
       })
     );
+    */
   }
 
   loadStarredScreeners(): Observable<ScreenerResp[]> {
+    // Backend endpoint doesn't exist yet - return empty array silently
+    // TODO: Implement when backend endpoint is available
+    this.updateState({
+      starredScreeners: [],
+      loading: false
+    });
+    return new Observable<ScreenerResp[]>(observer => {
+      observer.next([]);
+      observer.complete();
+    });
+    
+    // Original implementation - uncomment when backend endpoint is available
+    /*
     this.setLoading(true);
     this.setError(null);
 
@@ -242,6 +283,7 @@ export class ScreenerStateService {
         return throwError(() => error);
       })
     );
+    */
   }
 
   loadScreener(id: string): Observable<ScreenerResp> {

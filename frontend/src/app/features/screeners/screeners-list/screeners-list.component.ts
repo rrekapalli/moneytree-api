@@ -124,19 +124,20 @@ export class ScreenersListComponent implements OnInit, OnDestroy {
   private initializeSubscriptions() {
     combineLatest([
       this.screenerState.screeners$,
-      this.screenerState.myScreeners$,
-      this.screenerState.publicScreeners$,
-      this.screenerState.starredScreeners$,
       this.screenerState.loading$,
       this.screenerState.error$,
       this.screenerState.pagination$
     ]).pipe(takeUntil(this.destroy$))
-    .subscribe(([screeners, myScreeners, publicScreeners, starredScreeners, loading, error, pagination]) => {
+    .subscribe(([screeners, loading, error, pagination]) => {
       // Ensure arrays are never undefined - use empty array as fallback
       this.screeners = screeners || [];
-      this.myScreeners = myScreeners || [];
-      this.publicScreeners = publicScreeners || [];
-      this.starredScreeners = starredScreeners || [];
+      
+      // Filter screeners client-side since backend endpoints don't exist yet
+      // TODO: Replace with actual API calls when backend endpoints are implemented
+      this.publicScreeners = this.screeners.filter(s => s.isPublic);
+      this.myScreeners = this.screeners.filter(s => !s.isPublic); // Assuming private = my screeners
+      this.starredScreeners = []; // Will be populated when star functionality is implemented
+      
       this.loading = loading;
       this.error = error;
       this.pagination = pagination || {
@@ -156,10 +157,13 @@ export class ScreenersListComponent implements OnInit, OnDestroy {
   }  
 
   private loadInitialData() {
+    // Only load main screeners list - filter others client-side
+    // The backend doesn't have /my, /public, /starred endpoints yet
     this.loadScreeners();
-    this.loadMyScreeners();
-    this.loadPublicScreeners();
-    this.loadStarredScreeners();
+    // Don't call these endpoints that don't exist - filter from main list instead
+    // this.loadMyScreeners();
+    // this.loadPublicScreeners();
+    // this.loadStarredScreeners();
   }
 
   loadScreeners() {
