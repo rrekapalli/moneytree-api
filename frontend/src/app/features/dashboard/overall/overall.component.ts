@@ -862,7 +862,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       .setTooltipType('axis')  // Enable crosshair tooltip for better analysis
       .enableTimeRangeFilters(['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'], 'YTD')  // Enable time range filters with YTD as default
       .enableAreaSeries(false, 0.4)  // Disable area series - reserved for future indicators like Bollinger Bands
-      .enableVolume(false)  // Disable volume bars to avoid dual-axis issues
+      .enableVolume(true)  // Enable volume bars
       .enableLegend(false)  // Disable legend for cleaner appearance
       .enableDataZoom(true)  // Enable data zoom for timeline navigation
       .setTimeRangeChangeCallback(this.handleTimeRangeChange.bind(this))  // Set callback for time range changes
@@ -896,7 +896,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         max: 'dataMax',
         axisLabel: {
           rotate: 45,
-          fontSize: 20, // 1.25rem = 20px
+          fontSize: 14, // 0.9rem = 14.4px
           color: '#666',
           formatter: (value: string, index: number, data: any) => {
             // Format date labels to show year and month by default
@@ -975,14 +975,26 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       };
 
-      // CRITICAL FIX: Ensure single grid configuration
-      options.grid = {
-        top: '15%',
-        left: '5%',
-        right: '5%',
-        bottom: '18%',
-        containLabel: true
-      };
+      // Configure dual grids: one for candlestick chart, one for volume bars
+      // Main grid for candlestick chart (top area)
+      options.grid = [
+        {
+          id: 'main',
+          top: '10%',
+          left: '5%',
+          right: '5%',
+          bottom: '40%',  // Leave space for volume bars and data zoom
+          containLabel: true
+        },
+        {
+          id: 'volume',
+          top: '65%',  // Position volume bars between x-axis labels and data zoom
+          left: '5%',
+          right: '5%',
+          bottom: '12%',  // Leave space for data zoom control
+          containLabel: true
+        }
+      ];
 
       // Enhanced tooltip configuration
       options.tooltip = {
@@ -995,9 +1007,16 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         },
         formatter: (params: any) => {
-          const param = Array.isArray(params) ? params[0] : params;
-          const data = param.data;
-          const date = param.name;
+          const paramsArray = Array.isArray(params) ? params : [params];
+          const candlestickParam = paramsArray.find((p: any) => p.seriesType === 'candlestick');
+          const volumeParam = paramsArray.find((p: any) => p.seriesType === 'bar' && p.seriesName === 'Volume');
+          
+          if (!candlestickParam) {
+            return '';
+          }
+          
+          const data = candlestickParam.data;
+          const date = candlestickParam.name;
           
           // Format date for tooltip
           let formattedDate = date;
@@ -1021,6 +1040,19 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
           });
+          
+          const volumeFormatter = (value: number) => {
+            if (value >= 1000000) {
+              return (value / 1000000).toFixed(2) + 'M';
+            } else if (value >= 1000) {
+              return (value / 1000).toFixed(2) + 'K';
+            }
+            return value.toLocaleString('en-IN');
+          };
+          
+          const volumeValue = typeof volumeParam?.data === 'number' 
+            ? volumeParam.data 
+            : volumeParam?.data?.value || 0;
 
           return `
             <div style="padding: 8px;">
@@ -1041,30 +1073,101 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
                 <span style="color: #666;">High:</span> 
                 <span style="font-weight: bold;">${formatter.format(data[3])}</span>
               </div>
+              <div style="margin: 4px 0;">
+                <span style="color: #666;">Volume:</span> 
+                <span style="font-weight: bold;">${volumeFormatter(volumeValue)}</span>
+              </div>
             </div>
           `;
         }
       };
 
-      // Enhanced grid configuration for better spacing
-      options.grid = {
-        ...options.grid,
-        top: '15%',
-        left: '5%',   // Reduced from 10% to 5%
-        right: '5%',  // Reduced from 10% to 5%
-        bottom: '18%',  // Reduced from 25% to 18% to bring zoom control closer
-        containLabel: true
-      };
+      // Grid configuration already set above with dual grids
 
-      // Update data zoom configuration with increased height
+      // Update data zoom configuration - position at bottom
       if (options.dataZoom && Array.isArray(options.dataZoom)) {
         options.dataZoom.forEach((zoom: any) => {
           if (zoom.type === 'slider') {
-            zoom.height = '8%';  // Increased from 3% to 8%
-            zoom.bottom = '1%';   // Reduced from 3% to 1% to bring it closer to x-axis
+            zoom.height = '8%';
+            zoom.bottom = '1%';  // Position at the very bottom
+            zoom.xAxisIndex = [0, 1];  // Link to both x-axes (main and volume)
           }
         });
       }
+      
+      // Configure x-axis for both grids (shared x-axis)
+      if (!Array.isArray(options.xAxis)) {
+        options.xAxis = [options.xAxis];
+      }
+      // Ensure we have two x-axes: one for main grid, one for volume grid
+      if (options.xAxis.length < 2) {
+        const mainXAxis = options.xAxis[0] || {
+          type: 'category',
+          data: [],
+          gridIndex: 0
+        };
+        options.xAxis = [
+          { ...mainXAxis, gridIndex: 0, axisLabel: { ...mainXAxis.axisLabel, show: true } },
+          { 
+            ...mainXAxis, 
+            gridIndex: 1, 
+            axisLabel: { 
+              ...mainXAxis.axisLabel, 
+              show: false  // Hide labels on volume grid x-axis (main x-axis shows them)
+            }
+          }
+        ];
+      }
+      
+      // Configure y-axes: one for price (main grid), one for volume (volume grid)
+      if (!Array.isArray(options.yAxis)) {
+        options.yAxis = [options.yAxis];
+      }
+      // Ensure we have two y-axes
+      if (options.yAxis.length < 2) {
+        const mainYAxis = options.yAxis[0] || {
+          type: 'value',
+          scale: true,
+          gridIndex: 0
+        };
+        options.yAxis = [
+          { 
+            ...mainYAxis, 
+            gridIndex: 0,
+            position: 'right',
+            axisLabel: {
+              ...mainYAxis.axisLabel,
+              formatter: (value: number) => {
+                return new Intl.NumberFormat('en-IN', {
+                  style: 'currency',
+                  currency: 'INR',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 2
+                }).format(value);
+              }
+            }
+          },
+          {
+            type: 'value',
+            gridIndex: 1,
+            position: 'right',
+            axisLabel: {
+              formatter: (value: number) => {
+                // Format volume with appropriate units (K for thousands, M for millions)
+                if (value >= 1000000) {
+                  return (value / 1000000).toFixed(1) + 'M';
+                } else if (value >= 1000) {
+                  return (value / 1000).toFixed(1) + 'K';
+                }
+                return value.toString();
+              },
+              fontSize: 12
+            }
+          }
+        ];
+      }
+      
+      // Volume series will be added when data is applied in buildUpdatedCandlestickOptions
     }
 
     // Stock List Widget - Initialize with empty data, will be populated later
@@ -1087,7 +1190,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     // Position charts with proper spacing - adjusted candlestick chart height for time range filters
     stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
-    candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 18 };
+    candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
     
     // Use the Fluent API to build the dashboard config with filter highlighting enabled
     this.dashboardConfig = StandardDashboardBuilder.createStandard()
@@ -1901,9 +2004,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       Number(item.high) || 0
     ]);
 
+    const volumeData = dataset.map(item => Number(item.volume) || 0);
+
     const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
 
-    const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, xAxisData);
+    const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, xAxisData, volumeData);
 
     widget.data = dataset;
 
@@ -1924,12 +2029,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   private buildUpdatedCandlestickOptions(
     widget: IWidget,
     candlestickData: number[][],
-    xAxisData: string[]
+    xAxisData: string[],
+    volumeData: number[] = []
   ): any {
     const baseOptions: any = (widget.chartInstance?.getOption?.() || widget.config?.options || {});
     const options = { ...baseOptions };
 
-    // Update x-axis labels (first axis only) with enhanced formatter and font size
+    // Update x-axis labels with enhanced formatter and font size
     const xAxisFormatter = (value: string, index: number) => {
       if (value && typeof value === 'string') {
         try {
@@ -1961,37 +2067,77 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return value;
     };
 
+    // Update x-axes (shared between main and volume grids)
     if (Array.isArray(options.xAxis)) {
-      options.xAxis = options.xAxis.map((axis: any, index: number) =>
-        index === 0 ? { 
-          ...axis, 
+      options.xAxis = options.xAxis.map((axis: any, index: number) => {
+        const updatedAxis = {
+          ...axis,
           data: xAxisData,
-          axisLabel: {
+          gridIndex: index
+        };
+        
+        if (index === 0) {
+          // Main x-axis - show labels
+          updatedAxis.axisLabel = {
             ...axis.axisLabel,
-            fontSize: 20, // 1.25rem = 20px
-            formatter: xAxisFormatter
-          }
-        } : axis
-      );
+            fontSize: 14, // 0.9rem = 14.4px
+            formatter: xAxisFormatter,
+            show: true
+          };
+        } else {
+          // Volume x-axis - hide labels (main x-axis shows them)
+          updatedAxis.axisLabel = {
+            ...axis.axisLabel,
+            show: false
+          };
+        }
+        
+        return updatedAxis;
+      });
     } else if (options.xAxis) {
-      options.xAxis = { 
-        ...options.xAxis, 
+      // Convert single x-axis to array with two x-axes
+      const mainXAxis = {
+        ...options.xAxis,
         data: xAxisData,
+        gridIndex: 0,
         axisLabel: {
           ...options.xAxis.axisLabel,
-          fontSize: 20, // 1.25rem = 20px
-          formatter: xAxisFormatter
+          fontSize: 14,
+          formatter: xAxisFormatter,
+          show: true
         }
       };
-    } else {
-      options.xAxis = [{ 
-        type: 'category', 
+      const volumeXAxis = {
+        ...options.xAxis,
         data: xAxisData,
+        gridIndex: 1,
         axisLabel: {
-          fontSize: 20, // 1.25rem = 20px
-          formatter: xAxisFormatter
+          ...options.xAxis.axisLabel,
+          show: false
         }
-      }];
+      };
+      options.xAxis = [mainXAxis, volumeXAxis];
+    } else {
+      options.xAxis = [
+        { 
+          type: 'category', 
+          data: xAxisData,
+          gridIndex: 0,
+          axisLabel: {
+            fontSize: 14,
+            formatter: xAxisFormatter,
+            show: true
+          }
+        },
+        {
+          type: 'category',
+          data: xAxisData,
+          gridIndex: 1,
+          axisLabel: {
+            show: false
+          }
+        }
+      ];
     }
 
     // Update Y-axis font size
@@ -2013,25 +2159,79 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       };
     }
 
-    // Update series data - remove area series (line type), keep only candlestick
-    if (Array.isArray(options.series)) {
-      options.series = options.series
-        .filter((series: any) => series?.type !== 'line') // Remove area/line series
-        .map((series: any) => {
-          if (series?.type === 'candlestick') {
-            return {
-              ...series,
-              data: candlestickData
-            };
-          }
-          return series;
-        });
-    } else {
-      options.series = [{
-        type: 'candlestick',
-            data: candlestickData
-      }];
+    // Update series data - candlestick and volume bars
+    if (!Array.isArray(options.series)) {
+      options.series = [];
     }
+    
+    // Find and update candlestick series
+    let candlestickSeries = options.series.find((s: any) => s.type === 'candlestick');
+    if (!candlestickSeries) {
+      candlestickSeries = {
+        name: 'Price',
+        type: 'candlestick',
+        xAxisIndex: 0,
+        yAxisIndex: 0,
+        gridIndex: 0,
+        data: candlestickData,
+        itemStyle: {
+          color: '#00da3c',  // Green for positive
+          color0: '#ec0000', // Red for negative
+          borderColor: '#00da3c',
+          borderColor0: '#ec0000'
+        }
+      };
+      options.series.push(candlestickSeries);
+    } else {
+      candlestickSeries.data = candlestickData;
+      candlestickSeries.xAxisIndex = 0;
+      candlestickSeries.yAxisIndex = 0;
+      candlestickSeries.gridIndex = 0;
+    }
+    
+    // Find and update volume series
+    let volumeSeries = options.series.find((s: any) => s.type === 'bar' && (s.gridIndex === 1 || s.name === 'Volume'));
+    if (!volumeSeries && volumeData.length > 0) {
+      volumeSeries = {
+        name: 'Volume',
+        type: 'bar',
+        xAxisIndex: 1,
+        yAxisIndex: 1,
+        gridIndex: 1,
+        data: volumeData,
+        itemStyle: {
+          color: (params: any) => {
+            // Color bars based on price movement
+            const candle = candlestickData[params.dataIndex];
+            if (candle && candle.length >= 2) {
+              // candle format: [open, close, low, high]
+              return candle[1] >= candle[0] ? '#00da3c' : '#ec0000';  // Green if close >= open, red otherwise
+            }
+            return '#808080';  // Default gray
+          }
+        },
+        barWidth: '60%'
+      };
+      options.series.push(volumeSeries);
+    } else if (volumeSeries && volumeData.length > 0) {
+      // Update existing volume series
+      volumeSeries.data = volumeData;
+      volumeSeries.xAxisIndex = 1;
+      volumeSeries.yAxisIndex = 1;
+      volumeSeries.gridIndex = 1;
+      volumeSeries.itemStyle = {
+        color: (params: any) => {
+          const candle = candlestickData[params.dataIndex];
+          if (candle && candle.length >= 2) {
+            return candle[1] >= candle[0] ? '#00da3c' : '#ec0000';
+          }
+          return '#808080';
+        }
+      };
+    }
+    
+    // Remove any line/area series that shouldn't be there
+    options.series = options.series.filter((s: any) => s.type !== 'line');
 
     return options;
   }
