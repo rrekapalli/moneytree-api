@@ -19,10 +19,10 @@
 
 **Purpose**: Create frontend modulith directory and copy source files from MoneyPlant frontend
 
-- [ ] T001 Create frontend modulith directory at repository root in `frontend/`
-- [ ] T002 Copy source files from `/home/raja/code/MoneyPlant/frontend` to `frontend/` excluding build artifacts (node_modules/, dist/, .angular/, *.log, .DS_Store, .idea/, .vscode/)
-- [ ] T003 Install frontend dependencies by running `npm install` in `frontend/` directory
-- [ ] T004 Verify frontend structure matches source application (compare directory structure excluding build artifacts)
+- [x] T001 Create frontend modulith directory at repository root in `frontend/`
+- [x] T002 Copy source files from `/home/raja/code/MoneyPlant/frontend` to `frontend/` excluding build artifacts (node_modules/, dist/, .angular/, *.log, .DS_Store, .idea/, .vscode/)
+- [x] T003 Install frontend dependencies by running `npm install` in `frontend/` directory
+- [x] T004 Verify frontend structure matches source application (compare directory structure excluding build artifacts)
 
 **Phase 1 Checkpoint**: Verify frontend directory exists, source files copied, and dependencies installed. Run `cd frontend && npm list --depth=0` to verify dependencies. Commit with message: "feat(frontend): Setup frontend modulith - copy source files and install dependencies"
 
@@ -34,12 +34,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create API proxy configuration file `frontend/proxy.conf.json` to proxy `/api/**` requests to `http://localhost:8080`
-- [ ] T006 Update `frontend/angular.json` serve configuration to use proxy config and set port to 4200
-- [ ] T007 Update `frontend/src/environments/environment.ts` to set `apiUrl: '/api'` (use proxy, not absolute URL)
-- [ ] T008 Create frontend startup script `frontend/start-dev.sh` to start Angular dev server on port 4200 with proxy config
-- [ ] T009 Create root-level coordinated startup script `start-all.sh` to start both backend and frontend services together
-- [ ] T010 Make startup scripts executable (`chmod +x frontend/start-dev.sh` and `chmod +x start-all.sh`)
+- [x] T005 Create API proxy configuration file `frontend/proxy.conf.json` to proxy `/api/**` requests to `http://localhost:8080`
+- [x] T006 Update `frontend/angular.json` serve configuration to use proxy config and set port to 4200
+- [x] T007 Update `frontend/src/environments/environment.ts` to set `apiUrl: '/api'` (use proxy, not absolute URL)
+- [x] T008 Create frontend startup script `frontend/start-dev.sh` to start Angular dev server on port 4200 with proxy config
+- [x] T009 Create root-level coordinated startup script `start-all.sh` to start both backend and frontend services together
+- [x] T010 Make startup scripts executable (`chmod +x frontend/start-dev.sh` and `chmod +x start-all.sh`)
 
 **Phase 2 Checkpoint**: Verify proxy configuration exists, Angular config updated, environment configured, and startup scripts created. Test that `cd frontend && ng serve --port 4200 --proxy-config proxy.conf.json` starts without errors (can cancel after verification). Commit with message: "feat(frontend): Configure development server, API proxy, and startup scripts"
 
@@ -53,11 +53,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Verify frontend application builds successfully by running `cd frontend && npm run build` (should complete without errors)
-- [ ] T012 [US1] Test frontend development server starts correctly by running `cd frontend && ng serve --port 4200 --proxy-config proxy.conf.json` (verify it starts, then cancel)
-- [ ] T013 [US1] Verify static assets are served correctly by checking that JavaScript, CSS, and image files load with correct content types
-- [ ] T014 [US1] Test client-side routing by navigating to frontend routes (e.g., `/portfolios`, `/dashboard`) and verifying routes load correctly
-- [ ] T015 [US1] Verify frontend is accessible on port 4200 when both backend (port 8080) and frontend (port 4200) are running simultaneously
+- [x] T011 [US1] Verify frontend application builds successfully by running `cd frontend && npm run build` (should complete without errors)
+- [x] T012 [US1] Test frontend development server starts correctly by running `cd frontend && ng serve --port 4200 --proxy-config proxy.conf.json` (verify it starts, then cancel)
+- [x] T013 [US1] Verify static assets are served correctly by checking that JavaScript, CSS, and image files load with correct content types
+- [x] T014 [US1] Test client-side routing by navigating to frontend routes (e.g., `/portfolios`, `/dashboard`) and verifying routes load correctly
+- [x] T015 [US1] Verify frontend is accessible on port 4200 when both backend (port 8080) and frontend (port 4200) are running simultaneously
 
 **Phase 3 Checkpoint**: Frontend application loads on port 4200, routes work correctly, static assets load. Build completes without errors/warnings. Commit with message: "feat(frontend): Enable frontend access on port 4200 with routing and static asset serving"
 
@@ -71,11 +71,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Verify API proxy configuration works by making a test API request from frontend and confirming it reaches backend on port 8080
-- [ ] T017 [US2] Test API connectivity by navigating to a frontend feature that requires API data (e.g., portfolio list) and verifying data loads correctly
-- [ ] T018 [US2] Verify API requests are properly routed without CORS errors by checking browser console and Network tab
-- [ ] T019 [US2] Test API error handling by temporarily stopping backend and verifying frontend displays appropriate error messages
-- [ ] T020 [US2] Document any API contract incompatibilities discovered between frontend service calls and backend API endpoints in `frontend/API_COMPATIBILITY_NOTES.md`
+- [x] T016 [US2] Verify API proxy configuration works by making a test API request from frontend and confirming it reaches backend on port 8080
+- [x] T017 [US2] Test API connectivity by navigating to a frontend feature that requires API data (e.g., portfolio list) and verifying data loads correctly
+- [x] T018 [US2] Verify API requests are properly routed without CORS errors by checking browser console and Network tab
+- [x] T019 [US2] Test API error handling by temporarily stopping backend and verifying frontend displays appropriate error messages
+- [x] T020 [US2] Document any API contract incompatibilities discovered between frontend service calls and backend API endpoints in `frontend/API_COMPATIBILITY_NOTES.md`
 
 **Phase 4 Checkpoint**: Frontend successfully communicates with backend API, all API requests work correctly, no CORS errors. Build completes without errors/warnings. Commit with message: "feat(frontend): Enable API integration with backend - proxy configuration and connectivity verified"
 
@@ -89,26 +89,26 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Search for all `id: number` or `id: bigint` in entity models in `frontend/src/app/entities/` and `frontend/src/app/services/entities/` and update to `id: string`
-- [ ] T022 [P] [US3] Update Portfolio entity interface in `frontend/src/app/entities/portfolio.ts` (or equivalent) to use `id: string` instead of numeric ID
-- [ ] T023 [P] [US3] Update Signal entity interface in `frontend/src/app/entities/signal.ts` (or equivalent) to use `signalId: string` instead of numeric ID
-- [ ] T024 [P] [US3] Update BacktestRun entity interface in `frontend/src/app/entities/backtest-run.ts` (or equivalent) to use `runId: string` instead of numeric ID
-- [ ] T025 [P] [US3] Update BacktestTrade entity interface in `frontend/src/app/entities/backtest-trade.ts` (or equivalent) to use `tradeId: string` instead of numeric ID
-- [ ] T026 [P] [US3] Update Screener entity interface in `frontend/src/app/entities/screener.ts` (or equivalent) to use `id: string` instead of numeric ID
-- [ ] T027 [P] [US3] Update ScreenerRun entity interface in `frontend/src/app/entities/screener-run.ts` (or equivalent) to use `runId: string` instead of numeric ID
-- [ ] T028 [P] [US3] Update PortfolioTrade entity interface in `frontend/src/app/entities/portfolio-trade.ts` (or equivalent) to use `tradeId: string` instead of numeric ID
-- [ ] T029 [P] [US3] Update OpenPosition entity interface in `frontend/src/app/entities/open-position.ts` (or equivalent) to use `positionId: string` instead of numeric ID
-- [ ] T030 [P] [US3] Update PendingOrder entity interface in `frontend/src/app/entities/pending-order.ts` (or equivalent) to use `orderId: string` instead of numeric ID
-- [ ] T031 [US3] Update all foreign key fields (e.g., `portfolioId`, `screenerId`, `runId`) in entity interfaces to use `string` type instead of numeric
-- [ ] T032 [US3] Update all service methods in `frontend/src/app/services/` that accept or return entity IDs to use `string` type instead of numeric
-- [ ] T033 [US3] Update API request/response DTOs in `frontend/src/app/services/apis/` to use UUID strings for all ID fields
-- [ ] T034 [US3] Update all components in `frontend/src/app/features/` and `frontend/src/app/shared/` that display or manipulate entity IDs to work with UUID strings
-- [ ] T035 [US3] Update Angular route parameters that use IDs to accept UUID strings (check route definitions in `frontend/src/app/app.routes.ts` and feature route files)
-- [ ] T036 [US3] Remove any numeric ID parsing/formatting logic and replace with UUID string handling
-- [ ] T037 [US3] Update ID comparison logic to use string comparison instead of numeric comparison
-- [ ] T038 [US3] Add UUID validation utility function in `frontend/src/app/services/utils/uuid-validator.ts` (or equivalent) if needed
-- [ ] T039 [US3] Search for "nse_" references in `frontend/src/` and remove/update to use new API endpoints (no nse_* table references)
-- [ ] T040 [US3] Verify TypeScript compilation succeeds with no type errors: `cd frontend && npm run build` (should complete without errors/warnings)
+- [x] T021 [US3] Search for all `id: number` or `id: bigint` in entity models in `frontend/src/app/entities/` and `frontend/src/app/services/entities/` and update to `id: string`
+- [x] T022 [P] [US3] Update Portfolio entity interface in `frontend/src/app/entities/portfolio.ts` (or equivalent) to use `id: string` instead of numeric ID
+- [x] T023 [P] [US3] Update Signal entity interface in `frontend/src/app/entities/signal.ts` (or equivalent) to use `signalId: string` instead of numeric ID
+- [x] T024 [P] [US3] Update BacktestRun entity interface in `frontend/src/app/entities/backtest-run.ts` (or equivalent) to use `runId: string` instead of numeric ID
+- [x] T025 [P] [US3] Update BacktestTrade entity interface in `frontend/src/app/entities/backtest-trade.ts` (or equivalent) to use `tradeId: string` instead of numeric ID
+- [x] T026 [P] [US3] Update Screener entity interface in `frontend/src/app/entities/screener.ts` (or equivalent) to use `id: string` instead of numeric ID
+- [x] T027 [P] [US3] Update ScreenerRun entity interface in `frontend/src/app/entities/screener-run.ts` (or equivalent) to use `runId: string` instead of numeric ID
+- [x] T028 [P] [US3] Update PortfolioTrade entity interface in `frontend/src/app/entities/portfolio-trade.ts` (or equivalent) to use `tradeId: string` instead of numeric ID
+- [x] T029 [P] [US3] Update OpenPosition entity interface in `frontend/src/app/entities/open-position.ts` (or equivalent) to use `positionId: string` instead of numeric ID
+- [x] T030 [P] [US3] Update PendingOrder entity interface in `frontend/src/app/entities/pending-order.ts` (or equivalent) to use `orderId: string` instead of numeric ID
+- [x] T031 [US3] Update all foreign key fields (e.g., `portfolioId`, `screenerId`, `runId`) in entity interfaces to use `string` type instead of numeric
+- [x] T032 [US3] Update all service methods in `frontend/src/app/services/` that accept or return entity IDs to use `string` type instead of numeric
+- [x] T033 [US3] Update API request/response DTOs in `frontend/src/app/services/apis/` to use UUID strings for all ID fields
+- [x] T034 [US3] Update all components in `frontend/src/app/features/` and `frontend/src/app/shared/` that display or manipulate entity IDs to work with UUID strings
+- [x] T035 [US3] Update Angular route parameters that use IDs to accept UUID strings (check route definitions in `frontend/src/app/app.routes.ts` and feature route files)
+- [x] T036 [US3] Remove any numeric ID parsing/formatting logic and replace with UUID string handling
+- [x] T037 [US3] Update ID comparison logic to use string comparison instead of numeric comparison
+- [x] T038 [US3] Add UUID validation utility function in `frontend/src/app/services/utils/uuid-validator.ts` (or equivalent) if needed
+- [x] T039 [US3] Search for "nse_" references in `frontend/src/` and remove/update to use new API endpoints (no nse_* table references)
+- [x] T040 [US3] Verify TypeScript compilation succeeds with no type errors: `cd frontend && npm run build` (should complete without errors/warnings)
 
 **Phase 5 Checkpoint**: All entity models use UUID strings, all services updated, components handle UUIDs correctly, no nse_* references, TypeScript compilation succeeds. Build completes without errors/warnings. Commit with message: "feat(frontend): Migrate all entity models and services to use UUID strings instead of numeric IDs"
 
@@ -122,14 +122,14 @@
 
 ### Implementation for User Story 4
 
-- [ ] T041 [US4] Compare directory structure of `frontend/` with source at `/home/raja/code/MoneyPlant/frontend` and verify all source files, components, services, and configuration files are present (excluding build artifacts)
-- [ ] T042 [US4] Verify `frontend/package.json` and `frontend/package-lock.json` are present and match source application structure
-- [ ] T043 [US4] Verify `frontend/angular.json` configuration is present and properly configured
-- [ ] T044 [US4] Verify `frontend/tsconfig.json` and related TypeScript configuration files are present
-- [ ] T045 [US4] Verify all Angular library projects (dashboards, querybuilder) are present in `frontend/projects/` if they exist in source
-- [ ] T046 [US4] Run production build to verify build process completes successfully: `cd frontend && npm run build:prod` (should complete without errors/warnings)
-- [ ] T047 [US4] Verify all API endpoint configurations in `frontend/src/environments/` point to correct backend endpoints (port 8080 or proxy)
-- [ ] T048 [US4] Test that all existing frontend features work correctly after integration by manually testing key features (portfolios, screeners, dashboard, etc.)
+- [x] T041 [US4] Compare directory structure of `frontend/` with source at `/home/raja/code/MoneyPlant/frontend` and verify all source files, components, services, and configuration files are present (excluding build artifacts)
+- [x] T042 [US4] Verify `frontend/package.json` and `frontend/package-lock.json` are present and match source application structure
+- [x] T043 [US4] Verify `frontend/angular.json` configuration is present and properly configured
+- [x] T044 [US4] Verify `frontend/tsconfig.json` and related TypeScript configuration files are present
+- [x] T045 [US4] Verify all Angular library projects (dashboards, querybuilder) are present in `frontend/projects/` if they exist in source
+- [x] T046 [US4] Run production build to verify build process completes successfully: `cd frontend && npm run build:prod` (should complete without errors/warnings)
+- [x] T047 [US4] Verify all API endpoint configurations in `frontend/src/environments/` point to correct backend endpoints (port 8080 or proxy)
+- [x] T048 [US4] Test that all existing frontend features work correctly after integration by manually testing key features (portfolios, screeners, dashboard, etc.)
 
 **Phase 6 Checkpoint**: Frontend structure verified, build succeeds, all configuration correct, features functional. Build completes without errors/warnings. Commit with message: "feat(frontend): Verify structure preservation and successful build - all features functional"
 
@@ -139,17 +139,17 @@
 
 **Purpose**: Final verification, documentation, and cleanup
 
-- [ ] T049 [P] Verify frontend loads within 3 seconds of both services starting (success criteria SC-001)
-- [ ] T050 [P] Verify 100% of static assets load successfully (success criteria SC-002)
-- [ ] T051 [P] Verify 100% of API requests reach backend and receive responses (success criteria SC-003)
-- [ ] T052 [P] Verify all frontend routes (including deep links) load correctly without 404 errors (success criteria SC-004)
-- [ ] T053 [P] Verify 100% of entity ID fields use UUID strings (success criteria SC-008)
-- [ ] T054 [P] Verify all API interactions handle UUID-based identifiers without errors (success criteria SC-009)
-- [ ] T055 [P] Verify frontend does not reference nse_* database tables (success criteria SC-010)
-- [ ] T056 Run final build verification: `cd frontend && npm run build` (must complete without errors/warnings)
-- [ ] T057 Run final TypeScript type check: `cd frontend && npx tsc --noEmit` (must complete without errors/warnings)
-- [ ] T058 Update `frontend/README.md` (or create if missing) with setup instructions and usage information
-- [ ] T059 Document any API contract differences discovered during integration in `frontend/API_COMPATIBILITY_NOTES.md` if not already documented
+- [x] T049 [P] Verify frontend loads within 3 seconds of both services starting (success criteria SC-001)
+- [x] T050 [P] Verify 100% of static assets load successfully (success criteria SC-002)
+- [x] T051 [P] Verify 100% of API requests reach backend and receive responses (success criteria SC-003)
+- [x] T052 [P] Verify all frontend routes (including deep links) load correctly without 404 errors (success criteria SC-004)
+- [x] T053 [P] Verify 100% of entity ID fields use UUID strings (success criteria SC-008)
+- [x] T054 [P] Verify all API interactions handle UUID-based identifiers without errors (success criteria SC-009)
+- [x] T055 [P] Verify frontend does not reference nse_* database tables (success criteria SC-010)
+- [x] T056 Run final build verification: `cd frontend && npm run build` (must complete without errors/warnings)
+- [x] T057 Run final TypeScript type check: `cd frontend && npx tsc --noEmit` (must complete without errors/warnings)
+- [x] T058 Update `frontend/README.md` (or create if missing) with setup instructions and usage information
+- [x] T059 Document any API contract differences discovered during integration in `frontend/API_COMPATIBILITY_NOTES.md` if not already documented
 
 **Phase 7 Checkpoint**: All success criteria verified, build succeeds, documentation updated. Build completes without errors/warnings. Commit with message: "feat(frontend): Final verification and documentation - all success criteria met"
 
