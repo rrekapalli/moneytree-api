@@ -18,7 +18,16 @@
       [options]="dashboardConfig.config"
       [dashboardId]="dashboardConfig.dashboardId"
       (filterValuesChanged)="onFilterValuesChanged($event)"
+      (onStockSelected)="onIndexSelected($event)"
       (onStockDoubleClicked)="onIndexDoubleClicked($event)">
     </vis-dashboard-container>
+    
+    <!-- Loading overlay for candlestick chart - positioned over the widget -->
+    <div class="candlestick-loading-overlay" *ngIf="isCandlestickLoading">
+      <div class="loading-spinner-container">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #2196f3;"></i>
+        <p class="loading-text">Loading chart data...</p>
+      </div>
+    </div>
   </div>
 </p-scrollPanel>

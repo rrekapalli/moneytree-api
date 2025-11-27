@@ -227,6 +227,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   // Selected time range for candlestick chart
   private selectedTimeRange: string = 'YTD';
 
+  // Currently selected index symbol for highlighting in Index List widget
+  public selectedIndexSymbol: string = '';
+
+  // Loading state for candlestick chart
+  public isCandlestickLoading: boolean = false;
+
   // WebSocket connection state tracking
   private isWebSocketConnected: boolean = false;
   private currentSubscribedIndex: string | null = null;
@@ -422,12 +428,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     this.dashboardData = [...data];
     this.filteredDashboardData = [...data];
-    this.appliedFilters = [];
-
+          this.appliedFilters = [];
+          
     this.updateStockListWithFilteredData();
-    this.updateMetricTilesWithFilters([]);
-    this.cdr.detectChanges();
-  }
+          this.updateMetricTilesWithFilters([]);
+          this.cdr.detectChanges();
+        }
 
   private setDefaultIndexFromData(data: StockDataDto[]): void {
     this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
@@ -456,20 +462,27 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   /**
-   * Handle double-click events from the Index List widget.
+   * Handle single-click events from the Index List widget.
    * Loads the selected index into the dashboard and refreshes the candlestick chart.
    */
-  public onIndexDoubleClicked(selectedIndex: any): void {
+  public onIndexSelected(selectedIndex: any): void {
     if (!selectedIndex) {
       return;
     }
 
-    const symbol = selectedIndex.tradingsymbol || selectedIndex.symbol;
+    // Use symbol field first (as used by stock list table), fallback to tradingsymbol
+    const symbol = selectedIndex.symbol || selectedIndex.tradingsymbol;
     const name = selectedIndex.companyName || selectedIndex.name || symbol;
 
     if (!symbol && !name) {
       return;
     }
+
+    // Update selected index symbol for highlighting (use symbol field to match stock list table)
+    this.selectedIndexSymbol = symbol || name;
+
+    // Show loading indicator
+    this.isCandlestickLoading = true;
 
     const selectedIndexData: SelectedIndexData = {
       id: selectedIndex.id || symbol || name,
@@ -485,6 +498,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   /**
+   * Handle double-click events from the Index List widget.
+   * Reserved for future functionality.
+   */
+  public onIndexDoubleClicked(selectedIndex: any): void {
+    // Placeholder for future double-click functionality
+    // Currently empty as requested
+  }
+
+  /**
    * Load historical data for the selected index
    * @param indexName The name of the index to load historical data for
    */
@@ -494,12 +516,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         next: (historicalData: IndexHistoricalData[]) => {
           this.historicalData = this.normalizeHistoricalData(historicalData || []);
           this.updateCandlestickChartWithHistoricalData();
+          this.isCandlestickLoading = false; // Hide loading indicator
           this.cdr.detectChanges();
         },
         error: (error) => {
           console.warn('Failed to load historical data for', indexName, ':', error);
           this.historicalData = [];
           this.updateCandlestickChartWithHistoricalData();
+          this.isCandlestickLoading = false; // Hide loading indicator even on error
           this.cdr.detectChanges();
         }
       });
@@ -568,6 +592,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   private updateDashboardWithSelectedIndex(selectedIndex: SelectedIndexData): void {
     // Unsubscribe from previous WebSocket topic if any
     this.unsubscribeFromCurrentWebSocketTopic();
+    
+    // Update selected index symbol for highlighting in Index List widget
+    this.selectedIndexSymbol = selectedIndex.symbol || selectedIndex.name || '';
     
     // Update dashboard title with selected index name or symbol
     this.dashboardTitle = selectedIndex.name || selectedIndex.symbol || 'Financial Dashboard';
@@ -834,8 +861,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       .setLargeMode(100)  // Enable large mode for datasets with 100+ points
       .setTooltipType('axis')  // Enable crosshair tooltip for better analysis
       .enableTimeRangeFilters(['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'], 'YTD')  // Enable time range filters with YTD as default
-      .enableAreaSeries(true, 0.4)  // Enable area series with close price data and higher opacity
-      .setAreaSeriesOpacity(0.5)  // Set area series opacity to 50% for better visibility
+      .enableAreaSeries(false, 0.4)  // Disable area series - reserved for future indicators like Bollinger Bands
       .enableVolume(false)  // Disable volume bars to avoid dual-axis issues
       .enableLegend(false)  // Disable legend for cleaner appearance
       .enableDataZoom(true)  // Enable data zoom for timeline navigation
@@ -870,19 +896,34 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         max: 'dataMax',
         axisLabel: {
           rotate: 45,
-          fontSize: 10,
+          fontSize: 20, // 1.25rem = 20px
           color: '#666',
-          formatter: (value: string) => {
-            // Format date labels for better readability
+          formatter: (value: string, index: number, data: any) => {
+            // Format date labels to show year and month by default
+            // When zoomed in (dataZoom active), show full date
             if (value && typeof value === 'string') {
               try {
                 const date = new Date(value);
                 if (!isNaN(date.getTime())) {
+                  // Check if dataZoom is active by checking if we have many data points
+                  // If zoomed in (fewer visible points), show full date
+                  const totalPoints = data?.length || 0;
+                  const isZoomed = totalPoints < 30; // If less than 30 points visible, consider it zoomed
+                  
+                  if (isZoomed) {
+                    // Show full date when zoomed in
                   return date.toLocaleDateString('en-IN', { 
                     month: 'short', 
                     day: 'numeric',
                     year: '2-digit'
                   });
+                  } else {
+                    // Show year and month only when not zoomed
+                    return date.toLocaleDateString('en-IN', { 
+                      month: 'short', 
+                      year: 'numeric'
+                    });
+                  }
                 }
               } catch (e) {
                 // If not a valid date, return as is
@@ -919,7 +960,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
             }).format(value);
           },
           color: '#333',
-          fontSize: 10
+          fontSize: 20 // 1.25rem = 20px
         },
         axisLine: {
           lineStyle: {
@@ -1045,9 +1086,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     filterWidget.position = { x: 0, y: 2, cols: 12, rows: 1 };
 
     // Position charts with proper spacing - adjusted candlestick chart height for time range filters
-    stockListWidget.position = { x: 0, y: 3, cols: 4, rows: 16 };
-    candlestickChart.position = { x: 4, y: 3, cols: 8, rows: 16 };
-
+    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
+    candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 18 };
+    
     // Use the Fluent API to build the dashboard config with filter highlighting enabled
     this.dashboardConfig = StandardDashboardBuilder.createStandard()
       .setDashboardId('overall-dashboard')
@@ -1060,7 +1101,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       })
       .setWidgets([
         ...metricTiles,
-        filterWidget,
+        //filterWidget,
 
         stockListWidget,
         candlestickChart,
@@ -1117,11 +1158,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         if (widget.data) {
           widget.data.stocks = stockData;
           widget.data.isLoadingStocks = false;
+          widget.data.selectedStockSymbol = this.selectedIndexSymbol;
         } else {
           // Initialize widget data if it doesn't exist
           widget.data = {
             stocks: stockData,
-            isLoadingStocks: false
+            isLoadingStocks: false,
+            selectedStockSymbol: this.selectedIndexSymbol
           };
         }
       } else {
@@ -1788,7 +1831,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
     
     this.chartUpdateTimer = setTimeout(() => {
-      this.updateCandlestickChartWithHistoricalData();
+        this.updateCandlestickChartWithHistoricalData();
       this.updateStockListWithFilteredData();
       
       // Update metric tiles with filtered data
@@ -1848,6 +1891,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   /**
    * Apply candlestick data to the widget and update its ECharts options.
+   * Data is already sorted in ascending order (oldest to newest) from the API.
    */
   private applyCandlestickData(widget: IWidget, dataset: IndexHistoricalData[]): void {
     const candlestickData = dataset.map(item => [
@@ -1857,10 +1901,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       Number(item.high) || 0
     ]);
 
-    const closeSeriesData = dataset.map(item => Number(item.close) || 0);
     const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
 
-    const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, closeSeriesData, xAxisData);
+    const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, xAxisData);
 
     widget.data = dataset;
 
@@ -1881,46 +1924,112 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   private buildUpdatedCandlestickOptions(
     widget: IWidget,
     candlestickData: number[][],
-    closeSeriesData: number[],
     xAxisData: string[]
   ): any {
     const baseOptions: any = (widget.chartInstance?.getOption?.() || widget.config?.options || {});
     const options = { ...baseOptions };
 
-    // Update x-axis labels (first axis only)
+    // Update x-axis labels (first axis only) with enhanced formatter and font size
+    const xAxisFormatter = (value: string, index: number) => {
+      if (value && typeof value === 'string') {
+        try {
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            // Check if dataZoom is active by checking if we have many data points
+            const totalPoints = xAxisData?.length || 0;
+            const isZoomed = totalPoints < 30; // If less than 30 points visible, consider it zoomed
+            
+            if (isZoomed) {
+              // Show full date when zoomed in
+              return date.toLocaleDateString('en-IN', { 
+                month: 'short', 
+                day: 'numeric',
+                year: '2-digit'
+              });
+            } else {
+              // Show year and month only when not zoomed
+              return date.toLocaleDateString('en-IN', { 
+                month: 'short', 
+                year: 'numeric'
+              });
+            }
+          }
+        } catch (e) {
+          // If not a valid date, return as is
+        }
+      }
+      return value;
+    };
+
     if (Array.isArray(options.xAxis)) {
       options.xAxis = options.xAxis.map((axis: any, index: number) =>
-        index === 0 ? { ...axis, data: xAxisData } : axis
+        index === 0 ? { 
+          ...axis, 
+          data: xAxisData,
+          axisLabel: {
+            ...axis.axisLabel,
+            fontSize: 20, // 1.25rem = 20px
+            formatter: xAxisFormatter
+          }
+        } : axis
       );
     } else if (options.xAxis) {
-      options.xAxis = { ...options.xAxis, data: xAxisData };
+      options.xAxis = { 
+        ...options.xAxis, 
+        data: xAxisData,
+        axisLabel: {
+          ...options.xAxis.axisLabel,
+          fontSize: 20, // 1.25rem = 20px
+          formatter: xAxisFormatter
+        }
+      };
     } else {
-      options.xAxis = [{ type: 'category', data: xAxisData }];
+      options.xAxis = [{ 
+        type: 'category', 
+        data: xAxisData,
+        axisLabel: {
+          fontSize: 20, // 1.25rem = 20px
+          formatter: xAxisFormatter
+        }
+      }];
     }
 
-    // Update series data (candlestick and area series if present)
+    // Update Y-axis font size
+    if (Array.isArray(options.yAxis)) {
+      options.yAxis = options.yAxis.map((axis: any) => ({
+        ...axis,
+        axisLabel: {
+          ...axis.axisLabel,
+          fontSize: 20 // 1.25rem = 20px
+        }
+      }));
+    } else if (options.yAxis) {
+      options.yAxis = {
+        ...options.yAxis,
+        axisLabel: {
+          ...options.yAxis.axisLabel,
+          fontSize: 20 // 1.25rem = 20px
+        }
+      };
+    }
+
+    // Update series data - remove area series (line type), keep only candlestick
     if (Array.isArray(options.series)) {
-      options.series = options.series.map((series: any) => {
-        if (series?.type === 'candlestick') {
-          return {
-            ...series,
-            data: candlestickData
-          };
-        }
-
-        if (series?.type === 'line') {
-          return {
-            ...series,
-            data: closeSeriesData
-          };
-        }
-
-        return series;
-      });
+      options.series = options.series
+        .filter((series: any) => series?.type !== 'line') // Remove area/line series
+        .map((series: any) => {
+          if (series?.type === 'candlestick') {
+            return {
+              ...series,
+              data: candlestickData
+            };
+          }
+          return series;
+        });
     } else {
       options.series = [{
         type: 'candlestick',
-        data: candlestickData
+            data: candlestickData
       }];
     }
 
@@ -1976,10 +2085,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       if (widget.data) {
         widget.data.stocks = newStockDataArray;
         widget.data.isLoadingStocks = false;
+        widget.data.selectedStockSymbol = this.selectedIndexSymbol;
       } else {
         widget.data = {
           stocks: newStockDataArray,
-          isLoadingStocks: false
+          isLoadingStocks: false,
+          selectedStockSymbol: this.selectedIndexSymbol
         };
       }
     });

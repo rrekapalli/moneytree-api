@@ -70,10 +70,7 @@ public class KiteMarketDataRepository {
                         OR (? = 'NSE' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX'))
                         OR (? = 'NSE_INDEX' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX')) )
                   AND ( ? IS NULL OR UPPER(segment) = ? )
-                ORDER BY
-                    CASE WHEN UPPER(segment) = 'INDICES' THEN 0 ELSE 1 END,
-                    CASE WHEN UPPER(exchange) IN ('NSE', 'NSE_INDEX') THEN 0 ELSE 1 END,
-                    name
+                ORDER BY tradingsymbol ASC
                 """;
 
         return jdbcTemplate.queryForList(
@@ -170,7 +167,7 @@ public class KiteMarketDataRepository {
                   AND o.exchange IN ('NSE', 'NSE_INDEX')
                   AND o.candle_interval = 'day'
                   AND o.date >= CURRENT_DATE - (? || ' days')::interval
-                ORDER BY o.date DESC
+                ORDER BY o.date ASC
                 """;
         return jdbcTemplate.queryForList(
                 sql,
