@@ -37,9 +37,13 @@ export class AuthService {
     private http: HttpClient,
     private router: Router
   ) {
-    // Initialize authentication state immediately
-    this.initializeAuthState();
-    this.checkAuthStatus();
+    // AUTHENTICATION DISABLED - Skip authentication initialization
+    // TODO: Re-enable by uncommenting below when authentication is needed
+    // this.initializeAuthState();
+    // this.checkAuthStatus();
+    
+    // Set authenticated state to true when auth is disabled
+    this.isAuthenticatedSubject.next(true);
   }
 
   private initializeAuthState(): void {
@@ -203,6 +207,12 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
+    // AUTHENTICATION DISABLED - Always return true
+    // TODO: Re-enable authentication check by removing this line and uncommenting below
+    return true;
+    
+    // RE-ENABLE AUTHENTICATION: Uncomment below
+    // return this.isAuthenticatedSubject.value;
     // Check if we have a token and it's not expired
     const token = this.getToken();
     if (!token) {
