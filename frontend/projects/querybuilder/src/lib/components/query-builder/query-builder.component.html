@@ -1,0 +1,13 @@
+<div [class]="getClassNames()" [attr.aria-level]="getAriaLevel()">
+  <lib-query-entity
+    [config]="config"
+    [data]="query"
+    [parentValue]="parentValue"
+    [allowRuleset]="allowRuleset"
+    [allowEmpty]="allowEmpty"
+    [emptyMessage]="emptyMessage"
+    [operatorMap]="operatorMap"
+    [parentAriaLevel]="parentAriaLevel"
+    (dataChange)="onQueryChange($event)">
+  </lib-query-entity>
+</div>

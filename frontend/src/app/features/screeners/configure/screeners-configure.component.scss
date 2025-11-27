@@ -1,0 +1,727 @@
+.configure-content {
+  .no-selection {
+    text-align: center;
+    padding: 3rem;
+    color: #7f8c8d;
+
+    i {
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    p {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+    }
+
+    button {
+      margin-top: 1rem;
+    }
+  }
+
+  .screener-config {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 2rem;
+
+    .config-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e9ecef;
+
+      h3 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+    }
+
+    .config-section {
+      margin-bottom: 1rem;
+      
+      .section-title {
+        margin: 0 0 0.5rem 0;
+        color: #2c3e50;
+        font-size: 1rem;
+        font-weight: 600;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #e0e0e0;
+      }
+    }
+
+    .config-form {
+      .basic-info-container {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 2fr 1.5fr 1.5fr;
+        gap: 1rem;
+        align-items: start;
+        margin-bottom: 1rem;
+      }
+
+      .form-group {
+        margin-bottom: 0.75rem;
+
+        &.form-group-flex {
+          min-width: 0;
+        }
+
+        label {
+          display: block;
+          margin-bottom: 0.25rem;
+          font-weight: 600;
+          color: #2c3e50;
+          font-size: 0.85rem;
+        }
+
+        input,
+        textarea {
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 0.9rem;
+          transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+          &:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+          }
+
+          &[readonly] {
+            background-color: #f8f9fa;
+            border-color: #e9ecef;
+            color: #6c757d;
+            cursor: default;
+          }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 60px;
+        }
+
+        .visibility-controls {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          
+          .toggle-switch {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+
+            .switch {
+              position: relative;
+              display: inline-block;
+              width: 50px;
+              height: 24px;
+
+              input[type="checkbox"] {
+                opacity: 0;
+                width: 0;
+                height: 0;
+                position: absolute;
+                margin: 0;
+                padding: 0;
+              }
+
+              .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #ccc;
+                transition: .4s;
+                border-radius: 24px;
+                border: none;
+
+                &:before {
+                  position: absolute;
+                  content: "";
+                  height: 18px;
+                  width: 18px;
+                  left: 3px;
+                  bottom: 3px;
+                  background-color: white;
+                  transition: .4s;
+                  border-radius: 50%;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                }
+              }
+
+              input[type="checkbox"]:checked + .slider {
+                background-color: #28a745;
+              }
+
+              input[type="checkbox"]:checked + .slider:before {
+                transform: translateX(26px);
+              }
+
+              input[type="checkbox"]:disabled + .slider {
+                opacity: 0.6;
+                cursor: not-allowed;
+              }
+
+              &:hover .slider {
+                box-shadow: 0 0 8px rgba(0,0,0,0.1);
+              }
+            }
+
+            .toggle-label {
+              font-size: 0.9rem;
+              color: #495057;
+              font-weight: 500;
+              min-width: 60px;
+            }
+          }
+          
+          .edit-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+          }
+
+          .edit-save-btn {
+            min-width: 70px;
+            height: 32px;
+            font-size: 0.8rem;
+            
+            &.p-button-success {
+              background-color: #28a745;
+              border-color: #28a745;
+            }
+            
+            &:disabled {
+              opacity: 0.6;
+              cursor: not-allowed;
+            }
+          }
+
+          .cancel-btn {
+            min-width: 70px;
+            height: 32px;
+            font-size: 0.8rem;
+            color: #dc3545;
+            position: relative;
+            z-index: 1;
+            
+            &:hover {
+              background-color: #f8f9fa;
+              color: #c82333;
+            }
+          }
+        }
+      }
+    }
+
+    .criteria-header {
+      margin-bottom: 0.75rem;
+      
+      .criteria-description {
+        color: #7f8c8d;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        margin: 0;
+      }
+    }
+
+    .empty-section {
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      background: #fafafa;
+      text-align: center;
+      
+      p {
+        color: #666;
+        font-size: 1rem;
+        margin: 0;
+      }
+    }
+
+    .criteria-builder-container {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 1rem;
+      min-height: 300px;
+    }
+
+    .config-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #f0f0f0;
+
+      .action-buttons-right {
+        display: flex;
+        gap: 1rem;
+      }
+
+      button {
+        min-width: 150px;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .configure-content {
+    .screener-config {
+      padding: 1rem;
+
+      .config-form {
+        .form-row {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
+
+        .visibility-controls {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+          
+          .edit-buttons {
+            width: 100%;
+            justify-content: center;
+          }
+          
+          .edit-save-btn,
+          .cancel-btn {
+            flex: 1;
+            min-width: auto;
+          }
+        }
+      }
+
+      .config-actions {
+        .action-buttons-right {
+          flex-direction: column;
+          align-items: stretch;
+          width: 100%;
+
+          button {
+            min-width: auto;
+            width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Tablet responsive adjustments
+@media (max-width: 1024px) and (min-width: 769px) {
+  .configure-content {
+    .screener-config {
+      .config-form {
+        .form-row {
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          
+          .form-group:last-child {
+            grid-column: 1 / -1;
+          }
+        }
+
+        .visibility-controls {
+          .edit-buttons {
+            gap: 0.25rem;
+          }
+          
+          .edit-save-btn,
+          .cancel-btn {
+            min-width: 60px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// PrimeNG component styling
+:host ::ng-deep {
+  .p-select {
+    width: 100%;
+
+    &[disabled] {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+
+  .p-button {
+    &.p-button-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      border-radius: 0.25rem;
+    }
+  }
+
+  // Criteria builder placeholder styling
+  .criteria-builder-placeholder {
+    text-align: center;
+    padding: 2rem;
+    background: var(--surface-50);
+    border: 2px dashed var(--surface-border);
+    border-radius: 6px;
+    color: var(--text-color-secondary);
+    
+    p {
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+  }
+
+  // Message component styling for validation
+  .p-message {
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    
+    &.p-message-error {
+      background: color-mix(in srgb, var(--criteria-error) 10%, var(--criteria-bg-primary));
+      border: 1px solid color-mix(in srgb, var(--criteria-error) 30%, var(--criteria-border-primary));
+      color: var(--criteria-error);
+    }
+
+    &.p-message-warn {
+      background: color-mix(in srgb, var(--criteria-warning) 10%, var(--criteria-bg-primary));
+      border: 1px solid color-mix(in srgb, var(--criteria-warning) 30%, var(--criteria-border-primary));
+      color: var(--criteria-warning);
+    }
+
+    .p-message-text {
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+  }
+}
+
+// CSS Custom Properties for Theme Support
+:host {
+  // Light theme (default)
+  --criteria-bg-primary: #ffffff;
+  --criteria-bg-secondary: #f8f9fa;
+  --criteria-bg-tertiary: #e9ecef;
+  --criteria-text-primary: #2c3e50;
+  --criteria-text-secondary: #495057;
+  --criteria-text-muted: #6c757d;
+  --criteria-border-primary: #e9ecef;
+  --criteria-border-secondary: #dee2e6;
+  --criteria-accent-primary: #007bff;
+  --criteria-accent-secondary: #28a745;
+  --criteria-error: #dc3545;
+  --criteria-warning: #ffc107;
+  --criteria-success: #28a745;
+  --criteria-shadow-light: rgba(0, 0, 0, 0.1);
+  --criteria-shadow-medium: rgba(0, 0, 0, 0.15);
+  --criteria-shadow-accent: rgba(0, 123, 255, 0.15);
+
+  // Dark theme support (when parent has dark theme class)
+  &.dark-theme,
+  :host-context(.dark-theme) & {
+    --criteria-bg-primary: #2d3748;
+    --criteria-bg-secondary: #1a202c;
+    --criteria-bg-tertiary: #4a5568;
+    --criteria-text-primary: #f7fafc;
+    --criteria-text-secondary: #e2e8f0;
+    --criteria-text-muted: #a0aec0;
+    --criteria-border-primary: #4a5568;
+    --criteria-border-secondary: #2d3748;
+    --criteria-accent-primary: #63b3ed;
+    --criteria-accent-secondary: #68d391;
+    --criteria-error: #fc8181;
+    --criteria-warning: #f6e05e;
+    --criteria-success: #68d391;
+    --criteria-shadow-light: rgba(0, 0, 0, 0.3);
+    --criteria-shadow-medium: rgba(0, 0, 0, 0.4);
+    --criteria-shadow-accent: rgba(99, 179, 237, 0.25);
+  }
+}
+
+// Criteria builder styling
+.criteria-builder-container {
+  background: var(--criteria-bg-primary);
+  border: 1px solid var(--criteria-border-primary);
+  border-radius: 8px;
+  padding: 0;
+  min-height: 300px;
+  overflow: hidden;
+
+  .criteria-builder {
+    width: 100%;
+    min-height: 300px;
+    
+    // Placeholder for future criteria builder styling
+  }
+
+  // Validation error styling
+  .criteria-validation-errors {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--criteria-error) 10%, var(--criteria-bg-primary));
+    border: 1px solid color-mix(in srgb, var(--criteria-error) 30%, var(--criteria-border-primary));
+    border-radius: 6px;
+
+    .criteria-error-item {
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  // Validation warning styling
+  .criteria-validation-warnings {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--criteria-warning) 10%, var(--criteria-bg-primary));
+    border: 1px solid color-mix(in srgb, var(--criteria-warning) 30%, var(--criteria-border-primary));
+    border-radius: 6px;
+
+    .criteria-warning-item {
+      margin-bottom: 0.5rem;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  // Integration status placeholder styling
+  .criteria-builder-placeholder {
+    text-align: center;
+    padding: 2rem;
+    background: var(--criteria-bg-primary);
+    border: 2px solid var(--criteria-border-primary);
+    border-radius: 8px;
+    color: var(--criteria-text-primary);
+
+    &.disabled {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .placeholder-content {
+      max-width: 600px;
+      margin: 0 auto;
+
+      i {
+        margin-bottom: 1rem;
+        display: block;
+      }
+
+      h4 {
+        margin: 1rem 0 0.5rem 0;
+        color: var(--criteria-accent-primary);
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+
+      p {
+        margin: 0.5rem 0;
+        font-size: 0.95rem;
+        line-height: 1.4;
+
+        &.technical-note {
+          background: var(--criteria-bg-secondary);
+          padding: 1rem;
+          border-radius: 6px;
+          border-left: 4px solid var(--criteria-warning);
+          text-align: left;
+          margin: 1rem 0;
+          font-size: 0.9rem;
+        }
+      }
+
+      .integration-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 0.75rem;
+        margin: 1.5rem 0;
+        text-align: left;
+
+        .status-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem;
+          background: var(--criteria-bg-secondary);
+          border-radius: 4px;
+          font-size: 0.9rem;
+
+          i {
+            margin: 0;
+            font-size: 1rem;
+          }
+        }
+      }
+
+      button {
+        margin-top: 1rem;
+      }
+    }
+  }
+
+  // Legacy placeholder styling (for fallback)
+  .criteria-placeholder {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 8px;
+    color: #6c757d;
+
+    i {
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+
+      &.text-muted {
+        font-size: 0.9rem;
+        color: #adb5bd;
+      }
+    }
+  }
+}
+
+// Query Builder Integration Styles - Simplified
+.query-builder-wrapper {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 1rem;
+  min-height: 250px;
+}
+
+:host ::ng-deep {
+  lib-query-builder {
+    display: block;
+    width: 100%;
+  }
+  
+  .query-builder {
+    display: block;
+    width: 100%;
+      
+  }
+  
+  // All query builder components inherit PrimeNG styling automatically
+  // Just ensure they're visible
+  .query-entity,
+  .query-ruleset,
+  .query-ruleset-header,
+  .query-ruleset-controls,
+  .query-button-group,
+  .query-switch-group {
+    display: block;
+  }
+  
+  .query-ruleset-header,
+  .query-ruleset-controls,
+  .query-button-group,
+  .query-switch-group,
+  .query-rule,
+  .query-field-details,
+  .query-rule-container {
+    display: flex;
+  }
+  
+  // Fix PrimeNG dropdown overlay opacity
+  .p-select-overlay,
+  .p-select-panel {
+    opacity: 1 !important;
+    visibility: visible !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #e0e0e0 !important;
+    z-index: 1000 !important;
+  }
+  
+  .p-select-items {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  
+  .p-select-option,
+  .p-select-item {
+    opacity: 1 !important;
+    visibility: visible !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    padding: 8px 12px !important;
+    
+    &:hover {
+      background-color: #f0f0f0 !important;
+      color: #000000 !important;
+    }
+    
+    &.p-selected {
+      background-color: #e3f2fd !important;
+      color: #1976d2 !important;
+    }
+  }
+}
+
+// Query validation messages styling
+.query-validation-messages {
+  margin-top: 0.75rem;
+  
+  ::ng-deep .p-message {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    background: var(--yellow-50);
+    border: 1px solid var(--yellow-200);
+    color: var(--yellow-900);
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .p-message-icon {
+      color: var(--yellow-700);
+    }
+    
+    .p-message-text {
+      color: var(--yellow-900);
+    }
+    
+    .p-message-close {
+      color: var(--yellow-700);
+      
+      &:hover {
+        background: var(--yellow-100);
+      }
+    }
+  }
+}

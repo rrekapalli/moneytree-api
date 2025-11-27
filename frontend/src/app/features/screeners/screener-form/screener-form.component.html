@@ -1,0 +1,131 @@
+<!-- Page Header -->
+<app-page-header
+  [title]="isEdit ? 'Edit Screener' : 'Create Screener'"
+  [subtitle]="isEdit ? 'Modify your existing screener configuration' : 'Create a new stock screener with custom criteria'"
+  [showActionButton]="false">
+</app-page-header>
+
+<div class="page-container">
+
+  <div class="form-content">
+    <p-tabs [(value)]="activeTab" (valueChange)="onTabChange($event)">
+      <p-tablist>
+        <p-tab value="basic">
+          <i class="pi pi-info-circle"></i>
+          Basic Info
+        </p-tab>
+        <p-tab value="criteria">
+          <i class="pi pi-filter"></i>
+          Screening Criteria
+          @if (hasCriteria()) {
+          <span class="criteria-badge" [class.criteria-badge-active]="getCriteriaCount() > 0"
+            [class.criteria-badge-warning]="getCriteriaCount() > 10"
+            [title]="'Total conditions: ' + getCriteriaCount()">
+            {{ getCriteriaCount() }}
+          </span>
+          }
+        </p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <!-- Basic Info Tab -->
+        <p-tabpanel value="basic">
+          <p-card>
+            <form (ngSubmit)="saveScreener()" #form="ngForm">
+              <div class="form-grid">
+                <!-- Condensed row layout for better space utilization -->
+                <!-- Condensed row with Name, Default Universe, and Visibility -->
+                <div class="form-row">
+                  <div class="form-group form-group-flex">
+                    <label for="name">Name *</label>
+                    <input type="text" id="name" pInputText [(ngModel)]="screenerForm.name" name="name"
+                      placeholder="Enter screener name" required class="w-full" />
+                  </div>
+
+                  <div class="form-group form-group-flex">
+                    <label for="defaultUniverse">Default Universe</label>
+                    <input type="text" id="defaultUniverse" pInputText [(ngModel)]="screenerForm.defaultUniverse"
+                      name="defaultUniverse" placeholder="e.g., NSE, BSE" class="w-full" />
+                  </div>
+
+                  <div class="form-group form-group-flex checkbox-group">
+                    <label>Visibility</label>
+                    <div class="checkbox-wrapper">
+                      <p-checkbox [(ngModel)]="screenerForm.isPublic" name="isPublic" [binary]="true"
+                        label="Public"></p-checkbox>
+                      <small class="help-text">Viewable by other users</small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Description in separate row -->
+                <div class="form-group">
+                  <label for="description">Description</label>
+                  <textarea id="description" [(ngModel)]="screenerForm.description" name="description"
+                    placeholder="Enter screener description" rows="2" class="w-full"></textarea>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button pButton type="button" label="Cancel" icon="pi pi-times" (click)="cancel()"
+                  class="p-button-outlined"></button>
+                <button pButton type="submit" [label]="isEdit ? 'Update Screener' : 'Create Screener'"
+                  icon="pi pi-check" [disabled]="!form.valid || loading" [loading]="loading"></button>
+              </div>
+            </form>
+          </p-card>
+        </p-tabpanel>
+
+        <!-- Criteria Tab -->
+        <p-tabpanel value="criteria">
+          <p-card>
+            <div class="criteria-header">
+              <h3>Screening Criteria</h3>
+              <p class="criteria-description">
+                Define the technical indicators and conditions that stocks must meet to be included in this screener.
+                You can combine multiple conditions using AND/OR logic.
+              </p>
+            </div>
+
+            <div class="criteria-builder-container">
+              <div class="empty-criteria-section">
+                <p>Criteria builder section will be implemented here.</p>
+              </div>
+            </div>
+
+            <div class="criteria-actions">
+              <button pButton label="Clear All Criteria" icon="pi pi-trash" (click)="clearCriteria()"
+                class="p-button-outlined p-button-danger" [disabled]="!hasCriteria()"></button>
+              <button pButton label="Save Screener" icon="pi pi-check" (click)="saveScreener()" [disabled]="loading"
+                [loading]="loading"></button>
+            </div>
+
+            <!-- Simple Criteria Preview for MVP -->
+            @if (hasCriteria()) {
+            <div class="criteria-preview">
+              <h4>Criteria Summary</h4>
+              <div class="criteria-summary">
+                <div class="summary-item">
+                  <span class="summary-label">Total Conditions:</span>
+                  <span class="summary-value">{{ getCriteriaCount() }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Logic Operator:</span>
+                  <span class="summary-value">AND</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Status:</span>
+                  <span class="status-badge status-ready">Ready</span>
+                </div>
+              </div>
+            </div>
+            }
+          </p-card>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+
+  <!-- Toast Messages -->
+  <p-toast></p-toast>
+</div>

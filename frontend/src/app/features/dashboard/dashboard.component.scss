@@ -1,0 +1,164 @@
+:host ::ng-deep {
+  .p-card {
+    .p-card-content {
+      padding: var(--spacing-lg); /* 0.75rem -> var(--spacing-lg) */
+    }
+
+    &.shadow-2 {
+      box-shadow: 0 0.457em 1.143em rgba(0, 0, 0, 0.1); /* 4px/0.875rem, 10px/0.875rem */
+
+      &:hover {
+        box-shadow: 0 0.686em 1.6em rgba(0, 0, 0, 0.15); /* 6px/0.875rem, 14px/0.875rem */
+      }
+    }
+  }
+
+  .text-primary {
+    color: var(--primary-color);
+  }
+
+  .text-success {
+    color: var(--success-color);
+  }
+
+  .p-button.p-button-sm {
+    font-size: 1em; /* 0.875rem / 0.875rem = 1em */
+    padding: 0.343em 0.686em; /* 0.3rem/0.875rem, 0.6rem/0.875rem */
+  }
+
+  .p-button.w-full {
+    width: 100%;
+  }
+
+  .p-message {
+    justify-content: center;
+    margin-bottom: var(--spacing-lg); /* 0.75rem -> var(--spacing-lg) */
+  }
+}
+
+// Custom dashboard styles
+.dashboard-container {
+  padding: 1rem;
+  
+  .dashboard-header {
+    text-align: left;
+    margin-bottom: 2rem;
+    
+    h1 {
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      font-size: 2.5rem;
+    }
+    
+    p {
+      color: var(--text-color-secondary);
+      font-size: 1.1rem;
+    }
+  }
+  
+  .dashboard-nav {
+    display: flex;
+    justify-content: left;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--surface-border);
+    background: var(--surface-ground);
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    .dashboard-tab {
+      display: flex;
+      align-items: center;
+      padding: 1rem 2rem;
+      text-decoration: none;
+      color: var(--text-color);
+      background: transparent;
+      border: none;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+      position: relative;
+      
+      &:hover {
+        background: var(--surface-hover);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+      }
+      
+      &.active {
+        background: var(--surface-card);
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 600;
+        
+        &::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: var(--primary-color);
+        }
+      }
+      
+      &:not(:last-child) {
+        border-right: 1px solid var(--surface-border);
+      }
+    }
+  }
+  
+  .dashboard-content {
+    background: var(--surface-card);
+    border-radius: 6px;
+    min-height: 600px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    
+    // Make sure the routed components fill the container
+    > * {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 0.5rem;
+    
+    .dashboard-header h1 {
+      font-size: 2rem;
+    }
+    
+    .dashboard-nav {
+      flex-wrap: wrap;
+      
+      .dashboard-tab {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+        flex: 1;
+        text-align: center;
+        min-width: 120px;
+      }
+    }
+  }
+}
+
+// Dark theme support
+[data-theme="dark"] {
+  .dashboard-nav {
+    .dashboard-tab {
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+      
+      &.active {
+        background: rgba(255, 255, 255, 0.05);
+      }
+    }
+  }
+}

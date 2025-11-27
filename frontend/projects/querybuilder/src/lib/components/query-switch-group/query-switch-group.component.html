@@ -1,0 +1,13 @@
+<div class="query-switch-group">
+  <p-select
+    [options]="conditions"
+    [ngModel]="condition"
+    (ngModelChange)="onConditionChange($event)"
+    [disabled]="disabled"
+    optionLabel="label"
+    optionValue="value"
+    [style]="{ 'min-width': '70px', 'width': '70px' }"
+    size="small"
+    [showClear]="false">
+  </p-select>
+</div>

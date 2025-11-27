@@ -1,0 +1,20 @@
+<div class="query-button-group">
+  <p-button
+    label="+ Rule"
+    icon="pi pi-plus-circle"
+    size="small"
+    [disabled]="!canAddRule"
+    (onClick)="onAddRule()"
+    styleClass="query-add-rule-btn">
+  </p-button>
+  
+  <p-button
+    *ngIf="allowRuleset"
+    label="+ Group"
+    icon="pi pi-sitemap"
+    size="small"
+    [disabled]="!canAddRuleSet"
+    (onClick)="onAddRuleSet()"
+    styleClass="query-add-group-btn">
+  </p-button>
+</div>

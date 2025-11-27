@@ -1,0 +1,450 @@
+/* You can add global styles to this file, and also import other style files */
+/* Import PrimeNG styles */
+@import "primeicons/primeicons.css";
+@import "primeflex/primeflex.css";
+
+/* Global Page Header Styles - Consistent styling for all pages except Dashboard */
+.header-divider {
+  width: 100%;
+  height: 1px;
+  background-color: var(--surface-border, #e9ecef);
+  margin: 0;
+  padding: 0;
+}
+
+.header-section {
+  margin-bottom: 2rem;
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    .title-section {
+      .main-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        color: var(--text-color, #2c3e50);
+      }
+
+      .subtitle {
+        font-size: 1.1rem;
+        margin: 0;
+        color: var(--text-color-secondary, #6c757d);
+        font-weight: 400;
+      }
+    }
+
+    .create-btn {
+      background: var(--primary-color, #667eea);
+      border: 1px solid var(--primary-color, #667eea);
+      color: var(--primary-color-text, white);
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: var(--primary-600, #5a6fd8);
+        border-color: var(--primary-600, #5a6fd8);
+        transform: translateY(-2px);
+      }
+    }
+  }
+}
+
+/* Global Page Container Styles - Used by all pages */
+.page-container {
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 120px); /* Account for header height */
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Global Page Header Styles - Used by all pages */
+.page-header {
+  margin-bottom: 2rem;
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    .title-section {
+      .main-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        color: var(--text-color, #2c3e50);
+      }
+
+      .subtitle {
+        font-size: 1.1rem;
+        margin: 0;
+        color: var(--text-color-secondary, #6c757d);
+        font-weight: 400;
+      }
+    }
+
+    .create-btn {
+      background: var(--primary-color, #667eea);
+      border: 1px solid var(--primary-color, #667eea);
+      color: var(--primary-color-text, white);
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: var(--primary-600, #5a6fd8);
+        border-color: var(--primary-600, #5a6fd8);
+        transform: translateY(-2px);
+      }
+    }
+  }
+
+  .header-divider {
+    width: 100%;
+    height: 1px;
+    background-color: var(--surface-border, #e9ecef);
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Global Summary Cards Styles - Used by all pages */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  .summary-card {
+    background: var(--surface-card, white);
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: var(--card-shadow, 0 2px 12px rgba(0, 0, 0, 0.08));
+    transition: all 0.3s ease;
+    border: 1px solid var(--surface-border, #e9ecef);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 80px;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--card-shadow-hover, 0 8px 25px rgba(0, 0, 0, 0.15));
+    }
+
+    .card-content {
+      flex: 1;
+      
+      .card-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-color, #2c3e50);
+        margin-bottom: 0.25rem;
+        line-height: 1.2;
+      }
+
+      .card-label {
+        font-size: 0.85rem;
+        color: var(--text-color-secondary, #6c757d);
+        font-weight: 500;
+        line-height: 1.2;
+      }
+    }
+
+    .card-icon {
+      width: 45px;
+      height: 45px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-color, #667eea);
+      color: var(--primary-color-text, white);
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      margin-left: 1rem;
+    }
+  }
+}
+
+html, body {
+  font-size: 14px;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font-family);
+  background-color: var(--background-color);
+}
+
+.p-component {
+  font-family: var(--font-family);
+}
+
+/* Custom theme variables */
+:root {
+  --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --primary-color: #4CAF50;
+  --secondary-color: #2E7D32;
+  --accent-color: #8BC34A;
+  --text-color: #212121;
+  --background-color: #E0E0E0;
+  --card-background: #FFFFFF;
+  --p-menu-bar-color: #ffffff;
+  --p-menubar-background: #ffffff;
+  --success-color: #4CAF50;
+  --info-color: #2196F3;
+  --warning-color: #FFC107;
+  --danger-color: #F44336;
+
+  /* Font size customization - smaller sizes */
+  --font-size: 1rem;
+  //--font-size: 0.875rem;
+  --font-size-sm: calc(0.75rem / var(--font-size));
+  --font-size-lg: calc(1rem / var(--font-size));
+  --font-size-xl: calc(1.125rem / var(--font-size));
+
+  /* Spacing customization - proportionate to font-size */
+  --content-padding: 0.5rem; // calc(0.5rem / var(--font-size)); /* 0.5rem / 0.875rem */
+  --card-padding: calc(0.5rem / var(--font-size)); /* 0.5rem / 0.875rem */
+  --panel-padding: calc(0.375rem / var(--font-size)); /* 0.375rem / 0.875rem */
+  --input-padding: calc(0.2rem / var(--font-size)) calc(0.375rem / var(--font-size)); /* 0.2rem / 0.875rem, 0.375rem / 0.875rem */
+  --button-padding: calc(0.2rem / var(--font-size)) calc(0.375rem / var(--font-size)); /* 0.2rem / 0.875rem, 0.375rem / 0.875rem */
+  --p-tabs-tab-padding: calc(0.2rem / var(--font-size)) calc(0.375rem / var(--font-size)); /* 0.2rem / 0.875rem, 0.375rem / 0.875rem */
+  --gap-size: calc(0.375rem / var(--font-size)); /* 0.375rem / 0.875rem */
+
+  /* Additional spacing variables for common use cases */
+  --spacing-xs: calc(0.25rem / var(--font-size)); /* 0.25rem / 0.875rem */
+  --spacing-sm: calc(0.375rem / var(--font-size)); /* 0.375rem / 0.875rem */
+  --spacing-md: calc(0.5rem / var(--font-size)); /* 0.5rem / 0.875rem */
+  --spacing-lg: calc(0.75rem / var(--font-size)); /* 0.75rem / 0.875rem */
+  --spacing-xl: calc(1rem / var(--font-size)); /* 1rem / 0.875rem */
+  --spacing-2xl: calc(1.5rem / var(--font-size)); /* 1.5rem / 0.875rem */
+}
+
+/* Apply theme colors to PrimeNG components */
+.p-button.p-button-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.p-button.p-button-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+/* Custom utility classes */
+.text-primary {
+  color: var(--primary-color);
+}
+
+.text-secondary {
+  color: var(--secondary-color);
+}
+
+.bg-primary {
+  background-color: var(--primary-color);
+}
+
+.bg-secondary {
+  background-color: var(--secondary-color);
+}
+
+/* Layout utilities */
+.full-width {
+  width: 100%;
+}
+
+.full-height {
+  height: 100%;
+}
+
+.container {
+  padding: var(--content-padding);
+}
+
+/* Apply custom font sizes and spacing to PrimeNG components */
+body {
+  font-size: var(--font-size);
+}
+
+/* Typography adjustments */
+h1, .text-xl {
+  font-size: var(--font-size-xl);
+}
+
+h2, .text-lg {
+  font-size: var(--font-size-lg);
+}
+
+h3, h4, h5, h6 {
+  font-size: var(--font-size);
+}
+
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+
+/* Component spacing adjustments */
+.p-component {
+  font-size: var(--font-size);
+}
+
+.p-card {
+  .p-card-body, .p-card-content {
+    padding: var(--card-padding);
+  }
+}
+
+.p-tabview {
+  .p-tabview-panels {
+    padding: var(--panel-padding);
+  }
+  .p-tabview-nav li .p-tabview-nav-link {
+    padding: var(--p-tabs-tab-padding) !important;
+  }
+}
+
+.p-dialog {
+  .p-dialog-content {
+    padding: var(--panel-padding);
+  }
+  .p-dialog-header {
+    padding: var(--panel-padding);
+  }
+  .p-dialog-footer {
+    padding: var(--panel-padding);
+  }
+}
+
+.p-inputtext, .p-dropdown, .p-multiselect, .p-calendar .p-inputtext {
+  padding: var(--input-padding);
+  font-size: var(--font-size);
+}
+
+.p-button {
+  padding: var(--button-padding);
+  font-size: var(--font-size);
+}
+
+.p-datatable {
+  .p-datatable-header, .p-datatable-footer {
+    padding: var(--panel-padding);
+  }
+  .p-datatable-thead > tr > th, .p-datatable-tbody > tr > td {
+    padding: var(--input-padding);
+    font-size: var(--font-size);
+  }
+}
+
+.p-menu, .p-menubar, .p-tieredmenu {
+  .p-menuitem-link {
+    padding: var(--input-padding);
+  }
+  .p-submenu-list {
+    padding: var(--panel-padding);
+  }
+}
+
+/* Spacing utilities */
+.p-m-0 { margin: 0 !important; }
+.p-mt-0 { margin-top: 0 !important; }
+.p-mr-0 { margin-right: 0 !important; }
+.p-mb-0 { margin-bottom: 0 !important; }
+.p-ml-0 { margin-left: 0 !important; }
+
+.p-p-0 { padding: 0 !important; }
+.p-pt-0 { padding-top: 0 !important; }
+.p-pr-0 { padding-right: 0 !important; }
+.p-pb-0 { padding-bottom: 0 !important; }
+.p-pl-0 { padding-left: 0 !important; }
+
+.p-m-1 { margin: var(--gap-size) !important; }
+.p-mt-1 { margin-top: var(--gap-size) !important; }
+.p-mr-1 { margin-right: var(--gap-size) !important; }
+.p-mb-1 { margin-bottom: var(--gap-size) !important; }
+.p-ml-1 { margin-left: var(--gap-size) !important; }
+
+.p-p-1 { padding: var(--gap-size) !important; }
+.p-pt-1 { padding-top: var(--gap-size) !important; }
+.p-pr-1 { padding-right: var(--gap-size) !important; }
+.p-pb-1 { padding-bottom: var(--gap-size) !important; }
+.p-pl-1 { padding-left: var(--gap-size) !important; }
+
+/* Grid and layout adjustments for tighter spacing */
+.p-grid {
+  margin: 0;
+
+  > .p-col, 
+  > [class*="p-col-"] {
+    padding: var(--gap-size);
+  }
+}
+
+.p-formgrid {
+  margin: 0;
+
+  > .p-field, 
+  > [class*="p-field-"] {
+    padding: var(--gap-size);
+  }
+}
+
+.p-field {
+  margin-bottom: var(--gap-size);
+}
+
+.p-fieldset {
+  .p-fieldset-content {
+    padding: var(--panel-padding);
+  }
+  .p-fieldset-legend {
+    padding: var(--input-padding);
+    font-size: var(--font-size);
+  }
+}
+
+.p-accordion {
+  .p-accordion-content {
+    padding: var(--panel-padding);
+  }
+  .p-accordion-header a {
+    padding: var(--panel-padding);
+  }
+}
+
+.p-listbox {
+  .p-listbox-list .p-listbox-item {
+    padding: var(--input-padding);
+    font-size: var(--font-size);
+  }
+}
+
+.p-tree {
+  .p-treenode-content {
+    padding: var(--input-padding);
+    font-size: var(--font-size);
+  }
+}
+
+/* Line height adjustments for better readability with smaller fonts */
+p, li, td, th, input, button, .p-component {
+  line-height: 1.4;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .container {
+    padding: var(--spacing-sm);
+  }
+}

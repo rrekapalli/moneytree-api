@@ -1,0 +1,3 @@
+# This is a placeholder for favicon.ico
+# The actual favicon is now served via SVG and PNG files
+# This file prevents the 404 error for browsers that specifically request favicon.ico 

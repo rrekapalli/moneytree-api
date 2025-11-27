@@ -1,0 +1,101 @@
+.app-shell-two-column {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  //max-width: 1920px;
+  margin: 0 auto;
+  width: 100%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.content-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.column {
+  height: 100%;
+  background-color: var(--card-background);
+  position: relative;
+}
+
+.column-left {
+  width: 25%;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-color, #e0e0e0);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.column-right {
+  flex: 1;
+  padding: 0.5rem;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure router-outlet content takes full space and doesn't overlap */
+router-outlet {
+  display: contents; /* Make router-outlet transparent in layout */
+}
+
+/* Ensure routed components take full available space */
+.column-right > :not(router-outlet):not(.loading-container) {
+  flex: 1;
+  width: 100%;
+  overflow: auto;
+  background-color: var(--card-background);
+  margin: 0.5rem;
+  border-radius: 4px;
+}
+
+/* Ensure only one component is visible at a time */
+.column-right > :not(router-outlet):not(.loading-container):not(:last-child) {
+  display: none !important;
+}
+
+/* More aggressive cleanup - hide duplicate components */
+.column-right app-screeners:not(:last-of-type),
+.column-right app-portfolios:not(:last-of-type),
+.column-right app-strategies:not(:last-of-type),
+.column-right app-dashboard:not(:last-of-type),
+.column-right app-holdings:not(:last-of-type),
+.column-right app-positions:not(:last-of-type),
+.column-right app-market:not(:last-of-type) {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+.loading-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.7);
+  z-index: 1000;
+}
+
+/* Responsive adjustments */
+/* Tablet form factor */
+@media screen and (max-width: 992px) {
+  .app-shell-two-column {
+    max-width: 768px;
+  }
+}
+
+/* Mobile form factor */
+@media screen and (max-width: 768px) {
+  .app-shell-two-column {
+    max-width: 100%;
+    box-shadow: none;
+  }
+}

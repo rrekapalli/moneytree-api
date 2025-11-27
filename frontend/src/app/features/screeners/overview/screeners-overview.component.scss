@@ -1,0 +1,157 @@
+.overview-content {
+  .screeners-list {
+    .screener-item {
+      background: white;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      padding: 1.5rem;
+      transition: all 0.2s ease;
+
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: #007bff;
+      }
+
+      .screener-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+
+        .screener-info {
+          flex: 1;
+
+          .screener-name {
+            margin: 0 0 0.5rem 0;
+            color: #2c3e50;
+            font-size: 1.25rem;
+            font-weight: 600;
+          }
+
+          .screener-description {
+            margin: 0 0 1rem 0;
+            color: #6c757d;
+            font-size: 0.95rem;
+            line-height: 1.4;
+          }
+
+          .screener-meta {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+
+            .meta-item {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+              color: #6c757d;
+              font-size: 0.875rem;
+
+              i {
+                color: #007bff;
+              }
+            }
+          }
+        }
+
+        .screener-actions {
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+
+          .star-button {
+            margin-right: 0.5rem;
+          }
+        }
+      }
+
+      .screener-details {
+        display: flex;
+        gap: 2rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e9ecef;
+        flex-wrap: wrap;
+
+        .detail-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .detail-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.875rem;
+          }
+
+          .detail-value {
+            color: #6c757d;
+            font-size: 0.875rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .overview-content {
+    .screeners-list {
+      .screener-item {
+        .screener-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 1rem;
+
+          .screener-actions {
+            justify-content: center;
+            flex-wrap: wrap;
+          }
+        }
+
+        .screener-details {
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+      }
+    }
+  }
+}
+
+// PrimeNG button customizations
+:host ::ng-deep {
+  .p-button {
+    &.p-button-sm {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    &.p-button-rounded {
+      border-radius: 50% !important;
+      width: 2.5rem !important;
+      height: 2.5rem !important;
+      min-width: 2.5rem !important;
+      min-height: 2.5rem !important;
+      max-width: 2.5rem !important;
+      max-height: 2.5rem !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 0 !important;
+      
+      .p-button-label {
+        display: none !important;
+      }
+      
+      .p-button-icon {
+        margin: 0 !important;
+      }
+    }
+  }
+
+  .p-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+}

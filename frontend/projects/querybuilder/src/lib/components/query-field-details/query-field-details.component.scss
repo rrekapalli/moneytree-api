@@ -1,0 +1,141 @@
+.query-field-details {
+  display: flex;
+  align-items: center;
+  gap: var(--qb-gap);
+  flex: 1;
+  min-height: var(--qb-input-height);
+
+  .query-field-select {
+    flex: 0 0 var(--qb-field-select-width);
+    min-width: var(--qb-field-select-width);
+    max-width: var(--qb-field-select-width);
+  }
+
+  .query-operator-select {
+    flex: 0 0 var(--qb-operator-select-width);
+    min-width: var(--qb-operator-select-width);
+    max-width: var(--qb-operator-select-width);
+  }
+
+  .query-value-input {
+    flex: 1;
+    min-width: var(--qb-min-input-width);
+  }
+
+  // Responsive layout adjustments
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    gap: var(--qb-spacing-xs);
+
+    .query-field-select,
+    .query-operator-select {
+      flex: 1 1 auto;
+      min-width: 120px;
+      max-width: none;
+    }
+
+    .query-value-input {
+      flex: 1 1 100%;
+      min-width: 100%;
+    }
+  }
+
+  // Compact mode adjustments
+  .query-builder-compact & {
+    gap: var(--qb-spacing-xs);
+
+    .query-field-select {
+      flex: 0 0 120px;
+      min-width: 120px;
+      max-width: 120px;
+    }
+
+    .query-operator-select {
+      flex: 0 0 80px;
+      min-width: 80px;
+      max-width: 80px;
+    }
+  }
+
+  // Dense mode adjustments
+  .query-builder-dense & {
+    gap: 2px;
+
+    .query-field-select {
+      flex: 0 0 100px;
+      min-width: 100px;
+      max-width: 100px;
+    }
+
+    .query-operator-select {
+      flex: 0 0 60px;
+      min-width: 60px;
+      max-width: 60px;
+    }
+
+    .query-value-input {
+      min-width: 60px;
+    }
+  }
+
+  // Ensure all child components align properly
+  ::ng-deep {
+    .p-select,
+    .p-inputtext,
+    .p-inputnumber,
+    .p-calendar,
+    .p-multiselect {
+      width: 100%;
+    }
+
+    // Field select specific styling
+    .query-field-select .p-select {
+      .p-select-label {
+        font-weight: var(--qb-font-weight-medium);
+        text-overflow: ellipsis;
+        overflow: hidden;
+        white-space: nowrap;
+      }
+    }
+
+    // Operator select specific styling
+    .query-operator-select .p-select {
+      .p-select-label {
+        text-align: center;
+        font-weight: var(--qb-font-weight-semibold);
+      }
+    }
+
+    // Value input specific styling
+    .query-value-input {
+      .p-inputtext,
+      .p-inputnumber-input {
+        text-align: left;
+      }
+
+      .p-select .p-select-label {
+        text-align: left;
+      }
+    }
+  }
+
+  // Error state styling
+  &.query-field-details-error {
+    ::ng-deep {
+      .p-component {
+        border-color: var(--red-500);
+        
+        &:focus {
+          border-color: var(--red-500);
+          box-shadow: 0 0 0 0.2rem var(--red-200);
+        }
+      }
+    }
+  }
+
+  // Loading state styling
+  &.query-field-details-loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}

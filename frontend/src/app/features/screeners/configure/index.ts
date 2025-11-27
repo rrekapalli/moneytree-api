@@ -1,0 +1,1 @@
+export * from './screeners-configure.component';

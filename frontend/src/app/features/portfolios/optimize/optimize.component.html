@@ -1,0 +1,74 @@
+<div class="optimize-tab-content">
+  @if (selectedPortfolio) {
+    <div class="portfolio-detail-header">
+      <h2>Optimize Portfolio: {{ selectedPortfolio.name }}</h2>
+      <p class="portfolio-description">Performance optimization and rebalancing recommendations</p>
+    </div>
+    
+    <div class="optimization-content">
+      <div class="performance-summary">
+        <div class="summary-card">
+          <h4>Current Performance</h4>
+          <div class="performance-metric">
+            <span class="metric-label">Total Return:</span>
+            <span class="metric-value" [style.color]="getPerformanceColor(selectedPortfolio.totalReturn || 0)">
+              {{ formatReturn(selectedPortfolio.totalReturn || 0) }}
+            </span>
+          </div>
+          <div class="performance-metric">
+            <span class="metric-label">Benchmark Return:</span>
+            <span class="metric-value">{{ formatReturn(selectedPortfolio.benchmarkReturn || 0) }}</span>
+          </div>
+          <div class="performance-metric">
+            <span class="metric-label">Outperformance:</span>
+            <span class="metric-value" [style.color]="getPerformanceColor(selectedPortfolio.outperformance || 0)">
+              {{ formatReturn(selectedPortfolio.outperformance || 0) }}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="optimization-recommendations">
+        <h3>Optimization Recommendations</h3>
+        <div class="recommendation-list">
+          <div class="recommendation-item">
+            <i class="pi pi-lightbulb recommendation-icon"></i>
+            <div class="recommendation-content">
+              <h4>Rebalance Portfolio</h4>
+              <p>Consider rebalancing to maintain target asset allocation and risk profile.</p>
+            </div>
+          </div>
+          <div class="recommendation-item">
+            <i class="pi pi-chart-line recommendation-icon"></i>
+            <div class="recommendation-content">
+              <h4>Diversification Check</h4>
+              <p>Review sector allocation to ensure adequate diversification across industries.</p>
+            </div>
+          </div>
+          <div class="recommendation-item">
+            <i class="pi pi-shield recommendation-icon"></i>
+            <div class="recommendation-content">
+              <h4>Risk Assessment</h4>
+              <p>Evaluate current risk exposure and adjust if it exceeds your risk tolerance.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="optimization-actions">
+          <button pButton 
+                  label="Apply Optimization" 
+                  icon="pi pi-check" 
+                  class="p-button-primary"
+                  (click)="onApplyOptimization()">
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="no-selection-message">
+      <i class="pi pi-info-circle"></i>
+      <h3>No Portfolio Selected</h3>
+      <p>Please select a portfolio from the Overview tab to view optimization recommendations.</p>
+    </div>
+  }
+</div>

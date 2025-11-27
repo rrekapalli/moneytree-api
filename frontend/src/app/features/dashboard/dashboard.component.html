@@ -1,0 +1,45 @@
+<div class="dashboard-container">
+<!--  <div class="dashboard-header">-->
+<!--    <h1 class="m-0 p-0">Overall Dashboard</h1>-->
+<!--    <p class="m-0 p-0">Comprehensive overview of your financial portfolio</p>-->
+<!--  </div>-->
+
+  <!-- Custom tab navigation using router links -->
+  <nav class="dashboard-nav">
+    <a routerLink="/dashboard/overall" 
+       routerLinkActive="active" 
+       class="dashboard-tab">
+      Overall
+    </a>
+    <a routerLink="/dashboard/stock-insights" 
+       routerLinkActive="active" 
+       class="dashboard-tab">
+      Stock Insights
+    </a>
+    <a routerLink="/dashboard/today" 
+       routerLinkActive="active" 
+       class="dashboard-tab">
+      Today
+    </a>
+    <a routerLink="/dashboard/week" 
+       routerLinkActive="active" 
+       class="dashboard-tab">
+      This Week
+    </a>
+    <a routerLink="/dashboard/month" 
+       routerLinkActive="active" 
+       class="dashboard-tab">
+      This Month
+    </a>
+    <a routerLink="/dashboard/year" 
+       routerLinkActive="active" 
+       class="dashboard-tab">
+      This Year
+    </a>
+  </nav>
+
+  <!-- Router outlet will load the appropriate dashboard component -->
+  <div class="dashboard-content">
+    <router-outlet></router-outlet>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+<div [style.height.px]="widget.height">
+    <!-- Special handling for stock list table component to bind events properly -->
+    <app-stock-list-table 
+        *ngIf="widget.config?.component === 'stock-list-table'"
+        [widget]="widget"
+        [selectedStockSymbol]="widget.data?.selectedStockSymbol || ''"
+        (stockSelected)="onStockSelected.emit($event)"
+        (stockDoubleClicked)="onStockDoubleClicked.emit($event)">
+    </app-stock-list-table>
+    
+    <!-- Default component outlet for other widget types -->
+    <ng-container *ngIf="widget.config?.component !== 'stock-list-table'">
+        <ng-container *ngComponentOutlet="currentWidget.component; inputs: currentWidget.inputs">
+        </ng-container>
+    </ng-container>
+</div>

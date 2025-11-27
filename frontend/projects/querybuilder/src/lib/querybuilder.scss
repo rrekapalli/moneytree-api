@@ -1,0 +1,515 @@
+/**
+ * QueryBuilder Library - Compact Design Styles
+ * 
+ * This stylesheet provides the core compact design system for the QueryBuilder library.
+ * It integrates with the main application's PrimeNG v20 Aura theme and CSS custom properties
+ * to achieve a space-efficient, compact UI design while maintaining theme consistency.
+ */
+
+:root {
+  // Compact design system variables - integrated with app theme
+  --qb-spacing-xs: 2px;
+  --qb-spacing-sm: 4px;
+  --qb-spacing-md: 8px;
+  --qb-spacing-lg: 12px;
+  --qb-spacing-xl: 16px;
+
+  // Component sizing - respects app font-size variable
+  --qb-input-height: 32px;
+  --qb-input-height-sm: 28px;
+  --qb-button-height: 32px;
+  --qb-button-height-sm: 28px;
+
+  // Typography - inherits from app theme
+  --qb-font-size: var(--font-size, 0.875rem);
+  --qb-font-size-sm: var(--font-size-sm, 0.8125rem);
+  --qb-font-size-xs: 0.75rem;
+  --qb-line-height: 1.4;
+  --qb-font-weight-normal: 400;
+  --qb-font-weight-medium: 500;
+  --qb-font-weight-semibold: 600;
+
+  // Layout - uses app spacing variables where available
+  --qb-border-radius: var(--p-border-radius, 4px);
+  --qb-border-width: 1px;
+  --qb-padding: var(--input-padding, 4px 8px);
+  --qb-padding-sm: var(--spacing-xs, 2px) var(--spacing-sm, 6px);
+  --qb-margin: var(--spacing-sm, 4px);
+  --qb-gap: var(--gap-size, 4px);
+
+  // Component-specific sizing
+  --qb-checkbox-size: 18px;
+  --qb-icon-size: 0.875rem;
+  --qb-icon-size-sm: 0.75rem;
+
+  // Compact layout constraints
+  --qb-min-input-width: 80px;
+  --qb-max-button-width: 120px;
+  --qb-field-select-width: 140px;
+  --qb-operator-select-width: 100px;
+
+  // Theme integration - use app theme colors
+  --qb-primary-color: var(--primary-color, #4CAF50);
+  --qb-secondary-color: var(--secondary-color, #2E7D32);
+  --qb-accent-color: var(--accent-color, #8BC34A);
+  --qb-text-color: var(--text-color, #212121);
+  --qb-text-color-secondary: var(--text-color-secondary, #6c757d);
+  --qb-background-color: var(--background-color, #E0E0E0);
+  --qb-card-background: var(--card-background, #FFFFFF);
+  --qb-success-color: var(--success-color, #4CAF50);
+  --qb-info-color: var(--info-color, #2196F3);
+  --qb-warning-color: var(--warning-color, #FFC107);
+  --qb-danger-color: var(--danger-color, #F44336);
+
+  // PrimeNG theme integration
+  --qb-surface-card: var(--p-surface-card, var(--surface-card, #ffffff));
+  --qb-surface-ground: var(--p-surface-ground, var(--surface-ground, #f8f9fa));
+  --qb-surface-border: var(--p-surface-border, var(--surface-border, #e9ecef));
+  --qb-surface-50: var(--p-surface-50, var(--surface-50, #fafafa));
+  --qb-surface-100: var(--p-surface-100, var(--surface-100, #f5f5f5));
+  --qb-surface-200: var(--p-surface-200, var(--surface-200, #eeeeee));
+
+  // Color variations for different states
+  --qb-primary-50: var(--p-primary-50, #e8f5e8);
+  --qb-primary-100: var(--p-primary-100, #c8e6c8);
+  --qb-primary-200: var(--p-primary-200, #a5d6a7);
+  --qb-primary-500: var(--p-primary-500, var(--qb-primary-color));
+  --qb-primary-600: var(--p-primary-600, #43a047);
+  --qb-primary-700: var(--p-primary-700, #388e3c);
+
+  --qb-red-50: var(--p-red-50, #ffebee);
+  --qb-red-100: var(--p-red-100, #ffcdd2);
+  --qb-red-200: var(--p-red-200, #ef9a9a);
+  --qb-red-500: var(--p-red-500, #f44336);
+  --qb-red-600: var(--p-red-600, #e53935);
+  --qb-red-700: var(--p-red-700, #d32f2f);
+
+  --qb-green-50: var(--p-green-50, #e8f5e8);
+  --qb-green-500: var(--p-green-500, #4caf50);
+  --qb-green-600: var(--p-green-600, #43a047);
+
+  --qb-blue-50: var(--p-blue-50, #e3f2fd);
+  --qb-blue-500: var(--p-blue-500, #2196f3);
+  --qb-blue-600: var(--p-blue-600, #1e88e5);
+
+  --qb-orange-50: var(--p-orange-50, #fff3e0);
+  --qb-orange-500: var(--p-orange-500, #ff9800);
+  --qb-orange-600: var(--p-orange-600, #fb8c00);
+
+  --qb-yellow-50: var(--p-yellow-50, #fffde7);
+  --qb-yellow-200: var(--p-yellow-200, #fff59d);
+  --qb-yellow-800: var(--p-yellow-800, #f57f17);
+
+  --qb-purple-600: var(--p-purple-600, #8e24aa);
+}
+
+// Base query builder container styles
+.query-builder {
+  font-family: var(--font-family, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif);
+  font-size: var(--qb-font-size);
+  line-height: var(--qb-line-height);
+  color: var(--qb-text-color);
+
+  // Compact spacing utilities
+  .qb-spacing-xs { margin: var(--qb-spacing-xs); }
+  .qb-spacing-sm { margin: var(--qb-spacing-sm); }
+  .qb-spacing-md { margin: var(--qb-spacing-md); }
+  
+  .qb-gap-xs { gap: var(--qb-spacing-xs); }
+  .qb-gap-sm { gap: var(--qb-spacing-sm); }
+  .qb-gap-md { gap: var(--qb-spacing-md); }
+
+  // Compact layout utilities
+  .qb-flex { display: flex; }
+  .qb-flex-inline { display: inline-flex; }
+  .qb-flex-column { flex-direction: column; }
+  .qb-flex-row { flex-direction: row; }
+  .qb-align-center { align-items: center; }
+  .qb-justify-center { justify-content: center; }
+  .qb-flex-1 { flex: 1; }
+  .qb-flex-none { flex: none; }
+
+  // Typography utilities
+  .qb-text-sm { font-size: var(--qb-font-size-sm); }
+  .qb-text-xs { font-size: var(--qb-font-size-xs); }
+  .qb-font-medium { font-weight: var(--qb-font-weight-medium); }
+  .qb-font-semibold { font-weight: var(--qb-font-weight-semibold); }
+
+  // Global PrimeNG component overrides for compact design
+  ::ng-deep {
+    // Input components - inherit theme colors
+    .p-inputtext,
+    .p-inputnumber-input,
+    .p-datepicker input {
+      height: var(--qb-input-height);
+      padding: var(--qb-padding);
+      font-size: var(--qb-font-size);
+      border-radius: var(--qb-border-radius);
+      border-width: var(--qb-border-width);
+      line-height: var(--qb-line-height);
+      background-color: var(--qb-surface-card);
+      border-color: var(--qb-surface-border);
+      color: var(--qb-text-color);
+
+      &:focus {
+        border-color: var(--qb-primary-color);
+        box-shadow: 0 0 0 0.2rem var(--qb-primary-200);
+      }
+
+      &::placeholder {
+        color: var(--qb-text-color-secondary);
+      }
+    }
+
+    // Select components - inherit theme colors
+    .p-select,
+    .p-multiselect {
+      height: var(--qb-input-height);
+      border-radius: var(--qb-border-radius);
+      border-width: var(--qb-border-width);
+      background-color: var(--qb-surface-card);
+      border-color: var(--qb-surface-border);
+
+      .p-select-label,
+      .p-multiselect-label {
+        padding: var(--qb-padding);
+        font-size: var(--qb-font-size);
+        line-height: var(--qb-line-height);
+        color: var(--qb-text-color);
+      }
+
+      .p-select-dropdown,
+      .p-multiselect-dropdown {
+        width: 2rem;
+        border-radius: 0 var(--qb-border-radius) var(--qb-border-radius) 0;
+        background-color: var(--qb-surface-ground);
+        border-color: var(--qb-surface-border);
+        color: var(--qb-text-color);
+      }
+
+      &:focus {
+        border-color: var(--qb-primary-color);
+        box-shadow: 0 0 0 0.2rem var(--qb-primary-200);
+      }
+
+      &:hover {
+        border-color: var(--qb-primary-500);
+      }
+    }
+
+    // Button components - inherit theme colors
+    .p-button {
+      height: var(--qb-button-height);
+      padding: var(--qb-padding);
+      font-size: var(--qb-font-size);
+      border-radius: var(--qb-border-radius);
+      border-width: var(--qb-border-width);
+      min-width: auto;
+      line-height: var(--qb-line-height);
+      background-color: var(--qb-primary-color);
+      border-color: var(--qb-primary-color);
+      color: white;
+      transition: all 0.15s ease;
+
+      .p-button-label {
+        font-weight: var(--qb-font-weight-medium);
+      }
+
+      .p-button-icon {
+        font-size: var(--qb-icon-size);
+      }
+
+      &:hover:not(:disabled) {
+        background-color: var(--qb-primary-600);
+        border-color: var(--qb-primary-600);
+      }
+
+      &:focus {
+        box-shadow: 0 0 0 0.2rem var(--qb-primary-200);
+      }
+
+      // Secondary button variant
+      &.p-button-secondary {
+        background-color: var(--qb-secondary-color);
+        border-color: var(--qb-secondary-color);
+      }
+
+      // Outlined button variant
+      &.p-button-outlined {
+        background-color: transparent;
+        color: var(--qb-primary-color);
+
+        &:hover:not(:disabled) {
+          background-color: var(--qb-primary-50);
+        }
+      }
+
+      // Text button variant
+      &.p-button-text {
+        background-color: transparent;
+        border-color: transparent;
+        color: var(--qb-primary-color);
+
+        &:hover:not(:disabled) {
+          background-color: var(--qb-primary-50);
+        }
+      }
+
+      // Small button variant
+      &.p-button-sm {
+        height: var(--qb-button-height-sm);
+        padding: var(--qb-padding-sm);
+        font-size: var(--qb-font-size-sm);
+
+        .p-button-label {
+          font-size: var(--qb-font-size-sm);
+        }
+
+        .p-button-icon {
+          font-size: var(--qb-icon-size-sm);
+        }
+      }
+
+      // Icon-only button
+      &.p-button-icon-only {
+        width: var(--qb-button-height);
+        padding: 0;
+
+        &.p-button-sm {
+          width: var(--qb-button-height-sm);
+        }
+      }
+
+      // Disabled state
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    // Checkbox components - inherit theme colors
+    .p-checkbox {
+      width: var(--qb-checkbox-size);
+      height: var(--qb-checkbox-size);
+
+      .p-checkbox-box {
+        width: var(--qb-checkbox-size);
+        height: var(--qb-checkbox-size);
+        border-radius: calc(var(--qb-border-radius) / 2);
+        background-color: var(--qb-surface-card);
+        border-color: var(--qb-surface-border);
+
+        &.p-checked {
+          background-color: var(--qb-primary-color);
+          border-color: var(--qb-primary-color);
+        }
+      }
+
+      .p-checkbox-icon {
+        font-size: var(--qb-font-size-sm);
+        color: white;
+      }
+
+      &:focus .p-checkbox-box {
+        box-shadow: 0 0 0 0.2rem var(--qb-primary-200);
+      }
+    }
+
+    // Calendar components
+    .p-datepicker {
+      .p-datepicker-input-icon-container {
+        .p-button {
+          height: var(--qb-input-height);
+          width: var(--qb-input-height);
+          border-radius: 0 var(--qb-border-radius) var(--qb-border-radius) 0;
+        }
+      }
+    }
+
+    // InputNumber components
+    .p-inputnumber {
+      .p-inputnumber-buttons-stacked {
+        .p-button {
+          height: calc(var(--qb-input-height) / 2);
+          width: 1.5rem;
+          padding: 0;
+
+          .p-button-icon {
+            font-size: var(--qb-font-size-xs);
+          }
+        }
+      }
+
+      .p-inputnumber-buttons-horizontal {
+        .p-button {
+          height: var(--qb-input-height);
+          width: 1.5rem;
+          padding: 0;
+        }
+      }
+    }
+
+    // Dropdown overlays - inherit theme colors
+    .p-select-overlay,
+    .p-multiselect-panel {
+      background-color: var(--qb-surface-card);
+      border-color: var(--qb-surface-border);
+      border-radius: var(--qb-border-radius);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+      .p-select-items,
+      .p-multiselect-items {
+        .p-select-option,
+        .p-multiselect-item {
+          padding: var(--qb-padding);
+          font-size: var(--qb-font-size);
+          line-height: var(--qb-line-height);
+          min-height: auto;
+          color: var(--qb-text-color);
+
+          &:hover {
+            background-color: var(--qb-primary-50);
+            color: var(--qb-primary-700);
+          }
+
+          &.p-selected {
+            background-color: var(--qb-primary-color);
+            color: white;
+          }
+        }
+      }
+    }
+
+    // Message components - inherit theme colors
+    .p-message {
+      padding: var(--qb-padding);
+      font-size: var(--qb-font-size);
+      margin: var(--qb-spacing-xs) 0;
+      border-radius: var(--qb-border-radius);
+
+      .p-message-text {
+        font-size: var(--qb-font-size);
+        line-height: var(--qb-line-height);
+      }
+
+      .p-message-icon {
+        font-size: var(--qb-icon-size);
+      }
+
+      &.p-message-error {
+        background-color: var(--qb-red-50);
+        border-color: var(--qb-red-200);
+        color: var(--qb-red-700);
+      }
+
+      &.p-message-success {
+        background-color: var(--qb-green-50);
+        border-color: var(--qb-green-200);
+        color: var(--qb-green-600);
+      }
+
+      &.p-message-warn {
+        background-color: var(--qb-yellow-50);
+        border-color: var(--qb-yellow-200);
+        color: var(--qb-yellow-800);
+      }
+
+      &.p-message-info {
+        background-color: var(--qb-blue-50);
+        border-color: var(--qb-blue-200);
+        color: var(--qb-blue-600);
+      }
+
+      &.p-message-sm {
+        padding: var(--qb-padding-sm);
+        font-size: var(--qb-font-size-sm);
+
+        .p-message-text {
+          font-size: var(--qb-font-size-sm);
+        }
+
+        .p-message-icon {
+          font-size: var(--qb-icon-size-sm);
+        }
+      }
+    }
+
+    // Panel components - inherit theme colors
+    .p-panel {
+      background-color: var(--qb-surface-card);
+      border-color: var(--qb-surface-border);
+      border-radius: var(--qb-border-radius);
+
+      .p-panel-header {
+        padding: var(--qb-padding);
+        border-radius: var(--qb-border-radius) var(--qb-border-radius) 0 0;
+        background-color: var(--qb-surface-ground);
+        border-bottom-color: var(--qb-surface-border);
+        color: var(--qb-text-color);
+      }
+
+      .p-panel-content {
+        padding: var(--qb-padding);
+        background-color: var(--qb-surface-card);
+        color: var(--qb-text-color);
+      }
+    }
+
+    // Tooltip components
+    .p-tooltip {
+      .p-tooltip-text {
+        font-size: var(--qb-font-size-sm);
+        padding: var(--qb-padding-sm);
+        border-radius: var(--qb-border-radius);
+      }
+    }
+  }
+}
+
+// Responsive design adjustments
+@media (max-width: 768px) {
+  .query-builder {
+    --qb-font-size: 0.8125rem;
+    --qb-input-height: 36px;
+    --qb-button-height: 36px;
+    --qb-padding: 6px 10px;
+    --qb-gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .query-builder {
+    --qb-font-size: 0.75rem;
+    --qb-input-height: 40px;
+    --qb-button-height: 40px;
+    --qb-padding: 8px 12px;
+    --qb-gap: 8px;
+    --qb-field-select-width: 120px;
+    --qb-operator-select-width: 80px;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .query-builder {
+    --qb-border-width: 2px;
+    
+    ::ng-deep {
+      .p-component {
+        border-width: var(--qb-border-width);
+      }
+    }
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .query-builder {
+    ::ng-deep {
+      .p-component {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  }
+}

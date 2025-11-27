@@ -1,0 +1,217 @@
+.query-remove-button {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--qb-spacing-sm);
+
+  ::ng-deep {
+    .p-button {
+      height: var(--qb-button-height);
+      width: var(--qb-button-height);
+      padding: 0;
+      border-radius: var(--qb-border-radius);
+      border-width: var(--qb-border-width);
+      background-color: var(--red-500);
+      border-color: var(--red-500);
+      color: white;
+      transition: all 0.15s ease;
+
+      .p-button-icon {
+        font-size: var(--qb-icon-size);
+      }
+
+      &:hover:not(:disabled) {
+        background-color: var(--red-600);
+        border-color: var(--red-600);
+        transform: scale(1.05);
+      }
+
+      &:focus {
+        box-shadow: 0 0 0 0.2rem var(--red-200);
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+
+      &.p-button-sm {
+        height: var(--qb-button-height-sm);
+        width: var(--qb-button-height-sm);
+        
+        .p-button-icon {
+          font-size: var(--qb-icon-size-sm);
+        }
+      }
+
+      // Outlined variant for less aggressive appearance
+      &.p-button-outlined {
+        background-color: transparent;
+        color: var(--red-500);
+
+        &:hover:not(:disabled) {
+          background-color: var(--red-50);
+          color: var(--red-600);
+        }
+      }
+
+      // Text variant for minimal appearance
+      &.p-button-text {
+        background-color: transparent;
+        border-color: transparent;
+        color: var(--red-500);
+
+        &:hover:not(:disabled) {
+          background-color: var(--red-50);
+          color: var(--red-600);
+        }
+      }
+
+      // Disabled state
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+    }
+  }
+
+  // Compact mode adjustments
+  .query-builder-compact & {
+    margin-left: var(--qb-spacing-xs);
+
+    ::ng-deep {
+      .p-button {
+        height: var(--qb-button-height-sm);
+        width: var(--qb-button-height-sm);
+
+        .p-button-icon {
+          font-size: var(--qb-icon-size-sm);
+        }
+      }
+    }
+  }
+
+  // Dense mode adjustments
+  .query-builder-dense & {
+    margin-left: 2px;
+
+    ::ng-deep {
+      .p-button {
+        height: 24px;
+        width: 24px;
+
+        .p-button-icon {
+          font-size: var(--qb-icon-size-sm);
+        }
+      }
+    }
+  }
+
+  // Confirmation mode styling
+  &.query-remove-button-confirm {
+    ::ng-deep {
+      .p-button {
+        background-color: var(--orange-500);
+        border-color: var(--orange-500);
+        animation: pulse 1s infinite;
+
+        &:hover:not(:disabled) {
+          background-color: var(--red-600);
+          border-color: var(--red-600);
+          animation: none;
+        }
+
+        &:focus {
+          box-shadow: 0 0 0 0.2rem var(--orange-200);
+        }
+      }
+    }
+  }
+
+  // Loading state
+  &.query-remove-button-loading {
+    ::ng-deep {
+      .p-button {
+        opacity: 0.6;
+        pointer-events: none;
+
+        .p-button-icon {
+          animation: spin 1s linear infinite;
+        }
+      }
+    }
+  }
+
+  // Error state
+  &.query-remove-button-error {
+    ::ng-deep {
+      .p-button {
+        background-color: var(--red-700);
+        border-color: var(--red-700);
+        box-shadow: 0 0 0 2px var(--red-200);
+      }
+    }
+  }
+
+  // Tooltip positioning
+  .p-tooltip {
+    .p-tooltip-text {
+      font-size: var(--qb-font-size-sm);
+      padding: var(--qb-spacing-xs) var(--qb-spacing-sm);
+      border-radius: var(--qb-border-radius);
+      background-color: var(--surface-900);
+      color: var(--surface-0);
+    }
+  }
+}
+
+// Animations
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .query-remove-button {
+    ::ng-deep {
+      .p-button {
+        transition: none;
+
+        &:hover:not(:disabled) {
+          transform: none;
+        }
+
+        &:active {
+          transform: none;
+        }
+      }
+    }
+
+    &.query-remove-button-confirm {
+      ::ng-deep {
+        .p-button {
+          animation: none;
+        }
+      }
+    }
+
+    &.query-remove-button-loading {
+      ::ng-deep {
+        .p-button {
+          .p-button-icon {
+            animation: none;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+<!-- Dashboard Header -->
+<vis-dashboard-header 
+  [title]="dashboardTitle"
+  [isHighlightingEnabled]="isHighlightingEnabled"
+  [isExportingExcel]="isExportingExcel"
+  (onExportToExcel)="exportDashboardToExcel()"
+  (onToggleHighlighting)="toggleHighlightingMode()"
+  (onSetHighlightingPreset)="setHighlightingPreset($event)"
+  (onForceTileRefresh)="forceTileRefresh()">
+</vis-dashboard-header>
+
+<p-scrollPanel [style]="{ height: '100%', width: '100%', 'overflow-x': 'hidden', 'overflow': 'auto' }">
+  <div class="dashboard-container" #dashboardContainer>
+    <!-- Dashboard Container Component -->
+    <vis-dashboard-container 
+      #dashboardContainerComponent
+      [widgets]="dashboardConfig.widgets" 
+      [options]="dashboardConfig.config"
+      [dashboardId]="dashboardConfig.dashboardId"
+      (filterValuesChanged)="onFilterValuesChanged($event)">
+    </vis-dashboard-container>
+  </div>
+</p-scrollPanel>

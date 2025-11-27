@@ -1,0 +1,310 @@
+<div class="content-section">
+  @if (loading) {
+    <div class="loading-container">
+      <i class="pi pi-spin pi-spinner loading-spinner"></i>
+      <p class="loading-text">Loading portfolios...</p>
+    </div>
+  } @else if (error) {
+    <div class="error-container">
+      <i class="pi pi-exclamation-triangle error-icon"></i>
+      <h3>Authentication Required</h3>
+      <p class="error-message">{{ error }}</p>
+      <p class="demo-note">Please log in to access portfolio data.</p>
+      <button pButton 
+              label="Go to Login" 
+              icon="pi pi-sign-in" 
+              class="p-button-primary"
+              (click)="onGoToLogin()">
+      </button>
+    </div>
+  } @else if (!loading && filteredPortfolios.length > 0) {
+    
+    <!-- Portfolio Display Container -->
+    <div class="portfolio-display-container">
+      
+      <!-- Controls Section -->
+      <div class="controls-section">
+        <div class="controls-row">
+          <!-- Search Box -->
+          <div class="search-box">
+            <div class="search-input-wrapper">
+              <i class="pi pi-search search-icon"></i>
+              <input pInputText 
+                     type="text" 
+                     placeholder="Search portfolios..." 
+                     [(ngModel)]="searchText"
+                     (input)="onSearchChange()"
+                     class="search-input" />
+            </div>
+          </div>
+          
+          <!-- Sort Controls -->
+          <div class="sort-controls">
+            <span class="sort-label">Sort by:</span>
+            <div class="sort-buttons">
+              <button pButton 
+                      label="Name" 
+                      [class]="sortField === 'name' ? 'p-button-text p-button-sm' : 'p-button-link p-button-sm'"
+                      (click)="onSortChange('name')"
+                      [icon]="sortField === 'name' ? (sortOrder === 1 ? 'pi pi-sort-up' : 'pi pi-sort-down') : 'pi pi-sort'">
+              </button>
+              <button pButton 
+                      label="Risk Profile" 
+                      [class]="sortField === 'riskProfile' ? 'p-button-text p-button-sm' : 'p-button-link p-button-sm'"
+                      (click)="onSortChange('riskProfile')"
+                      [icon]="sortField === 'riskProfile' ? (sortOrder === 1 ? 'pi pi-sort-up' : 'pi pi-sort-down') : 'pi pi-sort'">
+              </button>
+              <button pButton 
+                      label="Inception Date" 
+                      [class]="sortField === 'inceptionDate' ? 'p-button-text p-button-sm' : 'p-button-link p-button-sm'"
+                      (click)="onSortChange('inceptionDate')"
+                      [icon]="sortField === 'inceptionDate' ? (sortOrder === 1 ? 'pi pi-sort-up' : 'pi pi-sort-down') : 'pi pi-sort'">
+              </button>
+            </div>
+          </div>
+          
+          <!-- Filter Controls -->
+          <div class="filter-controls">
+            <p-select 
+              [options]="riskProfileOptions" 
+              [(ngModel)]="selectedRiskProfile"
+              (onChange)="onRiskProfileChange()"
+              placeholder="Risk Profile"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              class="filter-dropdown">
+            </p-select>
+            
+            <button pButton 
+                    label="Clear" 
+                    icon="pi pi-filter" 
+                    class="p-button-outlined clear-btn"
+                    (click)="onClearFilters()">
+            </button>
+          </div>
+          
+          <!-- Layout Toggle -->
+          <div class="view-toggle">
+            <button pButton 
+                    icon="pi pi-th-large" 
+                    [class]="layout === 'grid' ? 'p-button-primary' : 'p-button-outlined'"
+                    (click)="onLayoutChange('grid')"
+                    pTooltip="Grid View"
+                    class="layout-btn">
+            </button>
+            <button pButton 
+                    icon="pi pi-list" 
+                    [class]="layout === 'list' ? 'p-button-primary' : 'p-button-outlined'"
+                    (click)="onLayoutChange('list')"
+                    pTooltip="List View"
+                    class="layout-btn">
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portfolio Cards Scroll Panel -->
+      <p-scrollPanel class="portfolio-scroll-panel">
+        <div class="portfolio-cards">
+          <div class="grid" [class]="layout === 'grid' ? 'grid-layout' : 'list-layout'">
+            <div *ngFor="let portfolio of filteredPortfolios; trackBy: trackPortfolioById" 
+                 class="portfolio-item">
+              
+              <!-- Grid View Card -->
+              <p-card *ngIf="layout === 'grid'" class="portfolio-card">
+                <!-- Card Content -->
+                <div class="portfolio-performance-card">
+                  <!-- Card Header -->
+                  <div class="card-header">
+                    <div class="title-row">
+                      <i class="pi pi-trending-up chart-icon"></i>
+                      <h3 class="portfolio-name">{{ portfolio.name }}</h3>
+                    </div>
+                    <p class="portfolio-subtitle">NAV vs Nifty 500 Performance</p>
+                  </div>
+
+                  <!-- Performance Metrics Row -->
+                  <div class="performance-row">
+                    <div class="left-metrics">
+                      <div class="main-return" [style.color]="getPerformanceColor(portfolio.totalReturn || 0)">
+                        {{ formatReturn(portfolio.totalReturn || 0) }}
+                      </div>
+                      <div class="benchmark-info">
+                        vs Nifty 500: {{ formatReturn(portfolio.benchmarkReturn || 0) }}
+                      </div>
+                    </div>
+                    <div class="right-metrics">
+                      <div class="stock-count">{{ portfolio.stockCount || 0 }} Stocks</div>
+                      <div class="outperformance" [style.color]="getPerformanceColor(portfolio.outperformance || 0)">
+                        {{ formatReturn(portfolio.outperformance || 0) }} outperformance
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Performance Chart -->
+                  <div class="chart-section" *ngIf="portfolio.performanceData">
+                    <div class="chart-container">
+                      <svg class="chart-svg" width="100%" height="120" viewBox="0 0 100 100">
+                        <!-- Portfolio performance line -->
+                        <path [attr.d]="getChartPath(portfolio.performanceData.portfolio)" 
+                              class="portfolio-line" 
+                              [attr.stroke]="getPortfolioColor(portfolio.riskProfile)" 
+                              stroke-width="3" 
+                              fill="none"/>
+                        
+                        <!-- Benchmark line -->
+                        <path [attr.d]="getChartPath(portfolio.performanceData.benchmark)" 
+                              class="benchmark-line" 
+                              stroke="#999" 
+                              stroke-width="2" 
+                              stroke-dasharray="4,2" 
+                              fill="none"/>
+                        
+                        <!-- Rebalance events -->
+                        <circle *ngFor="let position of getRebalancePositions(portfolio.rebalanceEvents || 0); let i = index" 
+                                [attr.cx]="position" 
+                                [attr.cy]="getRebalanceYPosition(portfolio.performanceData.portfolio, position)"
+                                r="4" 
+                                class="rebalance-dot" 
+                                fill="#ff9500"/>
+                      </svg>
+                      
+                      <!-- Chart labels -->
+                      <div class="chart-time-labels">
+                        <span class="time-label">6M</span>
+                        <span class="time-label">Now</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Chart Legend -->
+                  <div class="chart-legend">
+                    <div class="legend-row">
+                      <div class="legend-item">
+                        <div class="legend-line portfolio-legend" [style.background]="getPortfolioColor(portfolio.riskProfile)"></div>
+                        <span class="legend-label">{{ portfolio.name }}</span>
+                      </div>
+                      <div class="legend-item">
+                        <div class="legend-line benchmark-legend"></div>
+                        <span class="legend-label">Nifty 500</span>
+                      </div>
+                    </div>
+                    <div class="rebalance-info">
+                      <i class="pi pi-circle-fill rebalance-icon"></i>
+                      <span class="rebalance-text">Rebalance Events ({{ portfolio.rebalanceEvents || 0 }}) • Last: {{ portfolio.lastRebalance || 'N/A' }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="card-actions">
+                    <button pButton 
+                            label="Configure" 
+                            icon="pi pi-cog" 
+                            class="p-button-outlined configure-btn"
+                            (click)="onConfigurePortfolio(portfolio)">
+                    </button>
+                    <button pButton 
+                            label="Optimize" 
+                            icon="pi pi-chart-bar" 
+                            class="p-button-outlined optimize-btn"
+                            (click)="onOptimizePortfolio(portfolio)">
+                    </button>
+                  </div>
+                </div>
+              </p-card>
+
+              <!-- List View Card -->
+              <div *ngIf="layout === 'list'" class="portfolio-list-card">
+                <!-- Selection Checkbox -->
+                <div class="list-checkbox">
+                  <p-checkbox [binary]="true"></p-checkbox>
+                </div>
+
+                <!-- Main Content -->
+                <div class="list-main-content">
+                  <!-- Title and Description -->
+                  <div class="list-title-section">
+                    <h3 class="list-portfolio-name">{{ portfolio.name }}</h3>
+                    <p class="list-portfolio-description">{{ portfolio.description }}</p>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="list-action-buttons">
+                    <button pButton 
+                            label="Configure" 
+                            icon="pi pi-cog" 
+                            class="p-button-outlined configure-btn"
+                            (click)="onConfigurePortfolio(portfolio)">
+                    </button>
+                    <button pButton 
+                            label="Optimize" 
+                            icon="pi pi-chart-bar" 
+                            class="p-button-outlined optimize-btn"
+                            (click)="onOptimizePortfolio(portfolio)">
+                    </button>
+                  </div>
+
+                  <!-- Metadata -->
+                  <div class="list-metadata">
+                    <div class="metadata-item">
+                      <span class="metadata-label">Last Executed:</span>
+                      <span class="metadata-value">{{ formatDate(portfolio.inceptionDate) }}</span>
+                    </div>
+                    <div class="metadata-item">
+                      <span class="metadata-label">Risk Profile:</span>
+                      <span class="metadata-value">{{ getRiskProfileLabel(portfolio.riskProfile) }}</span>
+                    </div>
+                    <div class="metadata-item">
+                      <span class="metadata-label">Status:</span>
+                      <span class="metadata-value" [class]="portfolio.isActive ? 'status-active' : 'status-inactive'">
+                        {{ portfolio.isActive ? 'Active' : 'Inactive' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right Side Metrics -->
+                <div class="list-right-metrics">
+                  <div class="metric-item">
+                    <span class="metric-label">Total Return</span>
+                    <span class="metric-value" [style.color]="getPerformanceColor(portfolio.totalReturn || 0)">
+                      {{ formatReturn(portfolio.totalReturn || 0) }}
+                    </span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Stock Count</span>
+                    <span class="metric-value">{{ portfolio.stockCount || 0 }}</span>
+                  </div>
+                  <div class="metric-item">
+                    <span class="metric-label">Outperformance</span>
+                    <span class="metric-value" [style.color]="getPerformanceColor(portfolio.outperformance || 0)">
+                      {{ formatReturn(portfolio.outperformance || 0) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pagination Info -->
+          <div class="pagination-info">
+            <span>Showing {{ filteredPortfolios.length }} of {{ portfolios.length }} portfolios</span>
+          </div>
+        </div>
+      </p-scrollPanel>
+    </div>
+  } @else if (!loading && filteredPortfolios.length === 0 && !error) {
+    <div class="empty-message">
+      <i class="pi pi-info-circle empty-icon"></i>
+      <h3>No portfolios found</h3>
+      <p>No portfolios have been created yet. Create your first portfolio to get started.</p>
+      <button pButton 
+              label="Create Portfolio" 
+              icon="pi pi-plus" 
+              class="p-button-primary"
+              (click)="onCreatePortfolio()">
+      </button>
+    </div>
+  }
+</div>

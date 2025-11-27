@@ -1,0 +1,330 @@
+/* Container, header, and summary card styles are now global in styles.scss */
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.text-green-500 {
+  color: var(--success-color) !important;
+  font-weight: 500;
+}
+
+.text-red-500 {
+  color: var(--danger-color) !important;
+  font-weight: 500;
+}
+
+/* Container styles for full height */
+.container {
+  height: 75%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Indices view container */
+.indices-view-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Important for Firefox */
+}
+
+/* NSE Indices Status Bar */
+.nse-indices-status-bar {
+  background: linear-gradient(135deg, var(--surface-50) 0%, var(--surface-100) 100%);
+  border: 1px solid var(--surface-border);
+  
+  .text-green-600 {
+    color: var(--green-600) !important;
+  }
+  
+  .text-red-600 {
+    color: var(--red-600) !important;
+  }
+  
+  .text-gray-600 {
+    color: var(--gray-600) !important;
+  }
+}
+
+/* Custom styling for bottom tabs */
+::ng-deep .bottom-tabs {
+  display: flex;
+  flex-direction: column-reverse;
+  flex: 1;
+  min-height: 0; /* Important for Firefox */
+
+  .p-tabview-panels {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--surface-border, #dee2e6);
+    border-top: none;
+  }
+
+  .p-tabview-panel {
+    height: 100%;
+    overflow: auto;
+  }
+
+  .p-tabview-nav {
+    justify-content: center;
+    margin-top: var(--spacing-xl);
+    border-top: 1px solid var(--surface-border, #dee2e6);
+    border-bottom: none;
+
+    li {
+      margin-top: -1px;
+
+      .p-tabview-nav-link {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+        border-bottom-left-radius: 4px;
+        border-bottom-right-radius: 4px;
+        border-top: none;
+        border-bottom: 1px solid var(--surface-border, #dee2e6);
+        padding: var(--p-tabs-tab-padding);
+      }
+
+      &.p-highlight .p-tabview-nav-link {
+        border-color: var(--surface-border, #dee2e6);
+        border-top: none;
+        border-bottom-color: var(--info-color, #3B82F6);
+      }
+    }
+  }
+}
+
+/* Selected row highlighting */
+.selected-row {
+  background-color: var(--primary-color-text) !important;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%) !important;
+  border-left: 3px solid var(--primary-color) !important;
+  
+  &:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.08) 100%) !important;
+  }
+}
+
+/* Indices list and item styling */
+.indices-list {
+  flex: 1;
+  overflow: auto;
+}
+
+.index-item {
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.index-symbol {
+  font-weight: 600;
+}
+
+.indices-container {
+  padding: var(--spacing-xl);
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+/* View mode selector styling */
+.view-mode-selector {
+  display: flex;
+  align-items: center;
+}
+
+.inline-radio {
+  display: inline-flex;
+  align-items: center;
+  margin-right: var(--spacing-xl);
+}
+
+/* Override PrimeNG radio button styles for better alignment */
+::ng-deep .p-radiobutton {
+  margin-right: var(--spacing-md);
+}
+
+::ng-deep .p-radiobutton-label {
+  margin-bottom: 0;
+}
+
+/* Custom styling for ScrollPanel */
+::ng-deep .p-scrollpanel {
+  .p-scrollpanel-wrapper {
+    border-radius: 4px;
+  }
+
+  .p-scrollpanel-bar {
+    background-color: rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+
+    &:hover {
+      background-color: rgba(59, 130, 246, 0.5);
+    }
+  }
+}
+
+/* Search input styling - now inline with dropdown */
+.search-input {
+  width: 200px;
+  font-size: 0.875rem;
+  min-width: 150px; /* Ensure minimum width on smaller screens */
+}
+
+/* Stock list widget container styling */
+.stock-list-widget-container {
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-card);
+  min-height: 0; /* Important for flexbox */
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--surface-ground);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--primary-color-dark);
+    }
+  }
+  
+  /* Firefox scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) var(--surface-ground);
+  
+  /* Ensure dashboard container doesn't create additional scrollbars */
+  ::ng-deep vis-dashboard-container {
+    height: 100%;
+    overflow: hidden;
+    
+    .dashboard-container {
+      height: 100%;
+      overflow: hidden;
+    }
+  }
+}
+
+/* Indices list styling */
+.indices-list {
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-card);
+  padding: var(--spacing-md);
+  min-height: 0; /* Important for flexbox */
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--surface-ground);
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+    
+    &:hover {
+      background: var(--primary-color-dark);
+    }
+  }
+  
+  /* Firefox scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) var(--surface-ground);
+}
+
+/* Responsive adjustments for dropdown and search container */
+@media (max-width: 768px) {
+  .search-input {
+    width: 150px;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 576px) {
+  .search-input {
+    width: 120px;
+    min-width: 100px;
+  }
+}
+
+/* TreeTable specific styling */
+::ng-deep .p-treetable {
+  .category-row {
+    background-color: var(--surface-100);
+    font-weight: bold;
+    
+    td {
+      border-bottom: 2px solid var(--surface-border);
+    }
+  }
+  
+  .p-treetable-thead > tr > th {
+    background-color: var(--surface-50);
+    font-weight: 600;
+    border-bottom: 2px solid var(--primary-color);
+  }
+  
+  .p-treetable-tbody > tr {
+    &:hover {
+      background-color: var(--surface-hover);
+    }
+    
+    &.category-row:hover {
+      background-color: var(--surface-200);
+    }
+  }
+  
+  .p-treetable-toggler {
+    margin-right: 0.5rem;
+  }
+  
+  // Ensure proper alignment for tree structure
+  .p-treetable-tbody > tr > td:first-child {
+    padding-left: 1rem;
+  }
+  
+  // Style for expanded/collapsed indicators
+  .p-treetable-toggler-icon {
+    color: var(--primary-color);
+  }
+}
+
+// Font weight for category rows
+.font-bold {
+  font-weight: 600;
+}
+
+// Clickable row styling
+.clickable-row {
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background-color: var(--surface-hover) !important;
+  }
+  
+  &:active {
+    background-color: var(--surface-200) !important;
+  }
+}

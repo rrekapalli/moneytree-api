@@ -1,0 +1,19 @@
+<div class="page-header">
+  <div class="header-content">
+    <div class="title-section">
+      <h1 class="main-title">{{ title }}</h1>
+      <p class="subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+    </div>
+    <button 
+      *ngIf="showActionButton && actionButtonLabel"
+      pButton 
+      [label]="actionButtonLabel" 
+      [icon]="actionButtonIcon" 
+      class="p-button-primary create-btn"
+      [disabled]="actionButtonDisabled"
+      [loading]="actionButtonLoading"
+      (click)="onActionButtonClick()">
+    </button>
+  </div>
+  <div class="header-divider"></div>
+</div>

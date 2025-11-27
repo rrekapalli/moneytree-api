@@ -1,0 +1,14 @@
+<div class="query-remove-button">
+  <p-button
+    icon="pi pi-times"
+    severity="danger"
+    size="small"
+    [disabled]="disabled"
+    [pTooltip]="getTooltip()"
+    [ariaLabel]="getAriaLabel()"
+    (onClick)="onRemove()"
+    [style]="{ 'width': '28px', 'height': '28px', 'min-width': '28px' }">
+  </p-button>
+  
+  <p-confirmDialog></p-confirmDialog>
+</div>

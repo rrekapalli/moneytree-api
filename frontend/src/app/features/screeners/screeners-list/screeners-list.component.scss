@@ -1,0 +1,70 @@
+/* Container and header styles are now global in styles.scss */
+
+/* Summary card styles are now handled by the parent screeners component */
+
+.loading-card {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.loading-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+
+  p {
+    margin: 0;
+    color: var(--text-color-secondary);
+  }
+}
+
+.empty-message {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 3rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+
+    p {
+      margin: 0;
+      color: var(--text-color-secondary);
+      font-size: 1rem;
+    }
+  }
+}
+
+.screener-tabs {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .page-container {
+    padding: 0.5rem;
+  }
+}

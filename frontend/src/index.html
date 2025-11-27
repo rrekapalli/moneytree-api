@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MoneyPlant</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+  <link rel="icon" type="image/png" href="assets/images/moneytree-logo.png">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  
+  <!-- Node.js globals polyfill for sockjs-client compatibility -->
+  <script>
+    // Set global before any modules load to prevent "global is not defined" errors
+    window.global = window;
+    if (typeof global === 'undefined') {
+      global = window;
+    }
+    
+    // Basic crypto polyfill
+    if (typeof window.crypto === 'undefined') {
+      window.crypto = {
+        getRandomValues: function(array) {
+          for (let i = 0; i < array.length; i++) {
+            array[i] = Math.floor(Math.random() * 256);
+          }
+          return array;
+        }
+      };
+    }
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

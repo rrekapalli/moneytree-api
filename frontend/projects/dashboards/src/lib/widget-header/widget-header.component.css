@@ -1,0 +1,93 @@
+.panel-button {
+  display: flex;
+  flex-direction: row;
+  justify-content: end;
+}
+
+:host ::ng-deep .p-panel .p-panel-content {
+  display: none;
+}
+
+/* Custom panel header padding for widget-header component */
+:host ::ng-deep .p-panel .p-panel-header {
+  padding: 0.5rem 1rem;
+}
+
+/* Widget Data Panel Styles */
+.widget-data-panel {
+  padding: 1rem;
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.data-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.data-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.data-info {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.data-table-container {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th {
+  background-color: #f5f5f5;
+  padding: 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e0e0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.data-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  word-break: break-word;
+}
+
+.data-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.no-data {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Menu button styling */
+:host ::ng-deep .p-button.p-button-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}

@@ -1,0 +1,150 @@
+<!-- Page Header -->
+<app-page-header
+  title="Positions"
+  subtitle="Track your current stock positions and analyze performance"
+  actionButtonLabel="Add Position"
+  actionButtonIcon="pi pi-plus"
+  (actionButtonClick)="addPosition()">
+</app-page-header>
+
+<div class="page-container">
+
+  <div class="grid">
+    <div class="col-12">
+      <p-card>
+        <!-- List View -->
+        <ng-container *ngIf="!selectedPositionId">
+
+        <p-table [value]="positions" [paginator]="true" [rows]="10" [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} positions"
+          [rowsPerPageOptions]="[10,25,50]" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Symbol</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Change</th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-position>
+            <tr>
+              <td><strong>{{position.symbol}}</strong></td>
+              <td>{{position.name}}</td>
+              <td>{{position.price | currency}}</td>
+              <td [ngClass]="position.change >= 0 ? 'text-success' : 'text-danger'">
+                {{position.change >= 0 ? '+' : ''}}{{position.change | percent:'1.2'}}
+              </td>
+              <td>
+                <div class="flex gap-2">
+                  <p-button icon="pi pi-eye" (onClick)="viewPosition(position)" 
+                    styleClass="p-button-rounded p-button-text" 
+                    pTooltip="View Details" tooltipPosition="left"></p-button>
+                  <p-button icon="pi pi-pencil" (onClick)="editPosition(position)" 
+                    styleClass="p-button-rounded p-button-text" 
+                    pTooltip="Edit" tooltipPosition="top"></p-button>
+                  <p-button icon="pi pi-trash" (onClick)="deletePosition(position)" 
+                    styleClass="p-button-rounded p-button-text p-button-danger" 
+                    pTooltip="Delete" tooltipPosition="right"></p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="5" class="text-center">No positions found.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </ng-container>
+
+      <!-- Detail View -->
+      <ng-container *ngIf="selectedPositionId">
+        <ng-template pTemplate="header">
+          <div class="flex justify-content-between align-items-center p-3">
+            <h2 class="m-0">Position Details</h2>
+            <div class="flex gap-2">
+              <p-button label="Edit" icon="pi pi-pencil" styleClass="p-button-sm"></p-button>
+              <p-button label="Delete" icon="pi pi-trash" styleClass="p-button-sm p-button-danger"></p-button>
+              <p-button label="Back to List" icon="pi pi-arrow-left" styleClass="p-button-sm p-button-secondary" (onClick)="backToList()"></p-button>
+            </div>
+          </div>
+        </ng-template>
+
+        <div class="grid">
+          <div class="col-12">
+            <h3>Position Information</h3>
+            <div class="grid">
+              <div class="col-12 md:col-6 lg:col-3">
+                <div class="font-bold">Symbol</div>
+                <div>{{selectedPosition?.symbol}}</div>
+              </div>
+              <div class="col-12 md:col-6 lg:col-3">
+                <div class="font-bold">Name</div>
+                <div>{{selectedPosition?.name}}</div>
+              </div>
+              <div class="col-12 md:col-6 lg:col-3">
+                <div class="font-bold">Price</div>
+                <div>{{selectedPosition?.price | currency}}</div>
+              </div>
+              <div class="col-12 md:col-6 lg:col-3">
+                <div class="font-bold">Change</div>
+                <div [ngClass]="(selectedPosition?.change ?? 0) >= 0 ? 'text-success' : 'text-danger'">
+                  {{(selectedPosition?.change ?? 0) >= 0 ? '+' : ''}}{{selectedPosition?.change | percent:'1.2'}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <p-tabs [(value)]="activeDetailTab">
+          <p-tablist>
+            @for(tab of detailTabs; track tab.value) {
+              <p-tab [value]="tab.value" class="flex items-center !gap-2 text-inherit">
+                <span>{{ tab.label }}</span>
+              </p-tab>
+            }
+          </p-tablist>
+
+          <p-tabpanel [value]="'performance'">
+            <div class="grid">
+              <div class="col-12">
+                <h3>Performance Chart</h3>
+                <!-- Chart placeholder -->
+                <div style="height: 300px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                  Chart will be displayed here
+                </div>
+              </div>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel [value]="'transactions'">
+            <div class="grid">
+              <div class="col-12">
+                <h3>Transaction History</h3>
+                <!-- Transactions table placeholder -->
+                <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                  Transactions will be displayed here
+                </div>
+              </div>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel [value]="'analysis'">
+            <div class="grid">
+              <div class="col-12">
+                <h3>Position Analysis</h3>
+                <!-- Analysis content placeholder -->
+                <div style="height: 200px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                  Analysis will be displayed here
+                </div>
+              </div>
+            </div>
+          </p-tabpanel>
+        </p-tabs>
+      </ng-container>
+    </p-card>
+  </div>
+</div>

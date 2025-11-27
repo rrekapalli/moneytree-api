@@ -1,0 +1,99 @@
+<header class="app-header">
+  <div class="header-container">
+    <div class="header-left">
+        <div class="logo-container">
+            <span class="app-title">{{ title }}</span>
+        </div>
+        <p-menubar [model]="menuItems" styleClass="menu-items" [autoDisplay]="false" [style]="{'height': '3rem'}"></p-menubar>
+    </div>
+
+    <div class="header-right">
+      <div class="header-actions">
+        <ng-container *featureFlag="'notifications'">
+          <button 
+            pButton 
+            icon="pi pi-bell" 
+            class="p-button-rounded p-button-text p-button-plain" 
+            aria-label="Notifications"
+            (click)="notificationsPanel.toggle($event)"
+            [ngClass]="{'notification-badge': unreadCount() > 0}"
+          >
+            @if (unreadCount() > 0) {
+              <span class="p-badge p-badge-sm">{{ unreadCount() }}</span>
+            }
+          </button>
+          <p-popover #notificationsPanel [style]="{width: '350px'}" [showTransitionOptions]="'0.12s'" [hideTransitionOptions]="'0.1s'">
+            <ng-template pTemplate="content">
+              <div class="notifications-panel">
+                <div class="notifications-header">
+                  <h3>Notifications</h3>
+                  @if (unreadCount() > 0) {
+                    <button 
+                      pButton 
+                      label="Mark all as read" 
+                      class="p-button-text p-button-sm" 
+                      (click)="markAllAsRead()"
+                    ></button>
+                  }
+                </div>
+                <div class="notifications-list">
+                  @if (notifications().length > 0) {
+                    @for (notification of notifications(); track trackByNotificationId($index, notification)) {
+                      <div 
+                        class="notification-item"
+                        [ngClass]="{'unread': !notification.isRead}"
+                        (click)="navigateToNotification(notification, notificationsPanel)"
+                      >
+                        <div class="notification-content">
+                          <div class="notification-header">
+                            <span class="notification-title">{{ notification.title }}</span>
+                            <span class="notification-time">{{ notification.timestamp | date:'shortTime' }}</span>
+                          </div>
+                          <p class="notification-message">{{ notification.message }}</p>
+                        </div>
+                        <div class="notification-actions">
+                          @if (!notification.isRead) {
+                            <button 
+                              pButton 
+                              icon="pi pi-check" 
+                              class="p-button-text p-button-sm" 
+                              (click)="markAsRead(notification.id, $event)"
+                            ></button>
+                          }
+                          <button 
+                            pButton 
+                            icon="pi pi-trash" 
+                            class="p-button-text p-button-sm p-button-danger" 
+                            (click)="deleteNotification(notification.id, $event, notificationsPanel)"
+                          ></button>
+                        </div>
+                      </div>
+                    }
+                  } @else {
+                    <div class="no-notifications">
+                      <p>No notifications</p>
+                    </div>
+                  }
+                </div>
+              </div>
+            </ng-template>
+          </p-popover>
+        </ng-container>
+        <!-- <ng-container *featureFlag="'settings'">
+          <button pButton icon="pi pi-user" class="p-button-rounded p-button-text p-button-plain" aria-label="User Settings"></button>
+        </ng-container> -->
+        <ng-container *featureFlag="'user-profile'">
+          <button 
+            pButton 
+            [label]="getUserDisplayName()" 
+            icon="pi pi-user" 
+            class="p-button-rounded p-button-outlined user-profile-button" 
+            aria-label="User profile"
+            (click)="userMenu.toggle($event)"
+          ></button>
+          <p-menu #userMenu [model]="userMenuItems" [popup]="true" appendTo="body"></p-menu>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</header>
