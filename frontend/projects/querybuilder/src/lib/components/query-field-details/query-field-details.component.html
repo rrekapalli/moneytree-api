@@ -1,0 +1,40 @@
+<div class="query-field-details">
+  <!-- Field Selection -->
+  <div class="query-field-select">
+    <p-select
+      [options]="getFieldOptions()"
+      [ngModel]="rule.field"
+      (ngModelChange)="onFieldChange($event)"
+      [disabled]="disabled"
+      optionLabel="label"
+      optionValue="name"
+      placeholder="Select field"
+      [style]="{ 'min-width': '120px' }"
+      size="small"
+      [showClear]="false">
+    </p-select>
+  </div>
+
+  <!-- Operator Selection -->
+  <div class="query-operator-select">
+    <lib-query-operation
+      [field]="selectedField"
+      [operator]="rule.operator"
+      [operators]="availableOperators"
+      [disabled]="disabled"
+      (operatorChange)="onOperatorChange($event)">
+    </lib-query-operation>
+  </div>
+
+  <!-- Value Input -->
+  <div class="query-value-input">
+    <lib-query-input
+      [field]="selectedField"
+      [operator]="rule.operator"
+      [value]="rule.value"
+      [inputType]="getInputType()"
+      [disabled]="disabled"
+      (valueChange)="onValueChange($event)">
+    </lib-query-input>
+  </div>
+</div>

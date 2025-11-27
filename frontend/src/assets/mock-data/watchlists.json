@@ -1,0 +1,83 @@
+[
+  {
+    "id": "1",
+    "name": "Tech Stocks",
+    "description": "Top technology companies",
+    "items": [
+      {
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "price": 175.43,
+        "change": 0.0234
+      },
+      {
+        "symbol": "MSFT",
+        "name": "Microsoft Corporation",
+        "price": 338.11,
+        "change": 0.0156
+      },
+      {
+        "symbol": "GOOGL",
+        "name": "Alphabet Inc.",
+        "price": 131.86,
+        "change": -0.0078
+      },
+      {
+        "symbol": "AMZN",
+        "name": "Amazon.com Inc.",
+        "price": 129.12,
+        "change": 0.0345
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "name": "Financial Sector",
+    "description": "Banking and financial services companies",
+    "items": [
+      {
+        "symbol": "JPM",
+        "name": "JPMorgan Chase & Co.",
+        "price": 151.76,
+        "change": 0.0089
+      },
+      {
+        "symbol": "BAC",
+        "name": "Bank of America Corp.",
+        "price": 33.47,
+        "change": -0.0123
+      },
+      {
+        "symbol": "WFC",
+        "name": "Wells Fargo & Co.",
+        "price": 45.81,
+        "change": 0.0067
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "name": "Healthcare",
+    "description": "Healthcare and pharmaceutical companies",
+    "items": [
+      {
+        "symbol": "JNJ",
+        "name": "Johnson & Johnson",
+        "price": 162.39,
+        "change": -0.0045
+      },
+      {
+        "symbol": "PFE",
+        "name": "Pfizer Inc.",
+        "price": 28.79,
+        "change": 0.0178
+      },
+      {
+        "symbol": "UNH",
+        "name": "UnitedHealth Group Inc.",
+        "price": 486.71,
+        "change": 0.0256
+      }
+    ]
+  }
+]

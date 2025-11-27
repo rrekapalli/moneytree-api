@@ -1,0 +1,101 @@
+[
+  {
+    "id": "1",
+    "name": "Long-term Portfolio",
+    "description": "Investments for retirement",
+    "totalValue": 125000.75,
+    "dailyChange": 0.0156,
+    "holdings": [
+      {
+        "symbol": "AAPL",
+        "shares": 50,
+        "avgPrice": 150.25,
+        "currentPrice": 175.43,
+        "value": 8771.50,
+        "change": 0.1676
+      },
+      {
+        "symbol": "MSFT",
+        "shares": 30,
+        "avgPrice": 290.50,
+        "currentPrice": 338.11,
+        "value": 10143.30,
+        "change": 0.1639
+      },
+      {
+        "symbol": "JNJ",
+        "shares": 25,
+        "avgPrice": 155.75,
+        "currentPrice": 162.39,
+        "value": 4059.75,
+        "change": 0.0426
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "name": "Growth Portfolio",
+    "description": "High growth potential stocks",
+    "totalValue": 78500.25,
+    "dailyChange": -0.0089,
+    "holdings": [
+      {
+        "symbol": "TSLA",
+        "shares": 20,
+        "avgPrice": 220.75,
+        "currentPrice": 245.30,
+        "value": 4906.00,
+        "change": 0.1111
+      },
+      {
+        "symbol": "NVDA",
+        "shares": 15,
+        "avgPrice": 180.50,
+        "currentPrice": 425.75,
+        "value": 6386.25,
+        "change": 1.3587
+      },
+      {
+        "symbol": "AMZN",
+        "shares": 10,
+        "avgPrice": 115.25,
+        "currentPrice": 129.12,
+        "value": 1291.20,
+        "change": 0.1204
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "name": "Dividend Portfolio",
+    "description": "Stocks with consistent dividend payments",
+    "totalValue": 95250.50,
+    "dailyChange": 0.0045,
+    "holdings": [
+      {
+        "symbol": "KO",
+        "shares": 100,
+        "avgPrice": 55.25,
+        "currentPrice": 58.75,
+        "value": 5875.00,
+        "change": 0.0633
+      },
+      {
+        "symbol": "PG",
+        "shares": 40,
+        "avgPrice": 140.50,
+        "currentPrice": 145.25,
+        "value": 5810.00,
+        "change": 0.0338
+      },
+      {
+        "symbol": "VZ",
+        "shares": 75,
+        "avgPrice": 52.75,
+        "currentPrice": 40.50,
+        "value": 3037.50,
+        "change": -0.2323
+      }
+    ]
+  }
+]

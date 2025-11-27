@@ -1,0 +1,66 @@
+.query-entity {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.query-entity-ruleset {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 8px;
+  background-color: #f8f9fa;
+}
+
+.query-entity-rule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  min-height: 40px;
+}
+
+.query-ruleset {
+  display: block;
+}
+
+.query-ruleset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 8px;
+}
+
+.query-ruleset-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.query-ruleset-body {
+  padding: 8px;
+}
+
+.query-rule-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.query-rule-container lib-query-entity {
+  flex: 1;
+}
+
+.query-empty-warning {
+  padding: 16px;
+  text-align: center;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  margin: 8px;
+}

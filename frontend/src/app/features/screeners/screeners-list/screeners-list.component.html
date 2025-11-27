@@ -1,0 +1,139 @@
+<!-- Page Header -->
+<app-page-header
+  title="Screeners"
+  subtitle="Create and manage your custom stock screening criteria"
+  actionButtonLabel="Create Screener"
+  actionButtonIcon="pi pi-plus"
+  (actionButtonClick)="createScreener()">
+</app-page-header>
+
+<div class="page-container">
+
+  <!-- Summary Cards Section -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ totalScreeners }}</div>
+        <div class="card-label">Total Screeners</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-search"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ activeScreeners }}</div>
+        <div class="card-label">Active Screeners</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-check-circle"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ publicScreenersCount }}</div>
+        <div class="card-label">Public</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-globe"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ privateScreeners }}</div>
+        <div class="card-label">Private</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-lock"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ starredScreenersCount }}</div>
+        <div class="card-label">Starred</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-star"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading && !dataLoaded) {
+  <div class="loading-card">
+    <div class="loading-message">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+      <p>Loading screeners...</p>
+    </div>
+  </div>
+  }
+
+  <!-- Main Content -->
+
+  <!-- Empty state -->
+  @if (!dataLoaded && !filteredScreeners) {
+  <div class="empty-message">
+    @if (screeners.length === 0) {
+    <div>
+      <i class="pi pi-search" style="font-size: 3rem; color: #ccc;"></i>
+      <p>No screeners found.</p>
+      <button pButton label="Create Your First Screener" (click)="createScreener()" class="p-button-outlined"></button>
+    </div>
+    } @else {
+    <div>
+      <i class="pi pi-filter" style="font-size: 3rem; color: #ccc;"></i>
+      <p>No screeners match your current filters.</p>
+      <button pButton label="Clear Filters" icon="pi pi-times" (click)="clearFilters()"
+        class="p-button-outlined"></button>
+    </div>
+    }
+  </div>
+  }
+
+  @if (dataLoaded && filteredScreeners.length > 0) {
+  <p-tabs [(value)]="activeTabIndex" class="screener-tabs" (valueChange)="onTabChange($event)">
+    <p-tablist>
+      <p-tab value="0">
+        <i class="pi pi-chart-line"></i>
+        Overview
+      </p-tab>
+      <p-tab value="1">
+        <i class="pi pi-cog"></i>
+        Configure
+      </p-tab>
+    </p-tablist>
+    <p-tabpanels>
+      <p-tabpanel value="0">
+        <app-screeners-overview 
+          [screeners]="filteredScreeners"
+          [starredScreeners]="starredScreeners"
+          (runScreener)="runScreener($event)"
+          (viewResults)="viewResults($event)"
+          (configureScreener)="configureScreener($event)"
+          (deleteScreener)="deleteScreener($event)"
+          (toggleStar)="toggleStar($event)">
+        </app-screeners-overview>
+      </p-tabpanel>
+
+      <p-tabpanel value="1">
+        <app-screeners-configure
+          [selectedScreener]="selectedScreener"
+          [loading]="loading"
+          (createScreener)="createScreener()"
+          (clearSelection)="clearSelection()">
+        </app-screeners-configure>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+  }
+
+  <!-- Toast Messages -->
+  <p-toast></p-toast>
+
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog></p-confirmDialog>
+</div>

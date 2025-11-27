@@ -1,0 +1,15 @@
+<div class="app-shell-single">
+  <app-header></app-header>
+
+  <div class="content-container">
+    <main class="main-content">
+      <div class="loading-container" *ngIf="loading">
+        <p-progressSpinner styleClass="w-4rem h-4rem" strokeWidth="4" fill="var(--background-color)" animationDuration=".5s"></p-progressSpinner>
+      </div>
+      <router-outlet (activate)="onRouterOutletActivate($event)" (deactivate)="onRouterOutletDeactivate($event)"></router-outlet>
+    </main>
+  </div>
+
+  <!-- Toast component for notifications -->
+  <p-toast position="bottom-right"></p-toast>
+</div>

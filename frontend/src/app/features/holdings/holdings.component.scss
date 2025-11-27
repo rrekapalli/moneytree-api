@@ -1,0 +1,23 @@
+/* Container, header, and summary card styles are now global in styles.scss */
+
+/* Styles for the holdings component */
+:host ::ng-deep {
+  .p-card {
+    .p-card-content {
+      padding: 1rem;
+    }
+  }
+
+  .text-green-500 {
+    color: var(--green-500);
+  }
+
+  .text-red-500 {
+    color: var(--red-500);
+  }
+
+  .p-button-rounded {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}

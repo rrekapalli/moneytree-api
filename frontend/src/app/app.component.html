@@ -1,0 +1,31 @@
+<div class="app-container">
+  <header>
+    <div class="header-content">
+      <p-menubar [model]="menuItems">
+        <ng-template pTemplate="start">
+          <div class="logo-container">
+            <span class="app-title">{{ title }}</span>
+          </div>
+        </ng-template>
+        <ng-template pTemplate="end">
+          <button pButton label="Login" icon="pi pi-user" class="p-button-outlined"></button>
+        </ng-template>
+      </p-menubar>
+    </div>
+  </header>
+
+  <main class="content">
+    <router-outlet></router-outlet>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>© 2025 MoneyPlant. All rights reserved.</p>
+      <div class="footer-links">
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact Us</a>
+      </div>
+    </div>
+  </footer>
+</div>

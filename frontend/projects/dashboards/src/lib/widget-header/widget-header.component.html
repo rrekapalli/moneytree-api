@@ -1,0 +1,43 @@
+<p-panel [header]="title">
+  <ng-template pTemplate="icons">
+    @if (onEditMode) {
+      <p-button class="p-button-sm mr-2" type="button" (click)="onDeleteWidgetClicked($event)"
+                [outlined]="true"
+                icon="pi pi-trash"></p-button>
+
+      <p-button [outlined]="true" class="p-button-sm" type="button" (click)="sidebarVisible = true" [outlined]="true"
+                icon="pi pi-cog"></p-button>
+    }
+
+    <!-- Three-dot menu for widget actions -->
+    <p-button #menuButton
+              [outlined]="true" 
+              class="p-button-sm ml-2" 
+              type="button" 
+              icon="pi pi-ellipsis-v"
+              (click)="menu.toggle($event)">
+    </p-button>
+  </ng-template>
+</p-panel>
+
+<!-- Widget Actions Menu -->
+<p-menu #menu 
+        [model]="menuItems" 
+        [popup]="true" 
+        appendTo="body">
+</p-menu>
+
+<!-- Settings Drawer -->
+<p-drawer [(visible)]="sidebarVisible" position="right" [modal]="false" [appendTo]="'body'" [style]="{
+      'width': '30%',
+      height: '100%',
+      padding: '0px',
+      'padding-right': '2px',
+    }">
+  <ng-template pTemplate="header">
+    <div class="font-bold ml-3 mb-3 text-lg">
+      {{ title }} Settings
+    </div>
+  </ng-template>
+  <vis-widget-config [selectedDashboardId]="dashboardId" [widget]="widget" (onUpdate)="onUpdateOptions($event)"/>
+</p-drawer>

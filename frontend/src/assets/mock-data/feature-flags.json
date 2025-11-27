@@ -1,0 +1,128 @@
+[
+  {
+    "id": "feature-1",
+    "name": "dashboard",
+    "description": "Dashboard feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-2",
+    "name": "watchlist",
+    "description": "Watchlist feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-3",
+    "name": "holdings",
+    "description": "Holdings feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-4",
+    "name": "market",
+    "description": "Market feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-5",
+    "name": "positions",
+    "description": "Positions feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-6",
+    "name": "settings",
+    "description": "Settings feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-7",
+    "name": "user-profile",
+    "description": "User profile feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-8",
+    "name": "notifications",
+    "description": "Notifications feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-9",
+    "name": "dashboard-overall",
+    "description": "Dashboard overall view",
+    "enabled": true,
+    "group": "dashboard"
+  },
+  {
+    "id": "feature-10",
+    "name": "dashboard-today",
+    "description": "Dashboard today view",
+    "enabled": true,
+    "group": "dashboard"
+  },
+  {
+    "id": "feature-11",
+    "name": "dashboard-week",
+    "description": "Dashboard this week view",
+    "enabled": true,
+    "group": "dashboard"
+  },
+  {
+    "id": "feature-12",
+    "name": "dashboard-month",
+    "description": "Dashboard this month view",
+    "enabled": true,
+    "group": "dashboard"
+  },
+  {
+    "id": "feature-13",
+    "name": "dashboard-year",
+    "description": "Dashboard this year view",
+    "enabled": true,
+    "group": "dashboard"
+  },
+  {
+    "id": "feature-18",
+    "name": "dashboard-stock-insights",
+    "description": "Dashboard stock insights view",
+    "enabled": true,
+    "group": "dashboard"
+  },
+  {
+    "id": "feature-14",
+    "name": "portfolios",
+    "description": "Portfolios feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-15",
+    "name": "screeners",
+    "description": "Screeners feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-16",
+    "name": "strategies",
+    "description": "Strategies feature",
+    "enabled": true,
+    "group": "core"
+  },
+  {
+    "id": "feature-17",
+    "name": "indices",
+    "description": "Indices feature",
+    "enabled": true,
+    "group": "core"
+  }
+]

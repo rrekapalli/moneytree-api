@@ -1,0 +1,211 @@
+.category-row {
+  background-color: #f8f9fa;
+}
+
+.stock-row:hover {
+  background-color: #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.stock-symbol {
+  font-weight: 600;
+  color: #1f2937;
+  transition: color 0.2s ease;
+}
+
+.stock-row:hover .stock-symbol {
+  color: #3b82f6;
+}
+
+.selected-stock {
+  background-color: #e3f2fd !important;
+  border-left: 4px solid #2196f3 !important;
+}
+
+.selected-stock:hover {
+  background-color: #bbdefb !important;
+}
+
+.p-card {
+  margin-bottom: 1rem;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.75rem;
+}
+
+.text-green-600 {
+  color: #16a34a;
+}
+
+.text-red-600 {
+  color: #dc2626;
+}
+
+.p-inputgroup {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+.p-inputgroup input {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+// Tooltip styling - Ultra aggressive PrimeNG overrides
+:host ::ng-deep .stock-tooltip {
+  max-width: none !important;
+  opacity: 1 !important;
+  border: none !important;
+  transform: translateX(-50px) !important;
+  
+  .p-tooltip-text {
+    width: 420px !important;
+    min-width: 420px !important;
+    max-width: 420px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 0.875rem !important;
+    line-height: 1.4 !important;
+    background: #fafafa !important;
+    background-color: #fafafa !important;
+    border: none !important;
+    border-width: 0 !important;
+    border-style: none !important;
+    outline: none !important;
+    border-radius: 8px !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12) !important;
+    color: #333 !important;
+    overflow: visible !important;
+  }
+  
+  .p-tooltip-arrow {
+    border-top-color: #fafafa !important;
+    border-color: #fafafa transparent transparent transparent !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+  }
+}
+
+// Additional override for any PrimeNG container
+:host ::ng-deep .p-tooltip {
+  border: none !important;
+  outline: none !important;
+}
+
+// Nuclear option - override all possible tooltip borders
+:host ::ng-deep .p-tooltip * {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:host ::ng-deep [class*="tooltip"] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+  
+// Template-based tooltip content styling
+.stock-tooltip-content {
+  padding: 18px;
+  background-color: #fafafa;
+  border-radius: 8px;
+  width: 360px;
+  box-sizing: border-box;
+  
+  .tooltip-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #1f2937;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  
+  .tooltip-industry-sector {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background-color: #f8fafc;
+    border-radius: 4px;
+    
+    .industry {
+      font-size: 0.875rem;
+      color: #6b7280;
+      font-weight: 500;
+    }
+    
+    .sector {
+      font-size: 0.875rem;
+      color: #6b7280;
+      font-weight: 500;
+      text-align: right;
+    }
+  }
+  
+  .tooltip-separator {
+    height: 1px;
+    background-color: #e5e7eb;
+    margin: 12px 0;
+  }
+
+  .tooltip-data-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    
+    .tooltip-data-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 8px 0;
+      
+      &:not(:last-child) {
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 10px;
+      }
+      
+      &.single-item {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        padding: 10px 10px;
+        background-color: #f8fafc;
+        border-radius: 4px;
+        border-bottom: none !important;
+      }
+      
+      .data-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        white-space: nowrap;
+        
+        .label {
+          font-size: 0.65rem;
+          color: #6b7280;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        
+        .value {
+          font-size: 0.85rem;
+          color: #333;
+          font-weight: 600;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+      }
+    }
+  }
+}

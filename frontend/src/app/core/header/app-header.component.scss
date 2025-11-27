@@ -1,0 +1,265 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  height: 3rem;
+  width: 100%;
+}
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  //max-width: 1920px;
+  margin: 0 auto;
+  width: 100%;
+  height: 100%;
+  padding: 0 0.75rem;
+  background-color: var(--p-menubar-background);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+::ng-deep .p-menubar {
+  padding: 0;
+  border: none;
+  background-color: var(--p-menubar-background);
+  height: 3rem;
+}
+
+::ng-deep .p-menubar .p-menubar-root-list {
+  align-items: center;
+}
+
+/* Consolidated active menu item styles */
+::ng-deep .p-menubar {
+  .p-menuitem.p-menuitem-active > .p-menuitem-link,
+  .p-menuitem.custom-active-menuitem > .p-menuitem-link,
+  .p-menuitem > .p-menuitem-link.p-menuitem-link-active,
+  .p-menuitem > .p-menuitem-link[class*="p-menuitem-active"],
+  .p-menuitem-active > .p-menuitem-link {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+    background-color: rgba(76, 175, 80, 0.2);
+    text-decoration: none;
+    font-weight: bold;
+
+    .p-menuitem-icon, 
+    .p-menuitem-text, 
+    .p-menuitem-label,
+    .p-menubar-item-label {
+      color: var(--primary-color);
+    }
+  }
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.app-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* User profile button styles */
+.user-profile-button {
+  min-width: 120px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+  ::ng-deep .p-button-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+/* User menu styles */
+::ng-deep .p-menu {
+  min-width: 180px;
+  
+  .p-menuitem-link {
+    padding: 0.75rem 1rem;
+    
+    .p-menuitem-icon {
+      margin-right: 0.5rem;
+    }
+  }
+  
+  .p-menuitem-separator {
+    margin: 0.25rem 0;
+  }
+}
+
+/* Notification styles */
+.notification-badge {
+  position: relative;
+
+  .p-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 0.75rem;
+    background-color: var(--primary-color);
+  }
+}
+
+.notifications-panel {
+  padding: var(--spacing-md);
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--surface-border);
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.notifications-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-lg);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-md);
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--surface-hover);
+  }
+
+  &.unread {
+    background-color: var(--surface-50);
+    border-left: 3px solid var(--primary-color);
+  }
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+}
+
+.notification-title {
+  font-weight: 600;
+}
+
+.notification-time {
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
+.notification-message {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+
+.notification-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-left: var(--spacing-md);
+
+  button {
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.no-notifications {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--text-color-secondary);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .header-container {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .header-left {
+    flex: 1;
+  }
+
+  .app-title {
+    font-size: 1.2rem;
+  }
+
+  .user-profile-button {
+    min-width: 100px;
+    max-width: 150px;
+    
+    ::ng-deep .p-button-label {
+      font-size: 0.8rem;
+    }
+  }
+
+  ::ng-deep .p-menubar {
+    flex: 1;
+
+    .p-menubar-button {
+      display: flex;
+    }
+
+    .p-menubar-root-list {
+      display: none;
+    }
+
+    &.p-menubar-mobile-active .p-menubar-root-list {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background-color: var(--p-menubar-background);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 1001;
+    }
+  }
+}

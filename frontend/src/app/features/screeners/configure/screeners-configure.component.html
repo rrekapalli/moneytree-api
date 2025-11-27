@@ -1,0 +1,115 @@
+<div class="configure-content">
+  @if (!selectedScreener) {
+  <div class="no-selection">
+    <i class="pi pi-cog" style="font-size: 3rem; color: #ccc;"></i>
+    <p>Select a screener from the Overview tab to configure it, or create a new screener.</p>
+    <button pButton label="Create New Screener" icon="pi pi-plus" (click)="onCreateScreener()"
+      class="p-button-primary"></button>
+  </div>
+  }
+
+  @if (selectedScreener) {
+  <div class="screener-config">
+    <div class="config-header">
+      <h3>Configure Screener: {{ selectedScreener.name }}</h3>
+      <button pButton icon="pi pi-times" (click)="onClearSelection()" class="p-button-text"
+        title="Close Configuration"></button>
+    </div>
+
+    <!-- Basic Information Section -->
+    <div class="config-section">
+      <h4 class="section-title">Basic Information</h4>
+      <div class="config-form">
+        <div class="basic-info-container">
+          <!-- Condensed row with Name, Default Universe, Visibility, and Edit button -->
+          <div class="form-row">
+            <div class="form-group form-group-flex">
+              <label for="configName">Name *</label>
+              <input type="text" pInputText id="configName" [(ngModel)]="screenerForm.name"
+                placeholder="Enter screener name" class="w-full" [readonly]="!isEditingBasicInfo" />
+            </div>
+
+            <div class="form-group form-group-flex">
+              <label for="configUniverse">Default Universe</label>
+              <p-select id="configUniverse" [(ngModel)]="screenerForm.defaultUniverse" [options]="universeOptions"
+                placeholder="e.g., NSE, BSE" class="w-full" [disabled]="!isEditingBasicInfo">
+              </p-select>
+            </div>
+
+            <div class="form-group form-group-flex">
+              <label for="configVisibility">Visibility</label>
+              <div class="visibility-controls">
+                <div class="toggle-switch">
+                  <label class="switch">
+                    <input type="checkbox" id="configVisibility" [(ngModel)]="screenerForm.isPublic"
+                      (change)="onVisibilityChange($event)" [disabled]="!isEditingBasicInfo">
+                    <span class="slider"></span>
+                  </label>
+                  <span class="toggle-label">{{ screenerForm.isPublic ? 'Public' : 'Private' }}</span>
+                </div>
+                <div class="edit-buttons">
+                  <button pButton [icon]="isEditingBasicInfo ? 'pi pi-check' : 'pi pi-pencil'"
+                    [label]="isEditingBasicInfo ? 'Save' : 'Edit'" (click)="toggleBasicInfoEdit()"
+                    class="p-button-sm edit-save-btn"
+                    [class.p-button-success]="isEditingBasicInfo && hasBasicInfoChanges()"
+                    [disabled]="isEditingBasicInfo && !hasBasicInfoChanges()">
+                  </button>
+                  <button pButton icon="pi pi-times" label="Cancel" (click)="cancelBasicInfoEdit()"
+                    class="p-button-sm p-button-text cancel-btn" [disabled]="!isEditingBasicInfo">
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description in separate row within the same container -->
+          <div class="form-group">
+            <label for="configDescription">Description</label>
+            <textarea id="configDescription" [(ngModel)]="screenerForm.description"
+              placeholder="Enter screener description" rows="2" class="w-full"
+              [readonly]="!isEditingBasicInfo"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Criteria Builder Section - QueryBuilder Integration -->
+    <div class="config-section">
+      <h4 class="section-title">Screening Criteria</h4>
+      <div class="criteria-builder-container">
+        <!-- Query Builder Component with compact design -->
+        <div class="query-builder-wrapper">
+          <lib-query-builder
+            [config]="queryConfig"
+            [query]="currentQuery"
+            [allowRuleset]="true"
+            [allowEmpty]="true"
+            [emptyMessage]="'Add screening conditions to filter stocks'"
+            (queryChange)="onQueryChange($event)"
+            (validationChange)="onQueryValidationChange($event)">
+          </lib-query-builder>
+        </div>
+
+        <!-- Validation messages only shown after save attempt -->
+        @if (saveAttempted && queryValidationErrors.length > 0) {
+        <div class="query-validation-messages">
+          @for (error of queryValidationErrors; track error) {
+          <p-message severity="warn" [text]="error" [closable]="true" styleClass="query-error-message"></p-message>
+          }
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="config-actions">
+      <div class="action-buttons-right">
+        <button pButton label="Cancel" icon="pi pi-times" (click)="onClearSelection()" class="p-button-text"></button>
+        <button pButton label="Save Changes" icon="pi pi-check" (click)="onSaveScreener()"
+          [disabled]="!screenerForm.name || loading || !isQueryValid()" [loading]="loading"></button>
+      </div>
+    </div>
+  </div>
+  }
+
+</div>

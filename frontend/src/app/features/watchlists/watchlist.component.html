@@ -1,0 +1,130 @@
+<div class="container mx-auto p-3">
+  <!-- Search Box -->
+  <div class="col-12 mb-2">
+    <div class="flex flex-wrap gap-1 align-items-center col-md-11">
+      <input type="text" pInputText [(ngModel)]="searchQuery"
+             placeholder="Search for stocks..." 
+             (keyup.enter)="searchStocks(searchQuery)"
+             class="mr-2 search-input col-md-10">
+      <button type="button" size="small"
+              pButton icon="pi pi-search"
+              (click)="searchStocks(searchQuery)"
+              class="p-button-sm"></button>
+    </div>
+  </div>
+
+  <!-- Watchlist View -->
+  <div class="watchlist-view-container">
+
+    <!-- Search Results -->
+    @if (searchResults.length > 0) {
+      <div class="mb-4">
+        <div>Search Results</div>
+        <p-table [value]="searchResults" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Symbol</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Change</th>
+              <th>Action</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-stock>
+            <tr>
+              <td>{{ stock.symbol }}</td>
+              <td>{{ stock.name }}</td>
+              <td>{{ stock.price | currency }}</td>
+              <td [ngClass]="stock.change >= 0 ? 'text-green-500' : 'text-red-500'">
+                {{ stock.change | percent }}
+              </td>
+              <td>
+                <button pButton icon="pi pi-plus" 
+                        (click)="addStockFromSearch(stock)" 
+                        class="p-button-sm"></button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    }
+
+    <!-- Tabs for Watchlists -->
+    <p-tabs [(value)]="activeTab">
+      <p-tablist>
+        <div class="flex">
+          @for(watchlist of watchlists; track watchlist.id; let i = $index) {
+            <p-tab [value]="i.toString()">
+              <span>{{ i === 0 ? 'NSE' : (i + 1) }}</span>
+            </p-tab>
+          }
+          @if(watchlists.length === 0) {
+            <p-tab value="0">
+              <span>NSE</span>
+            </p-tab>
+          }
+        </div>
+      </p-tablist>
+
+      @for(watchlist of watchlists; track watchlist.id; let i = $index) {
+        <p-tabpanel [value]="i.toString()">
+          <div class="watchlist-container">
+            <p-scrollPanel [style]="{width: '100%', height: '75vh'}">
+              <div class="flex justify-between items-center mb-2">
+                <!-- Loading indicator for NSE equities -->
+                @if (i === 0 && isLoadingNseEquities) {
+                  <div class="p-2 text-center w-full">
+                    <p>Loading NSE equities...</p>
+                  </div>
+                }
+
+                <!-- Watchlist Stocks -->
+                @if (watchlist.items.length > 0 && !(i === 0 && isLoadingNseEquities)) {
+                  <div class="stock-list">
+                    @for (item of watchlist.items; track item.symbol) {
+                      <div class="stock-item p-2 mb-2 border-round surface-card" [pTooltip]="item.name" tooltipPosition="top">
+                        <div class="grid">
+                          <div class="col-12 md:col-6">
+                            <div class="flex align-items-center">
+                              <div class="stock-symbol mr-2">{{ item.symbol }}</div>
+                            </div>
+                          </div>
+                          <div class="col-12 md:col-4">
+                            <div class="flex align-items-center justify-content-end">
+                              <div class="stock-price mr-2">{{ item.price | currency }}</div>
+                              <div class="stock-change" [ngClass]="item.change >= 0 ? 'text-green-500' : 'text-red-500'">
+                                {{ item.change | percent }}
+                              </div>
+                            </div>
+                          </div>
+<!--                          <div class="col-12 md:col-2 flex justify-content-end">-->
+<!--                            <button pButton icon="pi pi-times" size="small"-->
+<!--                                    (click)="removeSymbol(item)"-->
+<!--                                    class="p-button-danger p-button-sm"></button>-->
+<!--                          </div>-->
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+                @if (watchlist.items.length === 0 && !(i === 0 && isLoadingNseEquities)) {
+                  <div class="p-2 text-center">
+                    <p>No stocks in this watchlist yet. Use the search box above to add stocks.</p>
+                  </div>
+                }
+              </div>
+            </p-scrollPanel>
+          </div>
+        </p-tabpanel>
+      }
+
+      @if(watchlists.length === 0) {
+        <p-tabpanel value="0">
+          <div class="p-4 text-center">
+            <p>No watchlist found. Create your first watchlist to get started.</p>
+          </div>
+        </p-tabpanel>
+      }
+    </p-tabs>
+  </div>
+</div>

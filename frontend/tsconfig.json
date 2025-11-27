@@ -1,0 +1,68 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "outDir": "./dist/out-tsc",
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "declaration": false,
+    "experimentalDecorators": true,
+    "moduleResolution": "bundler",
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "useDefineForClassFields": false,
+    "typeRoots": [
+      "node_modules/@types",
+      "src/types"
+    ],
+    "paths": {
+      "dashboards": ["./dist/dashboards", "./projects/dashboards/src/public-api"],
+      "dashboards/*": [
+        "./dist/dashboards/*"
+      ],
+      "querybuilder": ["./dist/querybuilder", "./projects/querybuilder/src/public-api"],
+      "querybuilder/*": [
+        "./dist/querybuilder/*"
+      ],
+      "criteria-builder": [
+        "./dist/criteria-builder"
+      ],
+      "@dashboards/*": ["./projects/dashboards/src/lib/*"],
+      "@dashboards/public-api": [
+        "./projects/dashboards/src/public-api"
+      ],
+      "@querybuilder/*": ["./projects/querybuilder/src/lib/*"],
+      "@querybuilder/public-api": [
+        "./projects/querybuilder/src/public-api"
+      ],
+      "echarts": ["./src/types/echarts"]
+    },
+    "lib": [
+      "ES2022",
+      "dom"
+    ],
+    "skipLibCheck": true
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "references": [
+    {
+      "path": "./projects/querybuilder/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/querybuilder/tsconfig.spec.json"
+    }
+  ]
+}

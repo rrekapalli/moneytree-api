@@ -1,0 +1,109 @@
+<!-- Page Header -->
+<app-page-header
+  title="Portfolios"
+  subtitle="Configure and manage your investment portfolios"
+  actionButtonLabel="Create Portfolio"
+  actionButtonIcon="pi pi-plus"
+  (actionButtonClick)="createPortfolio()">
+</app-page-header>
+
+<div class="page-container">
+
+  <!-- Summary Cards Section -->
+  <div class="summary-cards">
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ totalPortfolios }}</div>
+        <div class="card-label">Total Portfolios</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-chart-line"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ activePortfolios }}</div>
+        <div class="card-label">Active Portfolios</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-check-circle"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ conservativePortfolios }}</div>
+        <div class="card-label">Conservative</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-shield"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ moderatePortfolios }}</div>
+        <div class="card-label">Moderate</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-balance-scale"></i>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="card-content">
+        <div class="card-value">{{ aggressivePortfolios }}</div>
+        <div class="card-label">Aggressive</div>
+      </div>
+      <div class="card-icon">
+        <i class="pi pi-rocket"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Portfolio Tabs -->
+  <p-tabs [(value)]="activeTab" class="portfolio-tabs" (valueChange)="onTabChange($event)">
+    <p-tablist>
+      <p-tab value="0">
+        <i class="pi pi-chart-line"></i>
+        Overview
+      </p-tab>
+      <p-tab value="1">
+        <i class="pi pi-cog"></i>
+        Configure
+      </p-tab>
+      <p-tab value="2">
+        <i class="pi pi-chart-bar"></i>
+        Optimize
+      </p-tab>
+    </p-tablist>
+    <p-tabpanels>
+      <!-- Overview Tab Panel -->
+      <p-tabpanel value="0">
+        <app-portfolio-overview [portfolios]="portfolios" [filteredPortfolios]="filteredPortfolios" [loading]="loading"
+          [error]="error" [searchText]="searchText" [selectedRiskProfile]="selectedRiskProfile" [layout]="layout"
+          [sortField]="sortField" [sortOrder]="sortOrder" [riskProfileOptions]="riskProfileOptions"
+          (searchChange)="onSearchChange()" (riskProfileChange)="onRiskProfileChange()" (clearFilters)="clearFilters()"
+          (sortChange)="onSortChange($event)" (layoutChange)="layout = $event"
+          (configurePortfolio)="configurePortfolio($event)" (optimizePortfolio)="optimizePortfolio($event)"
+          (createPortfolio)="createPortfolio()" (goToLogin)="goToLogin()">
+        </app-portfolio-overview>
+      </p-tabpanel>
+
+      <!-- Configure Tab Panel -->
+      <p-tabpanel value="1">
+        <app-portfolio-configure [selectedPortfolio]="selectedPortfolio" [riskProfileOptions]="riskProfileOptions"
+          (saveChanges)="onSaveChanges($event)" (cancel)="onCancel()" (goToOverview)="goToOverview()">
+        </app-portfolio-configure>
+      </p-tabpanel>
+
+      <!-- Optimize Tab Panel -->
+      <p-tabpanel value="2">
+        <app-portfolio-optimize [selectedPortfolio]="selectedPortfolio"
+          (applyOptimization)="onApplyOptimization($event)">
+        </app-portfolio-optimize>
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</div>

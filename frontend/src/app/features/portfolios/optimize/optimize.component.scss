@@ -1,0 +1,157 @@
+.optimize-tab-content {
+  background: var(--surface-card, white);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: var(--card-shadow, 0 2px 12px rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--surface-border, #e9ecef);
+
+  .portfolio-detail-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--surface-border, #e9ecef);
+
+    h2 {
+      color: var(--text-color, #495057);
+      margin: 0 0 0.5rem 0;
+      font-size: 1.75rem;
+    }
+
+    .portfolio-description {
+      color: var(--text-color-secondary, #6c757d);
+      margin: 0;
+      font-size: 1rem;
+    }
+  }
+
+  .optimization-content {
+    .performance-summary {
+      margin-bottom: 2rem;
+
+      .summary-card {
+        background: var(--surface-ground, #f8f9fa);
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--surface-border, #e9ecef);
+
+        h4 {
+          color: var(--text-color, #495057);
+          margin: 0 0 1rem 0;
+          font-size: 1.125rem;
+        }
+
+        .performance-metric {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.75rem;
+
+          .metric-label {
+            color: var(--text-color-secondary, #6c757d);
+            font-weight: 500;
+          }
+
+          .metric-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+          }
+        }
+      }
+    }
+
+    .optimization-recommendations {
+      h3 {
+        color: var(--text-color, #495057);
+        margin: 0 0 1.5rem 0;
+        font-size: 1.5rem;
+      }
+
+      .recommendation-list {
+        .recommendation-item {
+          display: flex;
+          gap: 1rem;
+          padding: 1rem;
+          background: var(--surface-ground, #f8f9fa);
+          border-radius: 8px;
+          margin-bottom: 1rem;
+          border: 1px solid var(--surface-border, #e9ecef);
+
+          .recommendation-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color, #667eea);
+            flex-shrink: 0;
+          }
+
+          .recommendation-content {
+            h4 {
+              color: var(--text-color, #495057);
+              margin: 0 0 0.5rem 0;
+              font-size: 1.125rem;
+            }
+
+            p {
+              color: var(--text-color-secondary, #6c757d);
+              margin: 0;
+              font-size: 0.95rem;
+            }
+          }
+        }
+      }
+
+      .optimization-actions {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--surface-border, #e9ecef);
+        text-align: center;
+      }
+    }
+  }
+
+  .no-selection-message {
+    text-align: center;
+    padding: 4rem 2rem;
+
+    i {
+      font-size: 4rem;
+      color: var(--surface-border, #dee2e6);
+      margin-bottom: 1rem;
+    }
+
+    h3 {
+      color: var(--text-color, #495057);
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: var(--text-color-secondary, #6c757d);
+      margin-bottom: 1.5rem;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .optimize-tab-content {
+    padding: 1.5rem;
+
+    .optimization-content {
+      .performance-summary {
+        .summary-card {
+          padding: 1rem;
+        }
+      }
+
+      .optimization-recommendations {
+        .recommendation-list {
+          .recommendation-item {
+            flex-direction: column;
+            text-align: center;
+
+            .recommendation-icon {
+              align-self: center;
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+<!-- Dashboard Header -->
+<vis-dashboard-header 
+  [title]="dashboardTitle"
+  [isHighlightingEnabled]="isHighlightingEnabled"
+  [isExportingExcel]="isExportingExcel"
+  (onExportToExcel)="exportDashboardToExcel()"
+  (onToggleHighlighting)="toggleHighlightingMode()"
+  (onSetHighlightingPreset)="setHighlightingPreset($event)"
+  (onForceTileRefresh)="forceTileRefresh()">
+</vis-dashboard-header>
+
+<p-scrollPanel [style]="{ height: '100%', width: '100%', 'overflow-x': 'hidden', 'overflow': 'auto' }">
+  <div class="dashboard-container" #dashboardContainer>
+    <!-- Dashboard Container Component -->
+    <vis-dashboard-container 
+      #dashboardContainerComponent
+      [widgets]="dashboardConfig.widgets" 
+      [options]="dashboardConfig.config"
+      [dashboardId]="dashboardConfig.dashboardId"
+      (filterValuesChanged)="onFilterValuesChanged($event)"
+      (onStockSelected)="onIndexSelected($event)"
+      (onStockDoubleClicked)="onIndexDoubleClicked($event)">
+    </vis-dashboard-container>
+    
+    <!-- Loading overlay for candlestick chart - positioned over the widget -->
+    <div class="candlestick-loading-overlay" *ngIf="isCandlestickLoading">
+      <div class="loading-spinner-container">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem; color: #2196f3;"></i>
+        <p class="loading-text">Loading chart data...</p>
+      </div>
+    </div>
+  </div>
+</p-scrollPanel>

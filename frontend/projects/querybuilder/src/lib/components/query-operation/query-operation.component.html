@@ -1,0 +1,14 @@
+<div class="query-operation">
+  <p-select
+    [options]="getOperatorOptions()"
+    [ngModel]="operator"
+    (ngModelChange)="onOperatorChange($event)"
+    [disabled]="disabled"
+    optionLabel="label"
+    optionValue="value"
+    placeholder="Select operator"
+    [style]="{ 'min-width': '100px', 'width': '100px' }"
+    size="small"
+    [showClear]="false">
+  </p-select>
+</div>

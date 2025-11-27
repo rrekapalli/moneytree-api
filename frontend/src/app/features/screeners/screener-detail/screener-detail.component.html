@@ -1,0 +1,390 @@
+<div class="screener-detail-container" *ngIf="screener">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <button pButton icon="pi pi-arrow-left" (click)="goBack()" class="p-button-text back-button"></button>
+      <div class="screener-info">
+        <h1>{{ screener.name }}</h1>
+        <p class="description">{{ screener.description || 'No description' }}</p>
+        <div class="screener-meta">
+          <p-tag 
+            [value]="screener.isPublic ? 'Public' : 'Private'" 
+            [severity]="screener.isPublic ? 'success' : 'info'"
+          ></p-tag>
+          <span class="created-date">Created: {{ formatDate(screener.createdAt) }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button pButton label="Edit" icon="pi pi-pencil" (click)="editScreener()" class="p-button-outlined"></button>
+      <button pButton label="Run" icon="pi pi-play" (click)="runScreener()" class="p-button-success"></button>
+      <button pButton label="Delete" icon="pi pi-trash" (click)="deleteScreener()" class="p-button-danger"></button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    <p-message severity="error" [text]="error"></p-message>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading" class="content">
+    <p-tabs [(value)]="activeTab" (onChange)="onTabChange($event)">
+      <p-tablist>
+        @for(tab of tabs; track tab.value) {
+          <p-tab [value]="tab.value" class="flex items-center !gap-2 text-inherit">
+            <span>{{ tab.label }}</span>
+          </p-tab>
+        }
+      </p-tablist>
+
+      <!-- Overview Tab -->
+      <p-tabpanel [value]="'overview'">
+        <div class="overview-content">
+          <div class="overview-grid">
+            <p-card header="Screener Details" styleClass="overview-card">
+              <div class="detail-item">
+                <label>Name:</label>
+                <span>{{ screener.name }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Description:</label>
+                <span>{{ screener.description || 'No description' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Visibility:</label>
+                <p-tag 
+                  [value]="screener.isPublic ? 'Public' : 'Private'" 
+                  [severity]="screener.isPublic ? 'success' : 'info'"
+                ></p-tag>
+              </div>
+              <div class="detail-item">
+                <label>Default Universe:</label>
+                <span>{{ screener.defaultUniverse || 'Not specified' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Created:</label>
+                <span>{{ formatDateTime(screener.createdAt) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Updated:</label>
+                <span>{{ formatDateTime(screener.updatedAt) }}</span>
+              </div>
+            </p-card>
+
+            <p-card header="Quick Stats" styleClass="overview-card">
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <div class="stat-value">{{ versions.length }}</div>
+                  <div class="stat-label">Versions</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ runs.length }}</div>
+                  <div class="stat-label">Total Runs</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ getSuccessfulRunsCount() }}</div>
+                  <div class="stat-label">Successful Runs</div>
+                </div>
+                <div class="stat-item">
+                  <div class="stat-value">{{ getFailedRunsCount() }}</div>
+                  <div class="stat-label">Failed Runs</div>
+                </div>
+              </div>
+            </p-card>
+          </div>
+        </div>
+      </p-tabpanel>
+
+      <!-- Versions Tab -->
+      <p-tabpanel [value]="'versions'">
+        <div class="versions-content">
+          <div class="versions-header">
+            <h3>Screener Versions</h3>
+            <button pButton label="Create Version" icon="pi pi-plus" (click)="createVersion()"></button>
+          </div>
+          
+          <p-table [value]="versions" styleClass="p-datatable-sm" [tableStyle]="{'min-width': '50rem'}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Version</th>
+                <th>Engine</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-version>
+              <tr>
+                <td>{{ version.versionNumber }}</td>
+                <td>{{ version.engine }}</td>
+                <td>
+                  <p-tag 
+                    [value]="version.status" 
+                    [severity]="getVersionStatusSeverity(version.status)"
+                  ></p-tag>
+                </td>
+                <td>{{ formatDate(version.createdAt) }}</td>
+                <td>
+                  <div class="version-actions">
+                    <button pButton icon="pi pi-eye" class="p-button-rounded p-button-sm p-button-info" title="View Details"></button>
+                    <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-sm p-button-warning" title="Edit"></button>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="5">
+                  <div class="empty-message">
+                    <i class="pi pi-code" style="font-size: 3rem; color: #ccc;"></i>
+                    <p>No versions created yet.</p>
+                    <button pButton label="Create First Version" (click)="createVersion()" class="p-button-outlined"></button>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </p-tabpanel>
+
+      <!-- Runs Tab -->
+      <p-tabpanel [value]="'runs'">
+        <div class="runs-content">
+          <div class="runs-header">
+            <h3>Screener Runs</h3>
+            <button pButton label="Run Screener" icon="pi pi-play" (click)="runScreener()"></button>
+          </div>
+          
+          <p-table [value]="runs" styleClass="p-datatable-sm" [tableStyle]="{'min-width': '50rem'}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Run ID</th>
+                <th>Status</th>
+                <th>Started</th>
+                <th>Finished</th>
+                <th>Duration</th>
+                <th>Actions</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-run>
+              <tr>
+                <td>{{ run.screenerRunId }}</td>
+                <td>
+                  <p-tag 
+                    [value]="run.status" 
+                    [severity]="getStatusSeverity(run.status)"
+                  ></p-tag>
+                </td>
+                <td>{{ run.startedAt ? formatDateTime(run.startedAt) : '-' }}</td>
+                <td>{{ run.finishedAt ? formatDateTime(run.finishedAt) : '-' }}</td>
+                <td>
+                  <span *ngIf="run.startedAt && run.finishedAt">
+                    {{ getDuration(run.startedAt, run.finishedAt) }}
+                  </span>
+                  <span *ngIf="run.startedAt && !run.finishedAt">
+                    Running...
+                  </span>
+                  <span *ngIf="!run.startedAt">-</span>
+                </td>
+                <td>
+                  <div class="run-actions">
+                    <button 
+                      pButton 
+                      icon="pi pi-eye" 
+                      class="p-button-rounded p-button-sm p-button-info" 
+                      (click)="viewResults(run)"
+                      title="View Results"
+                    ></button>
+                    <button 
+                      pButton 
+                      icon="pi pi-refresh" 
+                      class="p-button-rounded p-button-sm p-button-warning" 
+                      (click)="retryRun(run)"
+                      [disabled]="run.status !== 'FAILED'"
+                      title="Retry Run"
+                    ></button>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="6">
+                  <div class="empty-message">
+                    <i class="pi pi-play-circle" style="font-size: 3rem; color: #ccc;"></i>
+                    <p>No runs yet.</p>
+                    <button pButton label="Run Screener" (click)="runScreener()" class="p-button-outlined"></button>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </p-tabpanel>
+
+      <!-- Results Tab -->
+      <p-tabpanel [value]="'results'">
+        <div class="results-content">
+          <div class="results-header">
+            <h3>Run Results</h3>
+            <div class="run-selector" *ngIf="runs.length > 0">
+              <label>Select Run:</label>
+              <select [(ngModel)]="currentRun" (change)="loadRunResults()">
+                @for(run of runs; track run.screenerRunId) {
+                  <option [ngValue]="run">Run {{ run.screenerRunId }} - {{ run.status }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          
+          <div *ngIf="currentRun" class="run-info">
+            <p-card>
+              <div class="run-details">
+                <div class="run-detail">
+                  <label>Run ID:</label>
+                  <span>{{ currentRun.screenerRunId }}</span>
+                </div>
+                <div class="run-detail">
+                  <label>Status:</label>
+                  <p-tag 
+                    [value]="currentRun.status" 
+                    [severity]="getStatusSeverity(currentRun.status)"
+                  ></p-tag>
+                </div>
+                <div class="run-detail">
+                  <label>Started:</label>
+                  <span>{{ currentRun.startedAt ? formatDateTime(currentRun.startedAt) : '-' }}</span>
+                </div>
+                <div class="run-detail">
+                  <label>Finished:</label>
+                  <span>{{ currentRun.finishedAt ? formatDateTime(currentRun.finishedAt) : '-' }}</span>
+                </div>
+              </div>
+            </p-card>
+          </div>
+
+          <p-table [value]="runResults" styleClass="p-datatable-sm" [tableStyle]="{'min-width': '50rem'}">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Symbol</th>
+                <th>Matched</th>
+                <th>Score</th>
+                <th>Rank</th>
+                <th>Metrics</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-result>
+              <tr>
+                <td>{{ result.symbolId }}</td>
+                <td>
+                  <p-tag 
+                    [value]="result.matched ? 'Yes' : 'No'" 
+                    [severity]="result.matched ? 'success' : 'danger'"
+                  ></p-tag>
+                </td>
+                <td>{{ (result.score0To1 * 100).toFixed(2) }}%</td>
+                <td>{{ result.rankInRun }}</td>
+                <td>
+                  <button pButton icon="pi pi-chart-bar" class="p-button-rounded p-button-sm p-button-outlined" title="View Metrics"></button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="5">
+                  <div class="empty-message">
+                    <i class="pi pi-chart-line" style="font-size: 3rem; color: #ccc;"></i>
+                    <p>No results available.</p>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </p-tabpanel>
+    </p-tabs>
+  </div>
+
+  <!-- Create Version Dialog -->
+  <p-dialog 
+    header="Create Version" 
+    [(visible)]="showCreateVersionDialog" 
+    [modal]="true" 
+    [style]="{width: '600px'}"
+  >
+    <div class="version-form">
+      <div class="form-group">
+        <label>Version Number</label>
+        <input type="number" pInputText [(ngModel)]="versionForm.versionNumber" readonly />
+      </div>
+      
+      <div class="form-group">
+        <label>Engine</label>
+        <select pInputText [(ngModel)]="versionForm.engine">
+          <option value="SQL">SQL</option>
+          <option value="DSL">DSL</option>
+          <option value="EXPR">EXPR</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Compiled SQL</label>
+        <textarea [(ngModel)]="versionForm.compiledSql" rows="5" placeholder="Enter SQL query" class="w-full"></textarea>
+      </div>
+    </div>
+    
+    <ng-template pTemplate="footer">
+      <button pButton label="Cancel" icon="pi pi-times" (click)="cancelDialog()" class="p-button-text"></button>
+      <button pButton label="Create" icon="pi pi-check" (click)="saveVersion()"></button>
+    </ng-template>
+  </p-dialog>
+
+  <!-- Run Screener Dialog -->
+  <p-dialog 
+    header="Run Screener" 
+    [(visible)]="showRunDialog" 
+    [modal]="true" 
+    [style]="{width: '500px'}"
+  >
+    <div class="run-form">
+      <div class="form-group">
+        <label>Version</label>
+        <select pInputText [(ngModel)]="runForm.screenerVersionId">
+          @for(version of versions; track version.screenerVersionId) {
+            <option [value]="version.screenerVersionId">Version {{ version.versionNumber }} ({{ version.engine }})</option>
+          }
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label>Trading Day</label>
+        <input type="date" pInputText [(ngModel)]="runForm.runForTradingDay" />
+      </div>
+    </div>
+    
+    <ng-template pTemplate="footer">
+      <button pButton label="Cancel" icon="pi pi-times" (click)="cancelDialog()" class="p-button-text"></button>
+      <button pButton label="Run" icon="pi pi-play" (click)="executeRun()"></button>
+    </ng-template>
+  </p-dialog>
+
+  <!-- Toast Messages -->
+  <p-toast></p-toast>
+  
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog></p-confirmDialog>
+</div>
+
+<div *ngIf="!screener && !loading" class="not-found">
+  <i class="pi pi-exclamation-triangle" style="font-size: 4rem; color: #ccc;"></i>
+  <h2>Screener Not Found</h2>
+  <p>The requested screener could not be found.</p>
+  <button pButton label="Back to Screeners" (click)="goBack()" class="p-button-outlined"></button>
+</div>

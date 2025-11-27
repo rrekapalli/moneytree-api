@@ -1,0 +1,150 @@
+<div class="query-input" *ngIf="shouldShowInput()">
+  
+  <!-- Between Operator - Two Inputs -->
+  <div *ngIf="isBetweenOperator()" class="query-input-between">
+    <!-- First Value -->
+    <div class="query-input-between-item">
+      <p-inputNumber
+        *ngIf="getInputTypeForField() === 'number'"
+        [ngModel]="betweenValues[0]"
+        (ngModelChange)="onBetweenValueChange(0, $event)"
+        [disabled]="disabled"
+        [placeholder]="'Min ' + getPlaceholder()"
+        size="small"
+        [showButtons]="false">
+      </p-inputNumber>
+      
+      <p-datePicker
+        *ngIf="getInputTypeForField() === 'date'"
+        [ngModel]="betweenValues[0]"
+        (ngModelChange)="onBetweenValueChange(0, $event)"
+        [disabled]="disabled"
+        [placeholder]="'From ' + getPlaceholder()"
+        size="small"
+        [showIcon]="true"
+        [iconDisplay]="'input'">
+      </p-datePicker>
+      
+      <input
+        *ngIf="getInputTypeForField() === 'text'"
+        pInputText
+        [ngModel]="betweenValues[0]"
+        (ngModelChange)="onBetweenValueChange(0, $event)"
+        [disabled]="disabled"
+        [placeholder]="'From ' + getPlaceholder()"
+        size="small">
+    </div>
+
+    <span class="query-input-between-separator">and</span>
+
+    <!-- Second Value -->
+    <div class="query-input-between-item">
+      <p-inputNumber
+        *ngIf="getInputTypeForField() === 'number'"
+        [ngModel]="betweenValues[1]"
+        (ngModelChange)="onBetweenValueChange(1, $event)"
+        [disabled]="disabled"
+        [placeholder]="'Max ' + getPlaceholder()"
+        size="small"
+        [showButtons]="false">
+      </p-inputNumber>
+      
+      <p-datePicker
+        *ngIf="getInputTypeForField() === 'date'"
+        [ngModel]="betweenValues[1]"
+        (ngModelChange)="onBetweenValueChange(1, $event)"
+        [disabled]="disabled"
+        [placeholder]="'To ' + getPlaceholder()"
+        size="small"
+        [showIcon]="true"
+        [iconDisplay]="'input'">
+      </p-datePicker>
+      
+      <input
+        *ngIf="getInputTypeForField() === 'text'"
+        pInputText
+        [ngModel]="betweenValues[1]"
+        (ngModelChange)="onBetweenValueChange(1, $event)"
+        [disabled]="disabled"
+        [placeholder]="'To ' + getPlaceholder()"
+        size="small">
+    </div>
+  </div>
+
+  <!-- Single Value Inputs -->
+  <div *ngIf="!isBetweenOperator()" class="query-input-single">
+    
+    <!-- Text Input -->
+    <input
+      *ngIf="getInputTypeForField() === 'text'"
+      pInputText
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      [disabled]="disabled"
+      [placeholder]="getPlaceholder()"
+      class="p-inputtext-sm"
+      style="min-width: 150px;">
+
+    <!-- Number Input -->
+    <p-inputNumber
+      *ngIf="getInputTypeForField() === 'number'"
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      [disabled]="disabled"
+      [placeholder]="getPlaceholder()"
+      size="small"
+      [showButtons]="false">
+    </p-inputNumber>
+
+    <!-- Date Input -->
+    <p-datePicker
+      *ngIf="getInputTypeForField() === 'date'"
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      [disabled]="disabled"
+      [placeholder]="getPlaceholder()"
+      size="small"
+      [showIcon]="true"
+      [iconDisplay]="'input'">
+    </p-datePicker>
+
+    <!-- Boolean Input -->
+    <p-checkbox
+      *ngIf="getInputTypeForField() === 'boolean'"
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      [disabled]="disabled"
+      [binary]="true">
+    </p-checkbox>
+
+    <!-- Single Select -->
+    <p-select
+      *ngIf="getInputTypeForField() === 'select'"
+      [options]="getFieldOptions()"
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      [disabled]="disabled"
+      optionLabel="name"
+      optionValue="value"
+      [placeholder]="getPlaceholder()"
+      size="small"
+      [showClear]="true">
+    </p-select>
+
+    <!-- Multi Select -->
+    <p-multiSelect
+      *ngIf="getInputTypeForField() === 'multiselect'"
+      [options]="getFieldOptions()"
+      [ngModel]="value"
+      (ngModelChange)="onValueChange($event)"
+      [disabled]="disabled"
+      optionLabel="name"
+      optionValue="value"
+      [placeholder]="getPlaceholder()"
+      size="small"
+      [showClear]="true">
+    </p-multiSelect>
+
+  </div>
+
+</div>

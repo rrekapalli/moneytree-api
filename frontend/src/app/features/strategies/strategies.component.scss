@@ -1,0 +1,146 @@
+/* Container, header, and summary card styles are now global in styles.scss */
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.loading-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  text-align: center;
+}
+
+.loading-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xl);
+}
+
+.strategies-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xl);
+}
+
+@media (min-width: 992px) {
+  .strategies-layout {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-xl);
+
+  h2 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+}
+
+.strategy-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-weight: bold;
+}
+
+.description {
+  font-size: var(--font-size);
+  color: var(--text-color-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.strategy-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-start;
+}
+
+.empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.chart-container {
+  height: 300px;
+  margin: var(--spacing-xl) 0;
+}
+
+.chart-footer {
+  text-align: center;
+  font-size: var(--font-size);
+  color: var(--text-color-secondary);
+}
+
+.strategy-details-card {
+  margin-top: var(--spacing-xl);
+}
+
+.strategy-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+  padding: var(--spacing-xl) 0;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+}
+
+.label {
+  font-weight: bold;
+  min-width: 120px;
+}
+
+.value {
+  flex: 1;
+}
+
+.strategy-detail-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+}
+
+// Utility classes for performance values
+.positive {
+  color: var(--green-500);
+}
+
+.negative {
+  color: var(--red-500);
+}
+
+// Make the tables more compact
+::ng-deep .p-datatable {
+  .p-datatable-thead > tr > th,
+  .p-datatable-tbody > tr > td {
+    padding: var(--spacing-md) var(--spacing-xl);
+  }
+}
+
+::ng-deep .p-button.p-button-sm {
+  font-size: 0.75rem;
+  padding: var(--spacing-xs);
+
+  .p-button-icon {
+    font-size: 0.75rem;
+  }
+}

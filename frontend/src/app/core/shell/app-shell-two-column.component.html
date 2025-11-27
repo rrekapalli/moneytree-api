@@ -1,0 +1,36 @@
+<div class="app-shell-two-column">
+  <app-header></app-header>
+
+  <div class="content-container">
+    <!-- First column - fixed width (500px) - shows indices or watchlists based on route -->
+    <div class="column column-left">
+      <ng-container *ngIf="isIndicesRoute(); else watchlistContent">
+        <!-- Indices component for indices routes -->
+        <app-indices></app-indices>
+      </ng-container>
+      <ng-template #watchlistContent>
+        <ng-container *featureFlag="'watchlist'; else watchlistDisabled">
+          <div class="watchlist-sidebar">
+            <p>Watchlist sidebar content</p>
+          </div>
+        </ng-container>
+        <ng-template #watchlistDisabled>
+          <div class="disabled-feature">
+            <p>Watchlist feature is currently disabled</p>
+          </div>
+        </ng-template>
+      </ng-template>
+    </div>
+
+    <!-- Second column - flexible width - shows other content -->
+    <main class="column column-right">
+      <div class="loading-container" *ngIf="loading">
+        <p-progressSpinner styleClass="w-4rem h-4rem" strokeWidth="4" fill="var(--background-color)" animationDuration=".5s"></p-progressSpinner>
+      </div>
+      <router-outlet (activate)="onRouterOutletActivate($event)" (deactivate)="onRouterOutletDeactivate($event)"></router-outlet>
+    </main>
+  </div>
+
+  <!-- Toast component for notifications -->
+  <p-toast position="bottom-right"></p-toast>
+</div>

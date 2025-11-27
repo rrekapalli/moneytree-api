@@ -1,0 +1,282 @@
+/**
+ * QueryBuilder Theme Integration
+ * 
+ * This file provides theme integration utilities and ensures the QueryBuilder
+ * components work seamlessly with different PrimeNG v20 themes while maintaining
+ * the compact design principles.
+ */
+
+// Theme compatibility mixin for different PrimeNG themes
+@mixin query-builder-theme-compatibility {
+  // Ensure compatibility with Aura theme (default)
+  &.p-theme-aura {
+    --qb-surface-card: var(--p-surface-card, #ffffff);
+    --qb-surface-ground: var(--p-surface-ground, #f8f9fa);
+    --qb-surface-border: var(--p-surface-border, #dee2e6);
+    --qb-primary-color: var(--p-primary-color, #10b981);
+    --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
+  }
+
+  // Compatibility with Lara theme
+  &.p-theme-lara {
+    --qb-surface-card: var(--p-surface-card, #ffffff);
+    --qb-surface-ground: var(--p-surface-ground, #f8f9fa);
+    --qb-surface-border: var(--p-surface-border, #dee2e6);
+    --qb-primary-color: var(--p-primary-color, #3b82f6);
+    --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
+  }
+
+  // Compatibility with Material theme
+  &.p-theme-material {
+    --qb-surface-card: var(--p-surface-card, #ffffff);
+    --qb-surface-ground: var(--p-surface-ground, #fafafa);
+    --qb-surface-border: var(--p-surface-border, #e0e0e0);
+    --qb-primary-color: var(--p-primary-color, #2196f3);
+    --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
+  }
+
+  // Compatibility with Bootstrap theme
+  &.p-theme-bootstrap {
+    --qb-surface-card: var(--p-surface-card, #ffffff);
+    --qb-surface-ground: var(--p-surface-ground, #f8f9fa);
+    --qb-surface-border: var(--p-surface-border, #dee2e6);
+    --qb-primary-color: var(--p-primary-color, #007bff);
+    --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
+  }
+}
+
+// Dark theme support
+@mixin query-builder-dark-theme {
+  &.p-dark {
+    --qb-surface-card: var(--p-surface-card, #1e293b);
+    --qb-surface-ground: var(--p-surface-ground, #0f172a);
+    --qb-surface-border: var(--p-surface-border, #334155);
+    --qb-text-color: var(--p-text-color, #f1f5f9);
+    --qb-text-color-secondary: var(--p-text-color-secondary, #94a3b8);
+
+    // Adjust colors for better contrast in dark mode
+    --qb-primary-50: var(--p-primary-50, rgba(16, 185, 129, 0.1));
+    --qb-primary-100: var(--p-primary-100, rgba(16, 185, 129, 0.2));
+    --qb-primary-200: var(--p-primary-200, rgba(16, 185, 129, 0.3));
+
+    --qb-red-50: var(--p-red-50, rgba(239, 68, 68, 0.1));
+    --qb-red-100: var(--p-red-100, rgba(239, 68, 68, 0.2));
+    --qb-red-200: var(--p-red-200, rgba(239, 68, 68, 0.3));
+
+    --qb-green-50: var(--p-green-50, rgba(34, 197, 94, 0.1));
+    --qb-blue-50: var(--p-blue-50, rgba(59, 130, 246, 0.1));
+    --qb-orange-50: var(--p-orange-50, rgba(249, 115, 22, 0.1));
+    --qb-yellow-50: var(--p-yellow-50, rgba(234, 179, 8, 0.1));
+  }
+}
+
+// High contrast theme support
+@mixin query-builder-high-contrast {
+  @media (prefers-contrast: high) {
+    --qb-border-width: 2px;
+    --qb-text-color: #000000;
+    --qb-surface-card: #ffffff;
+    --qb-surface-border: #000000;
+    --qb-primary-color: #0000ff;
+    --qb-danger-color: #ff0000;
+    --qb-success-color: #008000;
+
+    .p-component {
+      border-width: var(--qb-border-width);
+      
+      &:focus {
+        outline: 3px solid var(--qb-primary-color);
+        outline-offset: 2px;
+      }
+    }
+  }
+}
+
+// Reduced motion support
+@mixin query-builder-reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    .p-component {
+      transition: none !important;
+      animation: none !important;
+    }
+
+    .query-builder {
+      * {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  }
+}
+
+// Responsive design adjustments for compact layout
+@mixin query-builder-responsive {
+  // Tablet adjustments
+  @media (max-width: 768px) {
+    --qb-font-size: 0.9375rem;
+    --qb-input-height: 36px;
+    --qb-button-height: 36px;
+    --qb-padding: 6px 10px;
+    --qb-gap: 6px;
+    --qb-field-select-width: 120px;
+    --qb-operator-select-width: 90px;
+  }
+
+  // Mobile adjustments
+  @media (max-width: 480px) {
+    --qb-font-size: 1rem;
+    --qb-input-height: 44px;
+    --qb-button-height: 44px;
+    --qb-padding: 8px 12px;
+    --qb-gap: 8px;
+    --qb-field-select-width: 100%;
+    --qb-operator-select-width: 100%;
+    --qb-min-input-width: 100%;
+
+    .query-field-details {
+      flex-direction: column;
+      gap: var(--qb-spacing-sm);
+
+      .query-field-select,
+      .query-operator-select,
+      .query-value-input {
+        width: 100%;
+        max-width: none;
+      }
+    }
+
+    .query-button-group {
+      flex-direction: column;
+      width: 100%;
+
+      .p-button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+
+  // Large screen optimizations
+  @media (min-width: 1200px) {
+    --qb-field-select-width: 160px;
+    --qb-operator-select-width: 120px;
+    --qb-max-button-width: 140px;
+  }
+}
+
+// Apply all theme mixins to the query builder
+.query-builder {
+  @include query-builder-theme-compatibility;
+  @include query-builder-dark-theme;
+  @include query-builder-high-contrast;
+  @include query-builder-reduced-motion;
+  @include query-builder-responsive;
+}
+
+// Utility classes for theme integration
+.qb-theme-primary {
+  color: var(--qb-primary-color) !important;
+}
+
+.qb-theme-secondary {
+  color: var(--qb-secondary-color) !important;
+}
+
+.qb-theme-success {
+  color: var(--qb-success-color) !important;
+}
+
+.qb-theme-danger {
+  color: var(--qb-danger-color) !important;
+}
+
+.qb-theme-warning {
+  color: var(--qb-warning-color) !important;
+}
+
+.qb-theme-info {
+  color: var(--qb-info-color) !important;
+}
+
+.qb-bg-primary {
+  background-color: var(--qb-primary-color) !important;
+}
+
+.qb-bg-secondary {
+  background-color: var(--qb-secondary-color) !important;
+}
+
+.qb-bg-surface {
+  background-color: var(--qb-surface-card) !important;
+}
+
+.qb-bg-ground {
+  background-color: var(--qb-surface-ground) !important;
+}
+
+.qb-border-primary {
+  border-color: var(--qb-primary-color) !important;
+}
+
+.qb-border-surface {
+  border-color: var(--qb-surface-border) !important;
+}
+
+// Theme-aware component variants
+.query-builder {
+  // Compact variant for space-constrained layouts
+  &.qb-compact {
+    --qb-gap: 2px;
+    --qb-padding: 2px 4px;
+    --qb-input-height: 28px;
+    --qb-button-height: 28px;
+    --qb-font-size: 0.8125rem;
+  }
+
+  // Dense variant for maximum space efficiency
+  &.qb-dense {
+    --qb-gap: 1px;
+    --qb-padding: 1px 3px;
+    --qb-input-height: 24px;
+    --qb-button-height: 24px;
+    --qb-font-size: 0.75rem;
+    --qb-field-select-width: 100px;
+    --qb-operator-select-width: 60px;
+  }
+
+  // Comfortable variant for better accessibility
+  &.qb-comfortable {
+    --qb-gap: 8px;
+    --qb-padding: 8px 12px;
+    --qb-input-height: 40px;
+    --qb-button-height: 40px;
+    --qb-font-size: 1rem;
+  }
+}
+
+// Print styles for query builder
+@media print {
+  .query-builder {
+    --qb-font-size: 10pt;
+    --qb-input-height: auto;
+    --qb-button-height: auto;
+    --qb-padding: 2pt 4pt;
+    --qb-gap: 2pt;
+
+    .p-button {
+      display: none;
+    }
+
+    .p-select,
+    .p-inputtext,
+    .p-multiselect {
+      border: 1pt solid #000;
+      background: transparent;
+    }
+
+    .query-builder-container {
+      border: 1pt solid #000;
+      background: transparent;
+    }
+  }
+}

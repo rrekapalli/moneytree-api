@@ -1,0 +1,69 @@
+<div class="query-entity" [class.query-entity-ruleset]="meta.ruleset" [class.query-entity-rule]="!meta.ruleset">
+  
+  <!-- RuleSet Template -->
+  <div *ngIf="meta.ruleset" class="query-ruleset">
+    <div class="query-ruleset-header">
+      <div class="query-ruleset-controls">
+        <lib-query-switch-group
+          [config]="config"
+          [condition]="getRuleSet().condition"
+          [disabled]="getDisabledState()"
+          (conditionChange)="onConditionChange($event)">
+        </lib-query-switch-group>
+
+        <lib-query-button-group
+          [config]="config"
+          [allowRuleset]="allowRuleset"
+          [disabled]="getDisabledState()"
+          (addRule)="onAddRule()"
+          (addRuleSet)="onAddRuleSet()">
+        </lib-query-button-group>
+      </div>
+
+      <lib-query-remove-button
+        *ngIf="parentValue"
+        [disabled]="getDisabledState()"
+        [isRuleSet]="true"
+        (remove)="onRemoveEntity()">
+      </lib-query-remove-button>
+    </div>
+
+    <div class="query-ruleset-body">
+      <div *ngIf="showEmptyWarning()" class="query-empty-warning">
+        <p-message severity="warn" [text]="emptyMessage"></p-message>
+      </div>
+
+      <div *ngFor="let rule of getRuleSet().rules; let i = index; trackBy: trackByIndex" class="query-rule-container">
+        <lib-query-entity
+          [config]="config"
+          [data]="rule"
+          [parentValue]="getRuleSet()"
+          [allowRuleset]="allowRuleset"
+          [allowEmpty]="allowEmpty"
+          [emptyMessage]="emptyMessage"
+          [operatorMap]="operatorMap"
+          [parentAriaLevel]="getAriaLevel()"
+          (dataChange)="onRuleChange(i, $event)">
+        </lib-query-entity>
+
+        <lib-query-remove-button
+          [disabled]="getDisabledState()"
+          [isRuleSet]="false"
+          (remove)="onRemoveRule(i)">
+        </lib-query-remove-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rule Template -->
+  <div *ngIf="!meta.ruleset" class="query-rule">
+    <lib-query-field-details
+      [config]="config"
+      [rule]="getRule()"
+      [operatorMap]="operatorMap"
+      [disabled]="getDisabledState()"
+      (ruleChange)="onRuleFieldChange($event)">
+    </lib-query-field-details>
+  </div>
+
+</div>

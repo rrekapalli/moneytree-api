@@ -1,0 +1,276 @@
+{
+  "summary": [
+    {
+      "indexName": "S&P 500",
+      "value": 4567.89,
+      "change": 23.45,
+      "changePercent": 0.0052
+    },
+    {
+      "indexName": "Dow Jones",
+      "value": 35678.90,
+      "change": -156.78,
+      "changePercent": -0.0044
+    },
+    {
+      "indexName": "NASDAQ",
+      "value": 14567.89,
+      "change": 78.90,
+      "changePercent": 0.0055
+    },
+    {
+      "indexName": "Russell 2000",
+      "value": 2345.67,
+      "change": 12.34,
+      "changePercent": 0.0053
+    }
+  ],
+  "gainers": [
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "price": 425.75,
+      "change": 0.0587,
+      "volume": 25678900,
+      "marketCap": 1050000000000
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "price": 175.43,
+      "change": 0.0234,
+      "volume": 45678900,
+      "marketCap": 2800000000000
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "price": 338.11,
+      "change": 0.0156,
+      "volume": 32456700,
+      "marketCap": 2500000000000
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon.com Inc.",
+      "price": 129.12,
+      "change": 0.0345,
+      "volume": 28976500,
+      "marketCap": 1300000000000
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla, Inc.",
+      "price": 245.30,
+      "change": 0.0421,
+      "volume": 35678900,
+      "marketCap": 780000000000
+    }
+  ],
+  "losers": [
+    {
+      "symbol": "VZ",
+      "name": "Verizon Communications Inc.",
+      "price": 40.50,
+      "change": -0.0323,
+      "volume": 15678900,
+      "marketCap": 170000000000
+    },
+    {
+      "symbol": "BAC",
+      "name": "Bank of America Corp.",
+      "price": 33.47,
+      "change": -0.0123,
+      "volume": 25678900,
+      "marketCap": 265000000000
+    },
+    {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc.",
+      "price": 131.86,
+      "change": -0.0078,
+      "volume": 18765400,
+      "marketCap": 1650000000000
+    },
+    {
+      "symbol": "JNJ",
+      "name": "Johnson & Johnson",
+      "price": 162.39,
+      "change": -0.0045,
+      "volume": 12345600,
+      "marketCap": 420000000000
+    },
+    {
+      "symbol": "PFE",
+      "name": "Pfizer Inc.",
+      "price": 28.79,
+      "change": -0.0178,
+      "volume": 23456700,
+      "marketCap": 160000000000
+    }
+  ],
+  "active": [
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "price": 175.43,
+      "change": 0.0234,
+      "volume": 45678900,
+      "marketCap": 2800000000000
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "price": 338.11,
+      "change": 0.0156,
+      "volume": 32456700,
+      "marketCap": 2500000000000
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla, Inc.",
+      "price": 245.30,
+      "change": 0.0421,
+      "volume": 35678900,
+      "marketCap": 780000000000
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon.com Inc.",
+      "price": 129.12,
+      "change": 0.0345,
+      "volume": 28976500,
+      "marketCap": 1300000000000
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "price": 425.75,
+      "change": 0.0587,
+      "volume": 25678900,
+      "marketCap": 1050000000000
+    }
+  ],
+  "stocks": {
+    "AAPL": {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "price": 175.43,
+      "change": 0.0234,
+      "volume": 45678900,
+      "marketCap": 2800000000000
+    },
+    "MSFT": {
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "price": 338.11,
+      "change": 0.0156,
+      "volume": 32456700,
+      "marketCap": 2500000000000
+    },
+    "GOOGL": {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc.",
+      "price": 131.86,
+      "change": -0.0078,
+      "volume": 18765400,
+      "marketCap": 1650000000000
+    },
+    "AMZN": {
+      "symbol": "AMZN",
+      "name": "Amazon.com Inc.",
+      "price": 129.12,
+      "change": 0.0345,
+      "volume": 28976500,
+      "marketCap": 1300000000000
+    },
+    "TSLA": {
+      "symbol": "TSLA",
+      "name": "Tesla, Inc.",
+      "price": 245.30,
+      "change": 0.0421,
+      "volume": 35678900,
+      "marketCap": 780000000000
+    },
+    "NVDA": {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "price": 425.75,
+      "change": 0.0587,
+      "volume": 25678900,
+      "marketCap": 1050000000000
+    },
+    "JPM": {
+      "symbol": "JPM",
+      "name": "JPMorgan Chase & Co.",
+      "price": 151.76,
+      "change": 0.0089,
+      "volume": 14567800,
+      "marketCap": 440000000000
+    },
+    "BAC": {
+      "symbol": "BAC",
+      "name": "Bank of America Corp.",
+      "price": 33.47,
+      "change": -0.0123,
+      "volume": 25678900,
+      "marketCap": 265000000000
+    },
+    "WFC": {
+      "symbol": "WFC",
+      "name": "Wells Fargo & Co.",
+      "price": 45.81,
+      "change": 0.0067,
+      "volume": 18765400,
+      "marketCap": 170000000000
+    },
+    "JNJ": {
+      "symbol": "JNJ",
+      "name": "Johnson & Johnson",
+      "price": 162.39,
+      "change": -0.0045,
+      "volume": 12345600,
+      "marketCap": 420000000000
+    },
+    "PFE": {
+      "symbol": "PFE",
+      "name": "Pfizer Inc.",
+      "price": 28.79,
+      "change": -0.0178,
+      "volume": 23456700,
+      "marketCap": 160000000000
+    },
+    "UNH": {
+      "symbol": "UNH",
+      "name": "UnitedHealth Group Inc.",
+      "price": 486.71,
+      "change": 0.0256,
+      "volume": 9876500,
+      "marketCap": 450000000000
+    },
+    "KO": {
+      "symbol": "KO",
+      "name": "The Coca-Cola Company",
+      "price": 58.75,
+      "change": 0.0123,
+      "volume": 14567800,
+      "marketCap": 250000000000
+    },
+    "PG": {
+      "symbol": "PG",
+      "name": "Procter & Gamble Co.",
+      "price": 145.25,
+      "change": 0.0078,
+      "volume": 12345600,
+      "marketCap": 340000000000
+    },
+    "VZ": {
+      "symbol": "VZ",
+      "name": "Verizon Communications Inc.",
+      "price": 40.50,
+      "change": -0.0323,
+      "volume": 15678900,
+      "marketCap": 170000000000
+    }
+  }
+}

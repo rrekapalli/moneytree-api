@@ -1,0 +1,39 @@
+<div class="gridster-container" #dashboardContainer>
+  <gridster class="mt-2 dashboard-gridster" [options]="mergedOptions">
+    <div id="dashboard" class="print-body">
+      @for (item of widgets; track item.id; let i = $index) {
+        
+        <gridster-item 
+            [item]="item.position" 
+            (itemResize)="updateString(container.editModeString)"
+            (itemChange)="updateString(container.editModeString)"
+            [attr.data-widget-id]="item.id">
+
+            @if (item.config.header) {
+              <vis-widget-header 
+                  [dashboardId]="dashboardId" 
+                  [widget]="item" 
+                  [currentViewMode]="getWidgetViewMode(item.id)"
+                  (onUpdateWidget)="onUpdateWidget($event)"
+                  (onDeleteWidget)="onDeleteWidget($event)"
+                  (onToggleViewMode)="onToggleViewMode($event)"
+                  [onEditMode]="isEditMode"/>
+            }
+
+            <vis-widget 
+                [widget]="item" 
+                [viewMode]="getWidgetViewMode(item.id)"
+                (onDataLoad)="handleDataLoad($event)" 
+                (onUpdateFilter)="onUpdateFilter($event)"
+                (onStockSelected)="handleStockSelected($event)"
+                (onStockDoubleClicked)="handleStockDoubleClicked($event)"/>
+
+        </gridster-item>
+        
+      }
+    </div>
+  </gridster>
+</div>
+
+<!-- Toast Message -->
+<p-toast position="bottom-right" key="br" />

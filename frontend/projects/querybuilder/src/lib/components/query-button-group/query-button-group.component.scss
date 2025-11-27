@@ -1,0 +1,61 @@
+.query-button-group {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.query-button-group .p-button,
+.query-button-group ::ng-deep .p-button {
+  display: inline-flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: 32px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  border-radius: 4px;
+  min-width: 80px;
+  font-weight: 500;
+}
+
+.query-button-group .query-add-rule-btn,
+.query-button-group ::ng-deep .query-add-rule-btn {
+  background-color: #22c55e !important;
+  border-color: #22c55e !important;
+  color: white !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.query-button-group .query-add-rule-btn:hover,
+.query-button-group ::ng-deep .query-add-rule-btn:hover,
+.query-button-group .query-add-rule-btn:focus,
+.query-button-group ::ng-deep .query-add-rule-btn:focus {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+  color: white !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.query-button-group .query-add-group-btn,
+.query-button-group ::ng-deep .query-add-group-btn {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: white !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.query-button-group .query-add-group-btn:hover,
+.query-button-group ::ng-deep .query-add-group-btn:hover,
+.query-button-group .query-add-group-btn:focus,
+.query-button-group ::ng-deep .query-add-group-btn:focus {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: white !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}

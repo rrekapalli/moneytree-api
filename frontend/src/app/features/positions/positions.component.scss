@@ -1,0 +1,25 @@
+/* Container, header, and summary card styles are now global in styles.scss */
+
+:host ::ng-deep {
+  .p-card {
+    .p-card-content {
+      padding: 0;
+    }
+  }
+
+  .text-success {
+    color: var(--green-500);
+  }
+
+  .text-danger {
+    color: var(--red-500);
+  }
+
+  .p-datatable-sm .p-datatable-thead > tr > th {
+    padding: 0.5rem 1rem;
+  }
+
+  .p-datatable-sm .p-datatable-tbody > tr > td {
+    padding: 0.5rem 1rem;
+  }
+}

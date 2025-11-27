@@ -1,0 +1,378 @@
+/* Container, header, and summary card styles are now global in styles.scss */
+
+.screener-form-container {
+  .form-content {
+    flex: 1;
+    /* Updated layout for condensed form */
+
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+
+      .form-row {
+        display: grid !important;
+        grid-template-columns: 2fr 1.5fr 1fr !important;
+        gap: 1rem !important;
+        align-items: start !important;
+        width: 100% !important;
+        background-color: #f0f8ff !important; // Temporary debug background
+        padding: 1rem !important;
+        border-radius: 4px !important;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        label {
+          font-weight: 600;
+          color: #2c3e50;
+          font-size: 0.9rem;
+        }
+
+        input, textarea {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 1rem;
+          transition: border-color 0.2s;
+
+          &:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+          }
+
+          &.ng-invalid.ng-touched {
+            border-color: #e74c3c;
+          }
+        }
+
+        textarea {
+          resize: vertical;
+          min-height: 80px;
+        }
+
+        &.checkbox-group {
+          .checkbox-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+          }
+
+          .help-text {
+            color: #7f8c8d;
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+          }
+        }
+
+        &.form-group-flex {
+          min-width: 0; // Prevent flex items from overflowing
+          border: 1px solid transparent; // Debug border
+        }
+      }
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #f0f0f0;
+
+      button {
+        min-width: 120px;
+      }
+    }
+
+    // Criteria Builder Styles
+    .criteria-header {
+      margin-bottom: 2rem;
+      
+      h3 {
+        margin: 0 0 0.5rem 0;
+        color: #2c3e50;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      
+      .criteria-description {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 0;
+      }
+    }
+
+    .criteria-builder-container {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background-color: #fafafa;
+      min-height: 400px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .criteria-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f0f0f0;
+
+      button {
+        min-width: 150px;
+      }
+    }
+
+    .criteria-preview {
+      padding: 1.5rem;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+
+      h4 {
+        margin: 0 0 1rem 0;
+        color: #2c3e50;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .criteria-summary {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+
+        p {
+          margin: 0;
+          color: #2c3e50;
+          font-size: 0.9rem;
+
+          strong {
+            font-weight: 600;
+          }
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          text-transform: uppercase;
+
+          &.status-active {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .screener-form-container {
+    padding: 1rem;
+
+    .form-header {
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+
+    .form-content {
+      .form-grid {
+        .form-row {
+          grid-template-columns: 1fr;
+          gap: 1rem;
+        }
+      }
+
+      .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+
+        button {
+          min-width: auto;
+        }
+      }
+      
+      // Responsive criteria section adjustments
+      .criteria-builder-container {
+        padding: 1rem;
+        min-height: 250px;
+      }
+      
+      .criteria-actions {
+        flex-direction: column;
+        gap: 1rem;
+        
+        button {
+          min-width: auto;
+          width: 100%;
+        }
+      }
+    }
+    
+    // Responsive badge adjustments
+    :host ::ng-deep .p-tabs .p-tablist .p-tab {
+      .criteria-badge {
+        font-size: 0.65rem;
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0.2rem 0.4rem;
+        margin-left: 0.25rem;
+      }
+      
+      .criteria-preview {
+        padding: 1rem;
+        
+        .criteria-summary {
+          .summary-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Tablet responsive adjustments
+@media (max-width: 1024px) and (min-width: 769px) {
+  .screener-form-container {
+    .form-content {
+      .form-grid {
+        .form-row {
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          
+          .form-group:last-child {
+            grid-column: 1 / -1;
+          }
+        }
+      }
+
+      .criteria-builder-container {
+        // Tablet adjustments for criteria section
+      }
+    }
+  }
+}
+
+// PrimeNG customizations
+:host ::ng-deep {
+  .p-card {
+    .p-card-body {
+      padding: 2rem;
+    }
+  }
+
+  .p-checkbox {
+    .p-checkbox-label {
+      font-weight: 500;
+      color: #2c3e50;
+    }
+  }
+
+  .p-button {
+    &.p-button-loading {
+      .p-button-icon {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  .p-tabs {
+    .p-tablist {
+      .p-tab {
+        .criteria-badge {
+          background-color: #3498db;
+          color: white;
+          border-radius: 50%;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.7rem;
+          font-weight: 600;
+          margin-left: 0.5rem;
+          min-width: 1.2rem;
+          height: 1.2rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          
+          // Style badge consistently with existing UI patterns
+          &.criteria-badge-active {
+            background-color: #27ae60;
+            animation: pulse 2s infinite;
+          }
+          
+          &.criteria-badge-warning {
+            background-color: #f39c12;
+          }
+          
+          &.criteria-badge-error {
+            background-color: #e74c3c;
+          }
+        }
+        
+        // Enhance tab appearance when criteria exist
+        &.p-tab-active {
+          .criteria-badge {
+            background-color: #2980b9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+        }
+        
+        // Hover effects for better UX
+        &:hover {
+          .criteria-badge {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+          }
+        }
+      }
+    }
+  }
+
+  // Criteria section placeholder styling
+  .criteria-builder-container {
+    // Placeholder for future criteria functionality
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

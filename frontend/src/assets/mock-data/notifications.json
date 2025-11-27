@@ -1,0 +1,44 @@
+[
+  {
+    "id": "1",
+    "title": "Welcome to MoneyPlant",
+    "message": "Thank you for using MoneyPlant. We hope you enjoy the experience!",
+    "type": "info",
+    "isRead": false,
+    "timestamp": "2023-05-28T10:00:00.000Z"
+  },
+  {
+    "id": "2",
+    "title": "Market Update",
+    "message": "The market has closed with a positive trend today.",
+    "type": "success",
+    "isRead": false,
+    "timestamp": "2023-05-28T16:30:00.000Z"
+  },
+  {
+    "id": "3",
+    "title": "Portfolio Alert",
+    "message": "One of your stocks has dropped by more than 5% today.",
+    "type": "warning",
+    "isRead": true,
+    "timestamp": "2023-05-27T14:45:00.000Z"
+  },
+  {
+    "id": "4",
+    "title": "System Maintenance",
+    "message": "The system will be undergoing maintenance tonight from 2 AM to 4 AM.",
+    "type": "info",
+    "isRead": true,
+    "timestamp": "2023-05-26T09:15:00.000Z",
+    "link": "/settings/system-status"
+  },
+  {
+    "id": "5",
+    "title": "Error Processing Transaction",
+    "message": "There was an error processing your recent transaction. Please try again.",
+    "type": "error",
+    "isRead": false,
+    "timestamp": "2023-05-25T11:20:00.000Z",
+    "link": "/transactions/history"
+  }
+]

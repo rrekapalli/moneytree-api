@@ -1,0 +1,74 @@
+<div class="login-container">
+  <!-- Logo Section -->
+  <div class="logo-section">
+    <img src="assets/images/moneytree-logo.png" alt="MoneyPlant Logo" class="logo">
+    <h1 class="logo-text">MoneyPlant</h1>
+  </div>
+
+  <!-- Login Form -->
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+    <!-- Email Input -->
+    <div class="email-field">
+      <input 
+        id="email"
+        type="email" 
+        formControlName="email" 
+        placeholder="Enter your email..."
+        autocomplete="email"
+        class="email-input">
+      <small *ngIf="loginForm.get('email')?.hasError('required') && loginForm.get('email')?.touched" class="error-text">
+        Email is required.
+      </small>
+      <small *ngIf="loginForm.get('email')?.hasError('email') && loginForm.get('email')?.touched" class="error-text">
+        Please enter a valid email address.
+      </small>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="error-message">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Sign In Button -->
+    <button 
+      type="submit" 
+      [disabled]="!loginForm.valid || isLoading"
+      class="signin-button">
+      <span *ngIf="isLoading" class="loading-spinner"></span>
+      <span>{{ isLoading ? 'Signing in...' : 'Sign in' }}</span>
+    </button>
+  </form>
+
+  <!-- Separator -->
+  <div class="separator">
+    <span class="separator-text">OR</span>
+  </div>
+
+  <!-- OAuth Buttons -->
+  <div class="oauth-buttons">
+    <!-- Google Sign In -->
+    <button 
+      type="button"
+      [disabled]="true"
+      (click)="signInWithGoogle()"
+      class="oauth-button google-button">
+      <img src="assets/images/google-logo.svg" alt="Google" class="oauth-icon">
+      <span>Sign in with Google</span>
+    </button>
+
+    <!-- Microsoft Sign In -->
+    <button 
+      type="button"
+      (click)="signInWithMicrosoft()"
+      class="oauth-button microsoft-button">
+      <img src="assets/images/microsoft-logo.svg" alt="Microsoft" class="oauth-icon">
+      <span>Sign in with Microsoft</span>
+    </button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>First time? Learn more at <a href="#" class="footer-link">moneyplant.com</a>.</p>
+    <p class="footer-legal">By clicking the buttons above, you acknowledge that you have read, understood, and agree to MoneyPlant's <a href="#" class="footer-link">Terms of Service</a> and <a href="#" class="footer-link">Privacy Policy</a>.</p>
+  </div>
+</div> 

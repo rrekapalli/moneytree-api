@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+  
+  <!-- Plant/leaf design -->
+  <path d="M16 8 C20 8, 24 12, 24 16 C24 20, 20 24, 16 24 C12 24, 8 20, 8 16 C8 12, 12 8, 16 8 Z" fill="#8BC34A"/>
+  
+  <!-- Leaf details -->
+  <path d="M16 10 C18 10, 20 12, 20 14 C20 16, 18 18, 16 18 C14 18, 12 16, 12 14 C12 12, 14 10, 16 10 Z" fill="#4CAF50"/>
+  
+  <!-- Stem -->
+  <rect x="15" y="20" width="2" height="6" fill="#2E7D32"/>
+  
+  <!-- Money symbol -->
+  <text x="16" y="14" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="white">$</text>
+</svg> 

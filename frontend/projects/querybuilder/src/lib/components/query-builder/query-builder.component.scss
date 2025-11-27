@@ -1,0 +1,94 @@
+@import '../../querybuilder.scss';
+@import '../../theme-integration.scss';
+
+.query-builder {
+  @extend .query-builder;
+  
+  // Component-specific layout
+  .query-builder-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--qb-gap);
+    padding: var(--qb-spacing-sm);
+    border: var(--qb-border-width) solid var(--surface-border);
+    border-radius: var(--qb-border-radius);
+    background-color: var(--surface-card);
+    min-height: var(--qb-input-height);
+  }
+
+  // Empty state styling
+  .query-builder-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--qb-spacing-lg);
+    color: var(--text-color-secondary);
+    font-size: var(--qb-font-size-sm);
+    font-style: italic;
+    border: 2px dashed var(--surface-border);
+    border-radius: var(--qb-border-radius);
+    background-color: var(--surface-ground);
+    min-height: calc(var(--qb-input-height) * 2);
+  }
+
+  // Validation error styling
+  .query-builder-errors {
+    margin-top: var(--qb-spacing-sm);
+    
+    .p-message {
+      margin-bottom: var(--qb-spacing-xs);
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  // Compact mode adjustments
+  &.query-builder-compact {
+    .query-builder-container {
+      padding: var(--qb-spacing-xs);
+      gap: var(--qb-spacing-xs);
+    }
+
+    .query-builder-empty {
+      padding: var(--qb-spacing-md);
+      min-height: var(--qb-input-height);
+    }
+  }
+
+  // Dense mode for maximum space efficiency
+  &.query-builder-dense {
+    --qb-gap: 2px;
+    --qb-padding: 2px 4px;
+    --qb-input-height: 28px;
+    --qb-button-height: 28px;
+    --qb-font-size: 0.8125rem;
+
+    .query-builder-container {
+      padding: 2px;
+    }
+
+    .query-builder-empty {
+      padding: var(--qb-spacing-sm);
+      font-size: var(--qb-font-size-xs);
+    }
+  }
+
+  // Focus management for accessibility
+  &:focus-within {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+
+  // High contrast mode adjustments
+  @media (prefers-contrast: high) {
+    .query-builder-container {
+      border-width: 2px;
+    }
+
+    .query-builder-empty {
+      border-width: 3px;
+    }
+  }
+}

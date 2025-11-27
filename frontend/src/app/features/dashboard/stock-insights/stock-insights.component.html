@@ -1,0 +1,29 @@
+<!-- Dashboard Header -->
+<vis-dashboard-header 
+  [title]="dashboardTitle"
+  [isHighlightingEnabled]="isHighlightingEnabled"
+  [isExportingExcel]="isExportingExcel"
+  [enableStockSearch]="true"
+  [stockSearchList]="allStocks"
+  (onExportToExcel)="exportDashboardToExcel()"
+  (onToggleHighlighting)="toggleHighlightingMode()"
+  (onSetHighlightingPreset)="setHighlightingPreset($event)"
+  (onSearchStock)="onHeaderSearchStock($event)"
+  (onForceTileRefresh)="forceTileRefresh()">
+</vis-dashboard-header>
+
+<p-scrollPanel [style]="{ height: '100%', width: '100%', 'overflow-x': 'hidden', 'overflow': 'auto' }">
+  <div class="dashboard-container" #dashboardContainer>
+    <!-- Dashboard Container Component -->
+    <vis-dashboard-container 
+      #dashboardContainerComponent
+      [widgets]="dashboardConfig.widgets" 
+      [options]="dashboardConfig.config"
+      [dashboardId]="dashboardConfig.dashboardId"
+      (filterValuesChanged)="onFilterValuesChanged($event)"
+      (onDataLoad)="onDataLoad($event)"
+      (onStockSelected)="onStockSelected($event)"
+      (onStockDoubleClicked)="onStockDoubleClicked($event)">
+    </vis-dashboard-container>
+  </div>
+</p-scrollPanel>
