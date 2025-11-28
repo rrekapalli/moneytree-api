@@ -1061,20 +1061,24 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         }
       ];
 
-      // Enhanced tooltip configuration
+      // Enhanced tooltip configuration - crosshair extends across both candlestick and volume grids
       options.tooltip = {
         ...options.tooltip,
         trigger: 'axis',
         axisPointer: {
-          type: 'cross',
-          crossStyle: {
-            color: '#999'
+          link: [
+            {
+              xAxisIndex: 'all'
+            }
+          ],
+          label: {
+            backgroundColor: '#777'
           }
         },
         formatter: (params: any) => {
           const paramsArray = Array.isArray(params) ? params : [params];
           const candlestickParam = paramsArray.find((p: any) => p.seriesType === 'candlestick');
-          const volumeParam = paramsArray.find((p: any) => p.seriesType === 'bar' && p.seriesName === 'Volume');
+          const volumeParam = paramsArray.find((p: any) => p.seriesType === 'bar' && (p.seriesName === 'Volume' || p.seriesName?.toLowerCase().includes('volume')));
           
           if (!candlestickParam) {
             return '';
@@ -1115,9 +1119,29 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
             return value.toLocaleString('en-IN');
           };
           
-          const volumeValue = typeof volumeParam?.data === 'number' 
-            ? volumeParam.data 
-            : volumeParam?.data?.value || 0;
+          // Get volume value - try multiple ways to access it
+          let volumeValue = 0;
+          if (volumeParam) {
+            if (typeof volumeParam.data === 'number') {
+              volumeValue = volumeParam.data;
+            } else if (Array.isArray(volumeParam.data) && volumeParam.data.length > 0) {
+              volumeValue = typeof volumeParam.data[0] === 'number' ? volumeParam.data[0] : volumeParam.data[0]?.value || 0;
+            } else if (volumeParam.data?.value !== undefined) {
+              volumeValue = volumeParam.data.value;
+            }
+          }
+          
+          // If volume param not found, try to get it from the same data index
+          if (volumeValue === 0 && candlestickParam.dataIndex !== undefined) {
+            // Try to find volume from widget data if available
+            const widget = (candlestickParam as any).componentInstance?.chartInstance?.getOption?.();
+            if (widget?.series) {
+              const volumeSeries = widget.series.find((s: any) => s.type === 'bar' && (s.name === 'Volume' || s.name?.toLowerCase().includes('volume')));
+              if (volumeSeries?.data && volumeSeries.data[candlestickParam.dataIndex] !== undefined) {
+                volumeValue = volumeSeries.data[candlestickParam.dataIndex];
+              }
+            }
+          }
 
           return `
             <div style="padding: 8px;">
