@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -225,7 +225,8 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   private historicalData: IndexHistoricalData[] = [];
   
   // Selected time range for candlestick chart
-  private selectedTimeRange: string = 'YTD';
+  public selectedTimeRange: TimeRangeFilterEvent['range'] = 'YTD';
+  public readonly timeRangeOptions: TimeRangeFilterEvent['range'][] = ['1D', '5D', '1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'];
 
   // Currently selected index symbol for highlighting in Index List widget
   public selectedIndexSymbol: string = '';
@@ -254,7 +255,8 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     filterService: FilterService,
     private componentCommunicationService: ComponentCommunicationService,
     private indicesService: IndicesService,
-    private webSocketService: WebSocketService
+    private webSocketService: WebSocketService,
+    private ngZone: NgZone
 
   ) {
     super(cdr, excelExportService, filterService);
@@ -312,6 +314,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         this.loadDefaultNifty50Data();
       }
     }, 100);
+
+    // Wait for widget header to be fully rendered
+    setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
   }
 
   protected onChildDestroy(): void {
@@ -569,12 +574,16 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
    */
   private loadHistoricalData(indexName: string): void {
     if (indexName && indexName.trim()) {
-      this.indicesService.getIndexHistoricalData(indexName).subscribe({
+      const timeRange = this.selectedTimeRange || 'YTD';
+      const { startDate, endDate } = this.calculateDateRangeFromTimeRange(timeRange);
+
+      this.indicesService.getIndexHistoricalData(indexName, undefined, startDate, endDate).subscribe({
         next: (historicalData: IndexHistoricalData[]) => {
           this.historicalData = this.normalizeHistoricalData(historicalData || []);
           this.updateCandlestickChartWithHistoricalData();
           this.isCandlestickLoading = false; // Hide loading indicator
           this.cdr.detectChanges();
+          this.ensureWidgetTimeRangeFilters();
         },
         error: (error) => {
           console.warn('Failed to load historical data for', indexName, ':', error);
@@ -582,6 +591,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
           this.updateCandlestickChartWithHistoricalData();
           this.isCandlestickLoading = false; // Hide loading indicator even on error
           this.cdr.detectChanges();
+          this.ensureWidgetTimeRangeFilters();
         }
       });
     }
@@ -917,12 +927,11 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       .enableBrush()  // Enable brush selection for technical analysis
       .setLargeMode(100)  // Enable large mode for datasets with 100+ points
       .setTooltipType('axis')  // Enable crosshair tooltip for better analysis
-      .enableTimeRangeFilters(['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y', 'MAX'], 'YTD')  // Enable time range filters with YTD as default
       .enableAreaSeries(false, 0.4)  // Disable area series - reserved for future indicators like Bollinger Bands
       .enableVolume(true)  // Enable volume bars
       .enableLegend(false)  // Disable legend for cleaner appearance
       .enableDataZoom(true)  // Enable data zoom for timeline navigation
-      .setTimeRangeChangeCallback(this.handleTimeRangeChange.bind(this))  // Set callback for time range changes
+      .disableTimeRangeFilters() // Disable canvas overlay filters - using custom header filters instead
       .setEvents((widget: any, chart: any) => {
         if (chart) {
           chart.off('click');
@@ -2792,27 +2801,215 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
    * @param event TimeRangeFilterEvent containing the selected time range
    */
   private handleTimeRangeChange(event: TimeRangeFilterEvent): void {
+    console.log('🔥 handleTimeRangeChange called with event:', event);
+    
     // Store the selected time range
     this.selectedTimeRange = event.range;
+    this.ensureWidgetTimeRangeFilters();
     
-    // Filter the existing historical data and update the chart
-    const filteredData = this.filterHistoricalDataByTimeRange(event.range);
+    // Get the current index name
+    const indexName = this.currentSelectedIndexData?.indexName;
+    console.log('🔥 Current index name:', indexName);
+    console.log('🔥 Current selected index data:', this.currentSelectedIndexData);
     
-    // Update the candlestick chart with filtered data
-    if (this.dashboardConfig?.widgets) {
-      const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
-        widget.config?.header?.title === 'Index Historical Price Movement'
-      );
-      
-      if (candlestickWidget && filteredData.length > 0) {
-        // Safely dispose of existing chart instance to prevent reinitialization errors
-        this.safelyDisposeChartInstance(candlestickWidget);
-        
-        // Use CandlestickChartBuilder.updateData to properly update the chart with filtered data
-        CandlestickChartBuilder.updateData(candlestickWidget, filteredData);
+    if (!indexName) {
+      console.warn('⚠️ No index selected, cannot load historical data');
+      return;
+    }
+    
+    // Calculate start and end dates based on the time range
+    const { startDate, endDate } = this.calculateDateRangeFromTimeRange(event.range);
+    console.log('🔥 Calculated date range:', { startDate, endDate, range: event.range });
+    
+    // Show loading indicator
+    this.isCandlestickLoading = true;
+    this.cdr.detectChanges();
+    
+    // Make API call with date range (pass undefined for days to force date range usage)
+    this.indicesService.getIndexHistoricalData(indexName, undefined, startDate, endDate).subscribe({
+      next: (historicalData: IndexHistoricalData[]) => {
+        console.log('✅ Historical data loaded:', historicalData.length, 'records');
+        this.historicalData = this.normalizeHistoricalData(historicalData || []);
+        this.updateCandlestickChartWithHistoricalData();
+        this.isCandlestickLoading = false;
         this.cdr.detectChanges();
+        this.ensureWidgetTimeRangeFilters();
+      },
+      error: (error) => {
+        console.error('❌ Failed to load historical data for time range:', event.range, error);
+        this.isCandlestickLoading = false;
+        this.cdr.detectChanges();
+        this.ensureWidgetTimeRangeFilters();
+      }
+    });
+  }
+  
+  /**
+   * Calculate start and end dates based on the selected time range
+   * @param timeRange The selected time range (1D, 5D, 1M, 3M, 6M, YTD, 1Y, 3Y, 5Y, MAX)
+   * @returns Object with startDate and endDate as ISO date strings
+   */
+  private calculateDateRangeFromTimeRange(timeRange: string): { startDate: string; endDate: string } {
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999); // Set to end of day
+    let startDate = new Date();
+    
+    switch (timeRange) {
+      case '1D':
+        startDate.setDate(endDate.getDate() - 1);
+        break;
+      case '5D':
+        startDate.setDate(endDate.getDate() - 5);
+        break;
+      case '1M':
+        startDate.setMonth(endDate.getMonth() - 1);
+        break;
+      case '3M':
+        startDate.setMonth(endDate.getMonth() - 3);
+        break;
+      case '6M':
+        startDate.setMonth(endDate.getMonth() - 6);
+        break;
+      case 'YTD':
+        startDate = new Date(endDate.getFullYear(), 0, 1);
+        break;
+      case '1Y':
+        startDate.setFullYear(endDate.getFullYear() - 1);
+        break;
+      case '3Y':
+        startDate.setFullYear(endDate.getFullYear() - 3);
+        break;
+      case '5Y':
+        startDate.setFullYear(endDate.getFullYear() - 5);
+        break;
+      case 'MAX':
+        // For MAX, use a very old date (e.g., 10 years ago)
+        startDate.setFullYear(endDate.getFullYear() - 10);
+        break;
+      default:
+        // Default to 1 year
+        startDate.setFullYear(endDate.getFullYear() - 1);
+    }
+    
+    startDate.setHours(0, 0, 0, 0); // Set to start of day
+    
+    // Format as ISO date strings (YYYY-MM-DD)
+    const formatDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    return {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate)
+    };
+  }
+
+  /**
+   * Register global handler for ECharts time range filter clicks (fallback)
+   */
+  /**
+   * Handle header time range button click
+   */
+  public onTimeRangeButtonClick(range: TimeRangeFilterEvent['range']): void {
+    if (!range) {
+      return;
+    }
+
+    this.handleTimeRangeChange({
+      type: 'timeRangeChange',
+      range,
+      widgetId: 'candlestick-chart'
+    });
+  }
+
+  /**
+   * Ensure time range filters are rendered inside the candlestick widget header
+   */
+  private ensureWidgetTimeRangeFilters(): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const widgetElement = document.querySelector('[data-widget-id="candlestick-chart"]');
+    if (!widgetElement) {
+      // Retry after a short delay (max 5 retries)
+      const retryCount = (this as any)._filterRetryCount || 0;
+      if (retryCount < 5) {
+        (this as any)._filterRetryCount = retryCount + 1;
+        setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
+      }
+      return;
+    }
+
+    const header = widgetElement.querySelector('.p-panel-header') as HTMLElement | null;
+    if (!header) {
+      const retryCount = (this as any)._filterRetryCount || 0;
+      if (retryCount < 5) {
+        (this as any)._filterRetryCount = retryCount + 1;
+        setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
+      }
+      return;
+    }
+
+    // Reset retry count on success
+    (this as any)._filterRetryCount = 0;
+
+    // Target the new widget-header-right container
+    // Try both the new class and the old p-panel-header-icons as fallback
+    let rightContainer = header.querySelector('.widget-header-right') as HTMLElement | null;
+    if (!rightContainer) {
+      // Fallback to p-panel-header-icons if widget-header-right doesn't exist
+      rightContainer = header.querySelector('.p-panel-header-icons') as HTMLElement | null;
+    }
+    
+    if (!rightContainer) {
+      // If still not found, try to find the header content div and create the right container
+      const headerContent = header.querySelector('.widget-header-content') as HTMLElement | null;
+      if (headerContent) {
+        rightContainer = document.createElement('div');
+        rightContainer.classList.add('widget-header-right', 'p-panel-header-icons');
+        headerContent.appendChild(rightContainer);
+      } else {
+        // Last resort: append to header directly
+        rightContainer = document.createElement('div');
+        rightContainer.classList.add('widget-header-right', 'p-panel-header-icons');
+        header.appendChild(rightContainer);
       }
     }
+
+    let container = rightContainer.querySelector('.widget-time-range-filters') as HTMLElement | null;
+    if (!container) {
+      container = document.createElement('div');
+      container.classList.add('widget-time-range-filters');
+      rightContainer.appendChild(container);
+    }
+
+    container.innerHTML = '';
+
+    // Create time range filter buttons
+    this.timeRangeOptions.forEach((range) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.classList.add('time-range-btn');
+      if (range === this.selectedTimeRange) {
+        button.classList.add('active');
+      }
+      button.textContent = range;
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.ngZone.run(() => this.onTimeRangeButtonClick(range));
+      });
+      container?.appendChild(button);
+    });
+    
+    console.log('✅ Time range filters rendered in header:', this.timeRangeOptions.length, 'buttons');
+    
+    // Force change detection after DOM manipulation
+    this.cdr.detectChanges();
   }
 
   /**

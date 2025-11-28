@@ -159,10 +159,20 @@ public class IndexController {
                     .body(Map.of("error", "indexName is required"));
             }
 
-            int days = request.getDays() == null || request.getDays() <= 0 ? 365 : request.getDays();
-
             String tradingsymbol = mapIndexNameToTradingsymbol(request.getIndexName());
-            List<Map<String, Object>> historicalData = repository.getHistoricalData(tradingsymbol, days);
+            List<Map<String, Object>> historicalData;
+            
+            // Use date range if provided, otherwise use days
+            if (request.getStartDate() != null && request.getEndDate() != null) {
+                historicalData = repository.getHistoricalDataByDateRange(
+                    tradingsymbol, 
+                    request.getStartDate(), 
+                    request.getEndDate()
+                );
+            } else {
+                int days = request.getDays() == null || request.getDays() <= 0 ? 365 : request.getDays();
+                historicalData = repository.getHistoricalData(tradingsymbol, days);
+            }
             
             if (historicalData.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)

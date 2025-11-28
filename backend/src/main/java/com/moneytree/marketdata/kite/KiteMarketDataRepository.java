@@ -209,6 +209,52 @@ public class KiteMarketDataRepository {
     }
 
     /**
+     * Get historical data for an index from kite_ohlcv_historic using date range
+     * For indices, prioritize volume from nse_idx_ohlcv_historic as it has accurate volume data
+     */
+    public List<Map<String, Object>> getHistoricalDataByDateRange(String tradingsymbol, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        log.debug("Getting historical data for tradingsymbol: {}, startDate: {}, endDate: {}", tradingsymbol, startDate, endDate);
+        String normalized = normalizeSymbol(tradingsymbol);
+        String sql = """
+                SELECT o.date, o.open, o.high, o.low, o.close, 
+                       COALESCE(
+                           NULLIF(nidx.volume, 0),  -- Use nse_idx_ohlcv_historic volume if not 0
+                           NULLIF(o.volume, 0),      -- Fallback to kite_ohlcv_historic volume if not 0
+                           0                         -- Default to 0 if both are 0 or NULL
+                       ) as volume,
+                       m.name, m.tradingsymbol
+                FROM kite_ohlcv_historic o
+                JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
+                    AND o.exchange = m.exchange
+                LEFT JOIN nse_idx_ohlcv_historic nidx ON 
+                    (
+                        UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.name))
+                        OR UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.tradingsymbol))
+                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g')
+                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g')
+                    )
+                    AND DATE(nidx.date) = DATE(o.date)
+                WHERE (
+                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
+                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
+                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
+                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
+                  )
+                  AND o.exchange IN ('NSE', 'NSE_INDEX')
+                  AND o.candle_interval = 'day'
+                  AND o.date >= ?
+                  AND o.date <= ?
+                ORDER BY o.date ASC
+                """;
+        return jdbcTemplate.queryForList(
+                sql,
+                tradingsymbol, tradingsymbol,
+                normalized, normalized,
+                startDate, endDate
+        );
+    }
+
+    /**
      * Get latest tick data for stocks in an index from kite_instrument_ticks
      */
     public List<Map<String, Object>> getStockTicksByIndex(String indexTradingsymbol) {
