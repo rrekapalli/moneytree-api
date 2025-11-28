@@ -378,7 +378,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       return;
     }
 
-    this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').subscribe({
+    this.indicesService.getIndicesByExchangeSegment('NSE', 'NSE').subscribe({
       next: (indices) => {
         const mappedData = this.mapIndicesToStockData(indices || []);
         if (mappedData.length === 0) {

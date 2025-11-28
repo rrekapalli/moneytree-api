@@ -218,7 +218,13 @@ public class IndexController {
                         item.put("id", String.valueOf(instrument.getOrDefault("instrument_token", "")));
                         item.put("indexName", instrument.getOrDefault("name", instrument.get("tradingsymbol")));
                         item.put("indexSymbol", instrument.getOrDefault("tradingsymbol", instrument.get("name")));
-                        item.put("lastPrice", instrument.getOrDefault("last_price", 0));
+                        // Use close price from OHLCV data, fallback to last_price if not available
+                        Object closePrice = instrument.get("close");
+                        Object lastPrice = instrument.get("last_price");
+                        item.put("lastPrice", closePrice != null ? closePrice : (lastPrice != null ? lastPrice : 0));
+                        item.put("close", closePrice);
+                        item.put("previousClose", instrument.get("previous_close"));
+                        item.put("date", instrument.get("date"));
                         item.put("keyCategory", "Index");
                         item.put("createdAt", java.time.Instant.now().toString());
                         item.put("updatedAt", java.time.Instant.now().toString());

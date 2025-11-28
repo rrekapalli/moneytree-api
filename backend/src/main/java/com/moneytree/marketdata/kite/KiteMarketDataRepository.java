@@ -53,7 +53,7 @@ public class KiteMarketDataRepository {
     }
 
     /**
-     * List instruments by exchange and segment filters.
+     * List instruments by exchange and segment filters with previous day's close price.
      */
     public List<Map<String, Object>> getInstrumentsByExchangeAndSegment(String exchange, String segment) {
         String normalizedExchange = exchange != null && !exchange.isBlank() ? exchange.trim().toUpperCase() : null;
@@ -62,15 +62,32 @@ public class KiteMarketDataRepository {
         log.debug("Listing instruments by exchange={}, segment={}", normalizedExchange, normalizedSegment);
 
         String sql = """
-                SELECT instrument_token, exchange_token, tradingsymbol, name, last_price,
-                       expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
-                FROM kite_instrument_master
+                SELECT 
+                    kim.instrument_token,
+                    kim.tradingsymbol,
+                    kim."name",
+                    kim.exchange,
+                    kim.segment,
+                    koh.date,
+                    koh."close",
+                    LAG(koh."close", 1) OVER (
+                        PARTITION BY koh.instrument_token 
+                        ORDER BY koh.date
+                    ) AS previous_close
+                FROM kite_instrument_master kim
+                INNER JOIN kite_ohlcv_historic koh 
+                    ON kim.instrument_token = koh.instrument_token
+                   AND kim.exchange = koh.exchange
                 WHERE ( ? IS NULL
-                        OR UPPER(exchange) = ?
-                        OR (? = 'NSE' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX'))
-                        OR (? = 'NSE_INDEX' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX')) )
-                  AND ( ? IS NULL OR UPPER(segment) = ? )
-                ORDER BY tradingsymbol ASC
+                        OR UPPER(kim.exchange) = ?
+                        OR (? = 'NSE' AND UPPER(kim.exchange) IN ('NSE', 'NSE_INDEX'))
+                        OR (? = 'NSE_INDEX' AND UPPER(kim.exchange) IN ('NSE', 'NSE_INDEX')) )
+                  AND ( ? IS NULL OR UPPER(kim.segment) = ? )
+                  AND kim.instrument_type = 'EQ'
+                  AND kim.expiry IS NULL
+                  AND koh.date = CURRENT_DATE - 1
+                  AND kim.name IS NOT NULL
+                ORDER BY kim.tradingsymbol ASC
                 """;
 
         return jdbcTemplate.queryForList(
