@@ -918,7 +918,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           top: '10%',
           left: '5%',
           right: '5%',
-          bottom: '15%',  // Leave space for data zoom
+          bottom: '11%',  // Leave minimal space for data zoom
           containLabel: true
         }
       ];
@@ -996,7 +996,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         options.dataZoom.forEach((zoom: any) => {
           if (zoom.type === 'slider') {
             zoom.height = '8%';
-            zoom.bottom = '1%';  // Position at the very bottom
+            zoom.bottom = '0%';  // Position at the very bottom with no gap
             zoom.xAxisIndex = [0];  // Link to single x-axis
           }
         });

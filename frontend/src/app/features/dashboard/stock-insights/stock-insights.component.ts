@@ -961,7 +961,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         min: 'dataMin',
         max: 'dataMax',
         axisLabel: {
-          rotate: 45,
           fontSize: 14, // 0.9rem = 14.4px
           color: '#666',
           formatter: (value: string, index: number, data: any) => {
@@ -1155,7 +1154,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         options.dataZoom.forEach((zoom: any) => {
           if (zoom.type === 'slider') {
             zoom.height = '8%';
-            zoom.bottom = '1%';  // Position at the very bottom
+            zoom.bottom = '0%';  // Position at the very bottom with no gap
             zoom.xAxisIndex = [0, 1];  // Link to both x-axes (main and volume)
           }
         });
