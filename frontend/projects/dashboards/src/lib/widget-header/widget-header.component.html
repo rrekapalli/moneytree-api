@@ -1,22 +1,35 @@
-<p-panel [header]="title">
-  <ng-template pTemplate="icons">
-    @if (onEditMode) {
-      <p-button class="p-button-sm mr-2" type="button" (click)="onDeleteWidgetClicked($event)"
-                [outlined]="true"
-                icon="pi pi-trash"></p-button>
+<p-panel>
+  <ng-template pTemplate="header">
+    <div class="widget-header-content">
+      <!-- Left side: Cog button -->
+      <div class="widget-header-left">
+        <p-button #menuButton
+                  [outlined]="true" 
+                  class="p-button-sm" 
+                  type="button" 
+                  icon="pi pi-cog"
+                  (click)="menu.toggle($event)">
+        </p-button>
+        @if (onEditMode) {
+          <p-button class="p-button-sm ml-2" type="button" (click)="onDeleteWidgetClicked($event)"
+                    [outlined]="true"
+                    icon="pi pi-trash"></p-button>
 
-      <p-button [outlined]="true" class="p-button-sm" type="button" (click)="sidebarVisible = true" [outlined]="true"
-                icon="pi pi-cog"></p-button>
-    }
-
-    <!-- Three-dot menu for widget actions -->
-    <p-button #menuButton
-              [outlined]="true" 
-              class="p-button-sm ml-2" 
-              type="button" 
-              icon="pi pi-ellipsis-v"
-              (click)="menu.toggle($event)">
-    </p-button>
+          <p-button [outlined]="true" class="p-button-sm ml-2" type="button" (click)="sidebarVisible = true" [outlined]="true"
+                    icon="pi pi-cog"></p-button>
+        }
+      </div>
+      
+      <!-- Center: Title -->
+      <div class="widget-header-center">
+        <span class="widget-header-title">{{ title }}</span>
+      </div>
+      
+      <!-- Right side: Icons container (for dynamically added time range filters) -->
+      <div class="widget-header-right p-panel-header-icons">
+        <!-- Time range filters will be dynamically inserted here -->
+      </div>
+    </div>
   </ng-template>
 </p-panel>
 

@@ -159,10 +159,20 @@ public class IndexController {
                     .body(Map.of("error", "indexName is required"));
             }
 
-            int days = request.getDays() == null || request.getDays() <= 0 ? 365 : request.getDays();
-
             String tradingsymbol = mapIndexNameToTradingsymbol(request.getIndexName());
-            List<Map<String, Object>> historicalData = repository.getHistoricalData(tradingsymbol, days);
+            List<Map<String, Object>> historicalData;
+            
+            // Use date range if provided, otherwise use days
+            if (request.getStartDate() != null && request.getEndDate() != null) {
+                historicalData = repository.getHistoricalDataByDateRange(
+                    tradingsymbol, 
+                    request.getStartDate(), 
+                    request.getEndDate()
+                );
+            } else {
+                int days = request.getDays() == null || request.getDays() <= 0 ? 365 : request.getDays();
+                historicalData = repository.getHistoricalData(tradingsymbol, days);
+            }
             
             if (historicalData.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -218,7 +228,13 @@ public class IndexController {
                         item.put("id", String.valueOf(instrument.getOrDefault("instrument_token", "")));
                         item.put("indexName", instrument.getOrDefault("name", instrument.get("tradingsymbol")));
                         item.put("indexSymbol", instrument.getOrDefault("tradingsymbol", instrument.get("name")));
-                        item.put("lastPrice", instrument.getOrDefault("last_price", 0));
+                        // Use close price from OHLCV data, fallback to last_price if not available
+                        Object closePrice = instrument.get("close");
+                        Object lastPrice = instrument.get("last_price");
+                        item.put("lastPrice", closePrice != null ? closePrice : (lastPrice != null ? lastPrice : 0));
+                        item.put("close", closePrice);
+                        item.put("previousClose", instrument.get("previous_close"));
+                        item.put("date", instrument.get("date"));
                         item.put("keyCategory", "Index");
                         item.put("createdAt", java.time.Instant.now().toString());
                         item.put("updatedAt", java.time.Instant.now().toString());

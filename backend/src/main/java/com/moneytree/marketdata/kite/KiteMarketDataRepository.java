@@ -53,7 +53,7 @@ public class KiteMarketDataRepository {
     }
 
     /**
-     * List instruments by exchange and segment filters.
+     * List instruments by exchange and segment filters with previous day's close price.
      */
     public List<Map<String, Object>> getInstrumentsByExchangeAndSegment(String exchange, String segment) {
         String normalizedExchange = exchange != null && !exchange.isBlank() ? exchange.trim().toUpperCase() : null;
@@ -62,15 +62,32 @@ public class KiteMarketDataRepository {
         log.debug("Listing instruments by exchange={}, segment={}", normalizedExchange, normalizedSegment);
 
         String sql = """
-                SELECT instrument_token, exchange_token, tradingsymbol, name, last_price,
-                       expiry, strike, tick_size, lot_size, instrument_type, segment, exchange
-                FROM kite_instrument_master
+                SELECT 
+                    kim.instrument_token,
+                    kim.tradingsymbol,
+                    kim."name",
+                    kim.exchange,
+                    kim.segment,
+                    koh.date,
+                    koh."close",
+                    LAG(koh."close", 1) OVER (
+                        PARTITION BY koh.instrument_token 
+                        ORDER BY koh.date
+                    ) AS previous_close
+                FROM kite_instrument_master kim
+                INNER JOIN kite_ohlcv_historic koh 
+                    ON kim.instrument_token = koh.instrument_token
+                   AND kim.exchange = koh.exchange
                 WHERE ( ? IS NULL
-                        OR UPPER(exchange) = ?
-                        OR (? = 'NSE' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX'))
-                        OR (? = 'NSE_INDEX' AND UPPER(exchange) IN ('NSE', 'NSE_INDEX')) )
-                  AND ( ? IS NULL OR UPPER(segment) = ? )
-                ORDER BY tradingsymbol ASC
+                        OR UPPER(kim.exchange) = ?
+                        OR (? = 'NSE' AND UPPER(kim.exchange) IN ('NSE', 'NSE_INDEX'))
+                        OR (? = 'NSE_INDEX' AND UPPER(kim.exchange) IN ('NSE', 'NSE_INDEX')) )
+                  AND ( ? IS NULL OR UPPER(kim.segment) = ? )
+                  AND kim.instrument_type = 'EQ'
+                  AND kim.expiry IS NULL
+                  AND koh.date = CURRENT_DATE - 1
+                  AND kim.name IS NOT NULL
+                ORDER BY kim.tradingsymbol ASC
                 """;
 
         return jdbcTemplate.queryForList(
@@ -188,6 +205,52 @@ public class KiteMarketDataRepository {
                 tradingsymbol, tradingsymbol,
                 normalized, normalized,
                 String.valueOf(days)
+        );
+    }
+
+    /**
+     * Get historical data for an index from kite_ohlcv_historic using date range
+     * For indices, prioritize volume from nse_idx_ohlcv_historic as it has accurate volume data
+     */
+    public List<Map<String, Object>> getHistoricalDataByDateRange(String tradingsymbol, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        log.debug("Getting historical data for tradingsymbol: {}, startDate: {}, endDate: {}", tradingsymbol, startDate, endDate);
+        String normalized = normalizeSymbol(tradingsymbol);
+        String sql = """
+                SELECT o.date, o.open, o.high, o.low, o.close, 
+                       COALESCE(
+                           NULLIF(nidx.volume, 0),  -- Use nse_idx_ohlcv_historic volume if not 0
+                           NULLIF(o.volume, 0),      -- Fallback to kite_ohlcv_historic volume if not 0
+                           0                         -- Default to 0 if both are 0 or NULL
+                       ) as volume,
+                       m.name, m.tradingsymbol
+                FROM kite_ohlcv_historic o
+                JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
+                    AND o.exchange = m.exchange
+                LEFT JOIN nse_idx_ohlcv_historic nidx ON 
+                    (
+                        UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.name))
+                        OR UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.tradingsymbol))
+                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g')
+                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g')
+                    )
+                    AND DATE(nidx.date) = DATE(o.date)
+                WHERE (
+                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
+                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
+                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
+                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
+                  )
+                  AND o.exchange IN ('NSE', 'NSE_INDEX')
+                  AND o.candle_interval = 'day'
+                  AND o.date >= ?
+                  AND o.date <= ?
+                ORDER BY o.date ASC
+                """;
+        return jdbcTemplate.queryForList(
+                sql,
+                tradingsymbol, tradingsymbol,
+                normalized, normalized,
+                startDate, endDate
         );
     }
 

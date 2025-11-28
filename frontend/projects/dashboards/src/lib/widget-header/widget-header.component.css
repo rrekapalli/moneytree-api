@@ -13,6 +13,39 @@
   padding: 0.5rem 1rem;
 }
 
+/* Widget header layout */
+.widget-header-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 1rem;
+}
+
+.widget-header-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.widget-header-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.widget-header-title {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.widget-header-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Widget Data Panel Styles */
 .widget-data-panel {
   padding: 1rem;

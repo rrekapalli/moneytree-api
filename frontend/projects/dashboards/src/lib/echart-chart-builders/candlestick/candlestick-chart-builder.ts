@@ -81,7 +81,7 @@ export interface CandlestickChartOptions extends EChartsOption {
 }
 
 // Time range filter options
-export type TimeRange = '1D' | '5D' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
+export type TimeRange = '1D' | '5D' | '1W' | '1M' | '3M' | '6M' | 'YTD' | '1Y' | '3Y' | '5Y' | 'MAX';
 
 // Custom event interface for time range filter changes
 export interface TimeRangeFilterEvent {
@@ -510,6 +510,17 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
   }
 
   /**
+   * Disable time range filters
+   */
+  disableTimeRangeFilters(): this {
+    this.timeRangeFilters = [];
+    delete (this.chartOptions as any).timeRangeFilters;
+    this.graphicElements = [];
+    this.timeRangeChangeCallback = undefined;
+    return this;
+  }
+
+  /**
    * Set the selected time range
    * @param range The time range to select
    */
@@ -547,37 +558,46 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
         // Set up event handling for time range filters
         chart.off('click');
         chart.on('click', (params: any) => {
+          console.log('🔥 Chart click event:', params);
           
           // Check if the click is on a graphic element (time range filter)
           if (params.componentType === 'graphic') {
+            console.log('🔥 Graphic element clicked, componentIndex:', params.componentIndex);
+            
             // Get the graphic element from the chart options
             const chartOptions = chart.getOption();
             
             // Try different ways to access graphic elements
-            let graphicElements = [];
+            let graphicElements: any[] = [];
             if (chartOptions.graphic) {
-              graphicElements = chartOptions.graphic;
+              graphicElements = Array.isArray(chartOptions.graphic) ? chartOptions.graphic : [chartOptions.graphic];
             } else if (chartOptions.elements && chartOptions.elements.graphic) {
-              graphicElements = chartOptions.elements.graphic;
+              graphicElements = Array.isArray(chartOptions.elements.graphic) ? chartOptions.elements.graphic : [chartOptions.elements.graphic];
             } else if (Array.isArray(chartOptions)) {
               // If chartOptions is an array, look for graphic in each element
               for (const option of chartOptions) {
                 if (option.graphic) {
-                  graphicElements = option.graphic;
+                  graphicElements = Array.isArray(option.graphic) ? option.graphic : [option.graphic];
                   break;
                 }
               }
             }
             
+            console.log('🔥 Found graphic elements:', graphicElements.length);
+            
             let clickedElement = graphicElements[params.componentIndex];
             
             // Fallback: use stored graphic elements if chart options don't work
-            if (!clickedElement || !clickedElement.range) {
+            if (!clickedElement || (!clickedElement.range && !clickedElement.filterValue)) {
+              console.log('🔥 Trying fallback to stored graphic elements');
               clickedElement = this.graphicElements[params.componentIndex];
             }
             
+            console.log('🔥 Clicked element:', clickedElement);
+            
             if (clickedElement && (clickedElement.range || clickedElement.filterValue)) {
               const range = clickedElement.range || clickedElement.filterValue;
+              console.log('🔥 Time range selected:', range);
               
               // Update selected time range
               this.selectedTimeRange = range;
@@ -595,6 +615,7 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
               }
               
               if (this.timeRangeChangeCallback) {
+                console.log('🔥 Calling timeRangeChangeCallback with range:', range);
                 this.timeRangeChangeCallback({
                   type: 'timeRangeChange',
                   range: range,
@@ -607,14 +628,14 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
               // Also trigger global function as fallback
               if (typeof window !== 'undefined' && (window as any).handleTimeRangeFilterClick) {
                 (window as any).handleTimeRangeFilterClick(range);
-              } else {
-                console.warn('🔥 Global fallback function not available!');
               }
               
               return false; // Prevent default behavior
             } else {
-              console.log('🔥 Graphic element clicked but no range/filterValue found');
+              console.log('🔥 Graphic element clicked but no range/filterValue found. Element:', clickedElement);
             }
+          } else {
+            console.log('🔥 Click was not on graphic element, componentType:', params.componentType);
           }
           
           return true; // Allow default behavior for non-filter clicks
@@ -986,6 +1007,7 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
       
       // Add graphics to chart options
       (this.chartOptions as any).graphic = this.graphicElements;
+      console.log('🔥 Stored graphic elements:', this.graphicElements.length, 'elements');
     }
 
     // Prepare final options with conditional legend and data zoom
@@ -993,6 +1015,12 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
       ...this.chartOptions,
       series: series,
     };
+    
+    // Ensure graphic elements are included in final options
+    if (this.graphicElements && this.graphicElements.length > 0) {
+      (finalOptions as any).graphic = this.graphicElements;
+      console.log('🔥 Added graphic elements to finalOptions:', this.graphicElements.length);
+    }
     
     // CRITICAL FIX: Ensure dual-axis configuration is always present when volume is enabled
     if (this.showVolume) {

@@ -134,14 +134,33 @@ export class IndicesService {
   /**
    * Gets historical data for a given index name
    * @param indexName The name of the index to retrieve historical data for
-   * @param days Number of days to retrieve (defaults to 365)
+   * @param days Number of days to retrieve (defaults to 365) - used if startDate and endDate are not provided
+   * @param startDate Start date for the date range (ISO date string, e.g., '2024-01-01')
+   * @param endDate End date for the date range (ISO date string, e.g., '2024-12-31')
    * @returns An Observable of index historical data array
    */
-  getIndexHistoricalData(indexName: string, days: number = 365): Observable<IndexHistoricalData[]> {
-    const payload = {
-      indexName,
-      days
+  getIndexHistoricalData(
+    indexName: string, 
+    days?: number,
+    startDate?: string,
+    endDate?: string
+  ): Observable<IndexHistoricalData[]> {
+    const payload: any = {
+      indexName
     };
+    
+    // Use date range if provided (check for truthy and non-empty strings), otherwise use days
+    if (startDate && endDate && startDate.trim() !== '' && endDate.trim() !== '') {
+      payload.start_date = startDate;
+      payload.end_date = endDate;
+      console.log('📅 Using date range:', { start_date: startDate, end_date: endDate });
+    } else {
+      // Use provided days or default to 365
+      payload.days = days !== undefined ? days : 365;
+      console.log('📅 Using days:', payload.days);
+    }
+    
+    console.log('📤 API Payload:', JSON.stringify(payload, null, 2));
     return this.apiService.post<IndexHistoricalData[]>(`${this.endpoint}/historical-data`, payload);
   }
 }
