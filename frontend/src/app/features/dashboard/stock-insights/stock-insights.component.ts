@@ -8,18 +8,8 @@ import { filter, distinctUntilChanged } from 'rxjs/operators';
 
 // Import echarts core module and components
 import * as echarts from 'echarts/core';
-// Import bar, line, pie, and other chart components
+// Import required chart components
 import {
-  BarChart,
-  LineChart,
-  PieChart,
-  ScatterChart,
-  GaugeChart,
-  HeatmapChart,
-  MapChart,
-  TreemapChart,
-  SunburstChart,
-  SankeyChart,
   CandlestickChart
 } from 'echarts/charts';
 // Import tooltip, title, legend, and other components
@@ -54,16 +44,6 @@ echarts.use([
   DataZoomComponent,
   BrushComponent,
   ToolboxComponent,
-  BarChart,
-  LineChart,
-  PieChart,
-  ScatterChart,
-  GaugeChart,
-  HeatmapChart,
-  MapChart,
-  TreemapChart,
-  SunburstChart,
-  SankeyChart,
   CandlestickChart,
   CanvasRenderer
 ]);
@@ -75,16 +55,6 @@ declare global {
   }
 }
 
-// Register built-in maps and custom maps
-import { DensityMapBuilder } from '@dashboards/public-api';
-
-// Register the world map with ECharts
-// We'll use a dynamic import to load the world map data
-import('echarts-map-collection/custom/world.json').then((worldMapData) => {
-  DensityMapBuilder.registerMap('world', worldMapData.default || worldMapData);
-}).catch((error) => {
-  // Handle world map loading error silently
-});
 
 // Import dashboard modules and chart builders
 import { 
@@ -95,25 +65,12 @@ import {
   StandardDashboardBuilder,
   ExcelExportService,
   FilterService,
-  // Enhanced Chart Builders
+  // Chart Builders
   ApacheEchartBuilder,
-  PieChartBuilder,
-  AreaChartBuilder,
-  TreemapChartBuilder,
-  SankeyChartBuilder,
-  // Other builders and utilities
-  BarChartBuilder,
-  HorizontalBarChartBuilder,
-  ScatterChartBuilder,
-  GaugeChartBuilder,
-  HeatmapChartBuilder,
-  PolarChartBuilder,
   CandlestickChartBuilder,
   TimeRangeFilterEvent,
-  SunburstChartBuilder,
   // Stock List Chart Builder
   StockListChartBuilder,
-  StockListData,
   // Filter enum
   FilterBy,
   // Tile Builder for updating tiles
@@ -122,59 +79,25 @@ import {
 } from '@dashboards/public-api';
 
 // Import only essential widget creation functions and data
-import {
-  createFilterWidget,
-  updateFilterData,
-  addFilter as addFilterToWidget,
-  removeFilter as removeFilterFromWidget,
-  clearAllFilters as clearAllFiltersFromWidget,
-  // Dashboard data
-  INITIAL_DASHBOARD_DATA
-} from './widgets';
 import { createMetricTiles as createMetricTilesFunction } from './widgets/metric-tiles';
 
 // Import base dashboard component
-import { BaseDashboardComponent, IFilterValues } from '@dashboards/public-api';
+import { BaseDashboardComponent } from '@dashboards/public-api';
 
 // Import component communication service
 import { ComponentCommunicationService, SelectedIndexData } from '../../../services/component-communication.service';
 
 // Import stock ticks service and entities
-import {StockDataDto, StockTicksDto} from '../../../services/entities/stock-ticks';
+import {StockDataDto} from '../../../services/entities/stock-ticks';
 
 // Import indices service and historical data entities
 import { IndicesService } from '../../../services/apis/indices.api';
 import { IndexHistoricalData } from '../../../services/entities/index-historical-data';
 import { IndexResponseDto } from '../../../services/entities/indices';
 
-// Import NSE Indices service and entities
-
-
 // Import consolidated WebSocket service and entities
 import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
 
-/**
- * Filter criteria interface for centralized filtering system
- */
-interface FilterCriteria {
-  type: 'industry' | 'sector' | 'symbol' | 'custom' | 'macro' | 'tradingsymbol';
-  field: string; // The field name in StockDataDto to filter on
-  value: string | number; // The value to filter by
-  operator?: 'equals' | 'contains' | 'greaterThan' | 'lessThan'; // Comparison operator
-  source?: string; // Which widget/chart applied this filter (for tracking)
-}
-
-// Define the specific data structure for this dashboard
-export interface DashboardDataRow {
-  id: string;
-  assetCategory: string;
-  month: string;
-  market: string;
-  totalValue: number;
-  riskValue?: number;
-  returnValue?: number;
-  description?: string;
-}
 
 @Component({
   selector: 'app-stock-insights',
@@ -193,8 +116,7 @@ export interface DashboardDataRow {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 /**
- * Financial Dashboard with a centralized filtering system for consistent
- * filtering behavior across all widgets and charts.
+ * Financial Dashboard for stock insights with candlestick chart and stock list.
  */
 export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto> {
   // Shared dashboard data - Flat structure (implements abstract property)
@@ -203,9 +125,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
   // Filtered stock data for cross-chart filtering
   protected filteredDashboardData: StockDataDto[] | null = this.dashboardData || [];
-
-  // Central applied filters array for cumulative filtering
-  protected appliedFilters: FilterCriteria[] = [];
   
   // Dashboard title - dynamic based on a selected index
   public dashboardTitle: string = 'Financial Dashboard';
@@ -267,13 +186,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   }
 
   protected onChildInit(): void {
-    // Register world map for density map charts
-    import('echarts-map-collection/custom/world.json').then((worldMapData) => {
-      DensityMapBuilder.registerMap('world', worldMapData.default || worldMapData);
-    }).catch(() => {
-      // Handle world map loading error silently
-    });
-
     // WebSocket initialization disabled - WebSockets are not yet implemented
     // TODO: Re-enable when WebSocket server is available
     // this.initializeWebSocket();
@@ -285,8 +197,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       this.selectedIndexSubscription = null;
     }
 
-    // Reset filters and title
-    this.appliedFilters = [];
+    // Reset title
     this.dashboardTitle = 'Financial Dashboard';
     this.componentCommunicationService.clearSelectedIndex();
 
@@ -361,10 +272,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     // Disconnect WebSocket
     this.webSocketService.disconnect();
     
-    // Clear stock ticks data and reset filters
+    // Clear stock ticks data
     this.dashboardData = [];
     this.filteredDashboardData = null;
-    this.appliedFilters = [];
     this.currentSelectedIndexData = null;
     this.historicalData = [];
     
@@ -436,12 +346,11 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
     this.dashboardData = [...data];
     this.filteredDashboardData = [...data];
-          this.appliedFilters = [];
-          
+    
     this.updateStockListWithFilteredData();
-          this.updateMetricTilesWithFilters([]);
-          this.cdr.detectChanges();
-        }
+    this.updateMetricTilesWithFilters([]);
+    this.cdr.detectChanges();
+  }
 
   private setDefaultIndexFromData(data: StockDataDto[]): void {
     this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
@@ -1271,30 +1180,17 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       .setId('stock-list-widget')
       .build();
 
-    const filterWidget = createFilterWidget();
     const metricTiles = this.createMetricTiles([]);
 
-    // Position filter widget at row 2 (below metric tiles which occupy rows 0-1)
-    filterWidget.position = { x: 0, y: 2, cols: 12, rows: 1 };
-
-    // Position charts with proper spacing - adjusted candlestick chart height for time range filters
+    // Position charts with proper spacing
     stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
     candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
     
-    // Use the Fluent API to build the dashboard config with filter highlighting enabled
+    // Use the Fluent API to build the dashboard config
     this.dashboardConfig = StandardDashboardBuilder.createStandard()
       .setDashboardId('stock-insights-dashboard')
-      // Enable filter highlighting mode with custom styling
-      .enableFilterHighlighting(true, {
-        filteredOpacity: 0.25,
-        highlightedOpacity: 1.0,
-        highlightColor: '#ff6b6b',
-        filteredColor: '#e0e0e0'
-      })
       .setWidgets([
         ...metricTiles,
-        //filterWidget,
-
         stockListWidget,
         candlestickChart,
       ])
@@ -1470,9 +1366,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
     // Detect chart type and provide appropriate data
     switch (widgetTitle) {
-      case 'Portfolio Distribution':
-        // This is a pie chart - provide asset allocation data
-        return this.groupByAndSum(this.filteredDashboardData || this.dashboardData, 'industry', 'totalTradedValue');
       case 'Index Historical Price Movement':
         // This is a candlestick chart with volume - provide OHLCV data from historical data if available
         if (this.historicalData.length > 0) {
@@ -1521,58 +1414,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     const sourceData = data || this.filteredDashboardData || this.dashboardData;
 
     switch (widgetTitle) {
-      case 'Portfolio Distribution':
-        // Use stock ticks data with macro, industry, and sector hierarchy
-        if (!sourceData) {
-          return [];
-        }
-        
-        // Create hierarchical treemap data: macro -> industry -> sector with sum(totalTradedValue)
-        const macroGroups = sourceData.reduce((acc, stock) => {
-          const macro = stock.macro || 'Unknown Macro';
-          const industry = stock.industry || 'Unknown Industry';
-          const sector = stock.sector || 'Unknown Sector';
-          const tradedValue = stock.totalTradedValue || 0;
-          
-          if (!acc[macro]) {
-            acc[macro] = {};
-          }
-          if (!acc[macro][industry]) {
-            acc[macro][industry] = {};
-          }
-          if (!acc[macro][industry][sector]) {
-            acc[macro][industry][sector] = 0;
-          }
-          acc[macro][industry][sector] += tradedValue;
-          return acc;
-        }, {} as Record<string, Record<string, Record<string, number>>>);
-        
-        // Transform to treemap format
-        return Object.entries(macroGroups).map(([macro, industries]) => {
-          const industryChildren = Object.entries(industries).map(([industry, sectors]) => {
-            const sectorChildren = Object.entries(sectors).map(([sector, value]) => ({
-              name: sector,
-              value: value
-            }));
-            
-            const industryValue = sectorChildren.reduce((sum, child) => sum + child.value, 0);
-            
-            return {
-              name: industry,
-              value: industryValue,
-              children: sectorChildren
-            };
-          });
-          
-          const macroValue = industryChildren.reduce((sum, child) => sum + child.value, 0);
-          
-          return {
-            name: macro,
-            value: macroValue,
-            children: industryChildren
-          };
-        }).sort((a, b) => b.value - a.value);
-
       case 'Index Historical Price Movement':
         // Use historical data for candlestick chart with volume if available, otherwise use stock data
         if (this.historicalData.length > 0) {
@@ -1635,382 +1476,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     }
   }
 
-  /**
-   * Enhanced filtering method that applies filters and updates all widgets
-   */
-  protected applyEnhancedFilters(filters: any[]): void {
-    if (!this.dashboardConfig?.widgets) return;
-
-    // Apply filters to base data
-    let filteredData = this.dashboardData;
-    
-    if (filters && filters.length > 0) {
-      // Use the enhanced filtering from the base chart builder
-      const dataFilters = filters.map(filter => ({
-        property: filter.filterColumn || 'industry',
-        operator: 'equals' as const,
-        value: filter.value
-      }));
-      
-      filteredData = ApacheEchartBuilder.applyFilters(filteredData, dataFilters);
-    }
-
-    // Update the filteredDashboardData property
-    this.filteredDashboardData = filteredData;
-
-    // Update all chart widgets with filtered data
-    this.updateAllChartsWithFilteredData();
-
-    // Trigger change detection
-    setTimeout(() => this.cdr.detectChanges(), 100);
-  }
-
-  /**
-   * Helper method to create treemap data from stockTicksData with proper hierarchy
-   */
-  protected createStockTicksTreemapData(data: StockDataDto[] | null): Array<{
-    name: string;
-    value: number;
-    children?: Array<{ name: string; value: number; children?: Array<{ name: string; value: number }> }>
-  }> {
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    // Group by macro -> industry -> sector hierarchy
-    const macroGroups = new Map<string, StockDataDto[]>();
-    
-    data.forEach(stock => {
-      const macro = stock.macro || 'Other';
-      if (!macroGroups.has(macro)) {
-        macroGroups.set(macro, []);
-      }
-      macroGroups.get(macro)!.push(stock);
-    });
-
-    return Array.from(macroGroups.entries()).map(([macro, macroStocks]) => {
-      // Group by industry within macro
-      const industryGroups = new Map<string, StockDataDto[]>();
-      
-      macroStocks.forEach(stock => {
-        const industry = stock.industry || 'Other';
-        if (!industryGroups.has(industry)) {
-          industryGroups.set(industry, []);
-        }
-        industryGroups.get(industry)!.push(stock);
-      });
-
-      const industryChildren = Array.from(industryGroups.entries()).map(([industry, industryStocks]) => {
-        // Group by sector within industry
-        const sectorGroups = new Map<string, StockDataDto[]>();
-        
-        industryStocks.forEach(stock => {
-          const sector = stock.sector || 'Other';
-          if (!sectorGroups.has(sector)) {
-            sectorGroups.set(sector, []);
-          }
-          sectorGroups.get(sector)!.push(stock);
-        });
-
-        const sectorChildren = Array.from(sectorGroups.entries()).map(([sector, sectorStocks]) => {
-          const sectorValue = sectorStocks.reduce((sum, stock) => sum + (stock.lastPrice || 0), 0);
-          return {
-            name: sector,
-            value: sectorValue
-          };
-        });
-
-        const industryValue = sectorChildren.reduce((sum, child) => sum + child.value, 0);
-        
-        return {
-          name: industry,
-          value: industryValue,
-          children: sectorChildren
-        };
-      });
-
-      const macroValue = industryChildren.reduce((sum, child) => sum + child.value, 0);
-      
-      return {
-        name: macro,
-        value: macroValue,
-        children: industryChildren
-      };
-    });
-  }
-
-  private applyFilters(): void {
-    if (!this.dashboardData || this.dashboardData.length === 0) {
-      this.filteredDashboardData = [];
-      this.updateAllChartsWithFilteredData();
-      return;
-    }
-
-    if (this.appliedFilters.length === 0) {
-      this.filteredDashboardData = [...this.dashboardData];
-      this.updateAllChartsWithFilteredData();
-      return;
-    }
-
-    let filtered = [...this.dashboardData];
-    for (const filter of this.appliedFilters) {
-      filtered = this.applyIndividualFilter(filtered, filter);
-    }
-
-    this.filteredDashboardData = filtered;
-    this.updateAllChartsWithFilteredData();
-  }
-
-  private applyIndividualFilter(data: StockDataDto[], filter: FilterCriteria): StockDataDto[] {
-    const operator = filter.operator || 'equals';
-    
-    return data.filter(stock => {
-      const fieldValue = (stock as any)[filter.field];
-      
-      switch (operator) {
-        case 'equals':
-          return fieldValue === filter.value;
-        case 'contains':
-          return fieldValue && fieldValue.toString().toLowerCase().includes(filter.value.toString().toLowerCase());
-        case 'greaterThan':
-          return fieldValue > filter.value;
-        case 'lessThan':
-          return fieldValue < filter.value;
-        default:
-          return fieldValue === filter.value;
-      }
-    });
-  }
-
-  /**
-   * Convert FilterCriteria to IFilterValues format for filter widget display
-   */
-  private convertFilterCriteriaToIFilterValues(filter: FilterCriteria): IFilterValues {
-    const stringValue = typeof filter.value === 'number' ? filter.value.toString() : filter.value;
-    
-    // Create a user-friendly display format
-    const fieldDisplayName = this.getFieldDisplayName(filter.field);
-    const displayValue = `${fieldDisplayName}: '${filter.value}'`;
-    
-    // CRITICAL FIX: Filter widget displays 'value' property, so set it to the display name
-    // Calculate numeric value for internal use (percentage, etc.)
-    let numericValue = 0;
-    if (typeof filter.value === 'string') {
-      numericValue = this.getAggregatedValueForCategory(filter.field, filter.value as string);
-    }
-    
-    return {
-      accessor: filter.field,
-      filterColumn: filter.field,
-      category: stringValue,     // Category name for reference
-      value: stringValue,        // FIXED: Display name (e.g., "Iron & Steel") - this is what's shown
-      numericValue: numericValue.toString(), // Numeric value for internal use
-      percentage: numericValue.toString(),   // For compatibility
-      [filter.field]: stringValue,
-      displayValue: displayValue,
-      source: filter.source || 'Unknown'
-    };
-  }
-
-  /**
-   * Get aggregated value for a category (industry/sector) for filter display
-   */
-  private getAggregatedValueForCategory(field: string, categoryName: string): number {
-    if (!this.dashboardData || this.dashboardData.length === 0) {
-      return 0;
-    }
-    
-    // Calculate aggregated totalTradedValue for the category
-    return this.dashboardData
-      .filter(stock => (stock as any)[field] === categoryName)
-      .reduce((sum, stock) => sum + (stock.totalTradedValue || 0), 0);
-  }
-
-  /**
-   * Get user-friendly display name for filter fields
-   */
-  private getFieldDisplayName(field: string): string {
-    switch (field) {
-      case 'industry': return 'Industry';
-      case 'sector': return 'Sector';
-      case 'macro': return 'Macro';
-      case 'symbol':
-      case 'tradingsymbol':
-        return 'Symbol';
-      default: return field.charAt(0).toUpperCase() + field.slice(1);
-    }
-  }
-
-  /**
-   * Get the filter widget from dashboard configuration
-   */
-  private getFilterWidget() {
-    return this.dashboardConfig?.widgets?.find(widget => 
-      widget.id === 'filter-widget' || widget.config?.component === 'filter'
-    );
-  }
-
-  /**
-   * Update filter widget with current applied filters
-   */
-  private updateFilterWidget(): void {
-    const filterWidget = this.getFilterWidget();
-    if (filterWidget) {
-      const filterValues = this.appliedFilters.map(filter => 
-        this.convertFilterCriteriaToIFilterValues(filter)
-      );
-      updateFilterData(filterWidget, filterValues);
-      this.cdr.detectChanges();
-    }
-  }
-
-  private addFilter(filter: FilterCriteria): void {
-    // Check if this exact filter already exists
-    const exactFilterExists = this.appliedFilters.some(f => 
-      f.type === filter.type && f.field === filter.field && f.value === filter.value
-    );
-    
-    if (exactFilterExists) {
-      // Remove and re-add for refresh behavior
-      this.appliedFilters = this.appliedFilters.filter(f => 
-        !(f.type === filter.type && f.field === filter.field && f.value === filter.value)
-      );
-    } else {
-      // Remove any existing filter of the same type and field
-      this.appliedFilters = this.appliedFilters.filter(f => 
-        !(f.type === filter.type && f.field === filter.field)
-      );
-    }
-    
-    this.appliedFilters.push(filter);
-    this.applyFilters();
-    this.updateFilterWidget();
-  }
-
-  /**
-   * Remove a specific filter from the applied filters array
-   * This method removes a filter based on its type and field, then reapplies
-   * all remaining filters to update the filteredStockData
-   * 
-   * @param filterType The type of filter to remove (e.g., 'industry', 'sector')
-   * @param field The field name of the filter to remove
-   */
-  private removeFilter(filterType: string, field: string): void {
-    this.appliedFilters = this.appliedFilters.filter(f => 
-      !(f.type === filterType && f.field === field)
-    );
-    
-    // Apply remaining filters
-    this.applyFilters();
-    
-    // Update filter widget to reflect the removed filter
-    this.updateFilterWidget();
-  }
-
-  public override clearAllFilters(): void {
-    this.appliedFilters = [];
-    this.filteredDashboardData = [...(this.dashboardData || [])];
-    this.applyFilters();
-    this.updateAllChartsWithFilteredData();
-    
-    const filterWidget = this.getFilterWidget();
-    if (filterWidget) {
-      clearAllFiltersFromWidget(filterWidget);
-    }
-    
-    this.cdr.detectChanges();
-    setTimeout(() => {
-      this.cdr.markForCheck();
-      this.cdr.detectChanges();
-    }, 50);
-    
-    super.clearAllFilters();
-  }
-
-  override onFilterValuesChanged(filters: any[]): void {
-    // Handle clear all operation
-    if (!filters || filters.length === 0) {
-      this.appliedFilters = [];
-      this.filteredDashboardData = [...(this.dashboardData || [])];
-      this.updateAllChartsWithFilteredData();
-      
-      const filterWidget = this.getFilterWidget();
-      if (filterWidget) {
-        clearAllFiltersFromWidget(filterWidget);
-      }
-      
-      this.cdr.detectChanges();
-      return;
-    }
-    
-    // CRITICAL FIX: Default dashboard system sets value=numeric, category=name
-    // But filter widget displays 'value', so we need to swap them for display
-    const correctedFilters = filters.map(filter => {
-      // If this looks like a chart filter with numeric value and string category
-      if (filter.category && typeof filter.category === 'string' && 
-          typeof filter.value === 'number' && !isNaN(filter.value)) {
-        
-        // Swap value and category so filter widget displays the name
-        return {
-          ...filter,
-          value: filter.category,      // Set value to display name (what filter widget shows)
-          category: filter.category,   // Keep category as display name
-          numericValue: filter.value   // Store original numeric value
-        };
-      }
-      
-      return filter;
-    });
-    
-    // Update the filter widget with corrected values
-    const filterWidget = this.getFilterWidget();
-    if (filterWidget) {
-      updateFilterData(filterWidget, correctedFilters);
-    }
-    
-    // Handle individual filter removal or sync with filter widget
-    // Convert current filter widget state to appliedFilters format
-    const newAppliedFilters: FilterCriteria[] = [];
-    
-    correctedFilters.forEach(filter => {
-      const categoryName = filter.category || filter.value;
-      
-      if (filter.filterColumn === 'sector' && categoryName && 
-          typeof categoryName === 'string' && isNaN(Number(categoryName))) {
-        newAppliedFilters.push({
-          type: 'sector',
-          field: 'sector',
-          value: categoryName,
-          operator: 'equals',
-          source: 'Filter Widget'
-        });
-      } else if (filter.filterColumn === 'industry' && categoryName && 
-                 typeof categoryName === 'string' && isNaN(Number(categoryName))) {
-        newAppliedFilters.push({
-          type: 'industry',
-          field: 'industry',
-          value: categoryName,
-          operator: 'equals',
-          source: 'Filter Widget'
-        });
-      } else if (filter.filterColumn === 'tradingsymbol' && categoryName && 
-                 typeof categoryName === 'string' && isNaN(Number(categoryName))) {
-        newAppliedFilters.push({
-          type: 'tradingsymbol',
-          field: 'tradingsymbol',
-          value: categoryName,
-          operator: 'equals',
-          source: 'Filter Widget'
-        });
-      }
-    });
-    
-    // Update appliedFilters to match filter widget state
-    this.appliedFilters = newAppliedFilters;
-    
-    // Apply the updated filters
-    this.applyFilters();
-  }
 
   private updateAllChartsWithFilteredData(): void {
     if (!this.filteredDashboardData) {
@@ -2339,24 +1804,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     return date.toISOString().split('T')[0];
   }
 
-  /**
-   * Update treemap chart with filtered data
-   */
-  private updateTreemapWithFilteredData(): void {
-    if (!this.dashboardConfig?.widgets || !this.filteredDashboardData) return;
-
-    const treemapWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Portfolio Distribution'
-    );
-
-    if (treemapWidget) {
-      // Create hierarchical treemap data from filtered stock data
-      const treemapData = this.createStockTicksTreemapData(this.filteredDashboardData);
-      
-      // Update the widget with new data
-      this.updateEchartWidget(treemapWidget, treemapData);
-    }
-  }
 
   private updateStockListWithFilteredData(): void {
     if (!this.dashboardConfig?.widgets) {
@@ -2824,25 +2271,19 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
    * @param event TimeRangeFilterEvent containing the selected time range
    */
   private handleTimeRangeChange(event: TimeRangeFilterEvent): void {
-    console.log('🔥 handleTimeRangeChange called with event:', event);
-    
     // Store the selected time range
     this.selectedTimeRange = event.range;
     this.ensureWidgetTimeRangeFilters();
     
     // Get the current index name
     const indexName = this.currentSelectedIndexData?.indexName;
-    console.log('🔥 Current index name:', indexName);
-    console.log('🔥 Current selected index data:', this.currentSelectedIndexData);
     
     if (!indexName) {
-      console.warn('⚠️ No index selected, cannot load historical data');
       return;
     }
     
     // Calculate start and end dates based on the time range
     const { startDate, endDate } = this.calculateDateRangeFromTimeRange(event.range);
-    console.log('🔥 Calculated date range:', { startDate, endDate, range: event.range });
     
     // Show loading indicator
     this.isCandlestickLoading = true;
@@ -2851,7 +2292,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     // Make API call with date range (pass undefined for days to force date range usage)
     this.indicesService.getIndexHistoricalData(indexName, undefined, startDate, endDate).subscribe({
       next: (historicalData: IndexHistoricalData[]) => {
-        console.log('✅ Historical data loaded:', historicalData.length, 'records');
         this.historicalData = this.normalizeHistoricalData(historicalData || []);
         this.updateCandlestickChartWithHistoricalData();
         this.isCandlestickLoading = false;
@@ -2859,7 +2299,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         this.ensureWidgetTimeRangeFilters();
       },
       error: (error) => {
-        console.error('❌ Failed to load historical data for time range:', event.range, error);
         this.isCandlestickLoading = false;
         this.cdr.detectChanges();
         this.ensureWidgetTimeRangeFilters();
@@ -3028,8 +2467,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       });
       container?.appendChild(button);
     });
-    
-    console.log('✅ Time range filters rendered in header:', this.timeRangeOptions.length, 'buttons');
     
     // Force change detection after DOM manipulation
     this.cdr.detectChanges();
