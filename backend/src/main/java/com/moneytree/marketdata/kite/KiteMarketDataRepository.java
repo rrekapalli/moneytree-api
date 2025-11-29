@@ -85,7 +85,11 @@ public class KiteMarketDataRepository {
                   AND ( ? IS NULL OR UPPER(kim.segment) = ? )
                   AND kim.instrument_type = 'EQ'
                   AND kim.expiry IS NULL
-                  AND koh.date = CURRENT_DATE - 1
+                  AND koh.date = (
+                      SELECT MAX(date)
+                      FROM kite_ohlcv_historic
+                      WHERE date < CURRENT_DATE
+                  )
                   AND kim.name IS NOT NULL
                 ORDER BY kim.tradingsymbol ASC
                 """;
