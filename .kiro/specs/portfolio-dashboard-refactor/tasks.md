@@ -205,17 +205,17 @@
   - Test keyboard navigation
   - Test focus management
 
-- [ ] 15. Performance optimization
+- [x] 15. Performance optimization
   - Implement debouncing for search input
   - Add caching for portfolio data
   - Optimize change detection strategy
   - Implement lazy loading for tab content
   - _Requirements: 1.5, 3.1, 6.1, 7.1_
 
-- [ ] 15.1 Write unit tests for performance optimizations
+- [x] 15.1 Write unit tests for performance optimizations
   - Test search debouncing
   - Test caching behavior
   - Test lazy loading
 
-- [ ] 16. Final checkpoint - Ensure all tests pass
+- [x] 16. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.

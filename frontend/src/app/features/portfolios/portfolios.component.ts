@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
-import { Subject, takeUntil, finalize, retry, timer, catchError, throwError } from 'rxjs';
+import { Subject, takeUntil, finalize, retry, timer, catchError, throwError, debounceTime, distinctUntilChanged, of } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
@@ -49,10 +49,12 @@ import { ToastService } from '../../services/toast.service';
     PageHeaderComponent
   ],
   templateUrl: './portfolios.component.html',
-  styleUrls: ['./portfolios.component.scss']
+  styleUrls: ['./portfolios.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PortfoliosComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private searchSubject$ = new Subject<string>();
   
   portfolios: PortfolioWithMetrics[] = [];
   filteredPortfolios: PortfolioWithMetrics[] = [];
@@ -75,6 +77,19 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   
   // Active tab for the detail panel (overview, configure, holdings, trades)
   activeTab: 'overview' | 'configure' | 'holdings' | 'trades' = 'overview';
+  
+  // Cache for portfolio data
+  private portfolioCache: Map<string, PortfolioWithMetrics[]> = new Map();
+  private portfolioCacheTimestamp: number = 0;
+  private readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+  
+  // Cache for holdings and trades
+  private holdingsCache: Map<string, { data: PortfolioHolding[], timestamp: number }> = new Map();
+  private tradesCache: Map<string, { data: PortfolioTrade[], timestamp: number }> = new Map();
+  
+  // Lazy loading flags for tabs
+  private holdingsLoaded = false;
+  private tradesLoaded = false;
 
   // Configure tab form state
   configForm: PortfolioConfigForm = this.getDefaultConfigForm();
@@ -128,12 +143,28 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     //   return;
     // }
     
+    // Set up debounced search
+    this.searchSubject$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+      });
+    
     this.loadPortfolios();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Clear caches on destroy
+    this.portfolioCache.clear();
+    this.holdingsCache.clear();
+    this.tradesCache.clear();
   }
 
   private hasValidToken(): boolean {
@@ -153,6 +184,17 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   }
 
   loadPortfolios(): void {
+    // Check cache first
+    const now = Date.now();
+    const cachedData = this.portfolioCache.get('portfolios');
+    
+    if (cachedData && (now - this.portfolioCacheTimestamp) < this.CACHE_DURATION_MS) {
+      // Use cached data
+      this.portfolios = cachedData;
+      this.applyFilters();
+      return;
+    }
+    
     this.loading = true;
     this.error = null;
     this.retryCount = 0;
@@ -183,6 +225,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           if (Array.isArray(data)) {
             // Enhance portfolios with mock performance data for demonstration
             this.portfolios = this.enhancePortfoliosWithMetrics(data);
+            
+            // Cache the data
+            this.portfolioCache.set('portfolios', this.portfolios);
+            this.portfolioCacheTimestamp = Date.now();
+            
             this.applyFilters();
             this.error = null;
           } else {
@@ -193,6 +240,22 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           // Error already handled in catchError
         }
       });
+  }
+
+  // Method to clear portfolio cache
+  private clearPortfolioCache(): void {
+    this.portfolioCache.clear();
+    this.portfolioCacheTimestamp = 0;
+  }
+  
+  // Method to clear holdings cache for a specific portfolio
+  private clearHoldingsCache(portfolioId: string): void {
+    this.holdingsCache.delete(portfolioId);
+  }
+  
+  // Method to clear trades cache for a specific portfolio
+  private clearTradesCache(portfolioId: string): void {
+    this.tradesCache.delete(portfolioId);
   }
 
   private handlePortfolioLoadError(error: any): void {
@@ -349,7 +412,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
   // Search and filtering methods
   onSearchChange(): void {
-    this.applyFilters();
+    // Use debounced search subject instead of immediate filtering
+    this.searchSubject$.next(this.searchText);
   }
 
   onRiskProfileChange(): void {
@@ -448,6 +512,10 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     this.activeTab = 'overview';
     // Load portfolio configuration into form
     this.loadConfigForm(portfolio);
+    
+    // Reset lazy loading flags when selecting a new portfolio
+    this.holdingsLoaded = false;
+    this.tradesLoaded = false;
   }
 
   // Method to handle tab changes
@@ -458,11 +526,13 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
         
-        // Load data when switching to specific tabs
-        if (tabValue === 'holdings' && this.selectedPortfolio) {
+        // Lazy load data when switching to specific tabs (only load once)
+        if (tabValue === 'holdings' && this.selectedPortfolio && !this.holdingsLoaded) {
           this.loadHoldings(this.selectedPortfolio.id);
-        } else if (tabValue === 'trades' && this.selectedPortfolio) {
+          this.holdingsLoaded = true;
+        } else if (tabValue === 'trades' && this.selectedPortfolio && !this.tradesLoaded) {
           this.loadTrades(this.selectedPortfolio.id);
+          this.tradesLoaded = true;
         }
       }
     }
@@ -689,6 +759,9 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
               : 'Portfolio configuration has been saved successfully'
           );
 
+          // Clear portfolio cache to force refresh
+          this.clearPortfolioCache();
+
           // Update the portfolio in the list
           if (isNewPortfolio) {
             // Reload portfolios to get the new one
@@ -703,6 +776,10 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
               };
               this.applyFilters();
             }
+            
+            // Clear holdings and trades cache for this portfolio
+            this.clearHoldingsCache(updatedPortfolio.id);
+            this.clearTradesCache(updatedPortfolio.id);
           }
 
           // Update selected portfolio and form state
@@ -764,6 +841,17 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
   // Holdings tab methods
   loadHoldings(portfolioId: string): void {
+    // Check cache first
+    const cachedHoldings = this.holdingsCache.get(portfolioId);
+    const now = Date.now();
+    
+    if (cachedHoldings && (now - cachedHoldings.timestamp) < this.CACHE_DURATION_MS) {
+      // Use cached data
+      this.holdings = cachedHoldings.data;
+      this.holdingsError = null;
+      return;
+    }
+    
     this.holdingsLoading = true;
     this.holdingsError = null;
     this.holdingsRetryCount = 0;
@@ -791,6 +879,13 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           this.holdings = Array.isArray(data) ? data : [];
+          
+          // Cache the data
+          this.holdingsCache.set(portfolioId, {
+            data: this.holdings,
+            timestamp: Date.now()
+          });
+          
           this.holdingsError = null;
         },
         error: () => {
@@ -852,6 +947,17 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
   // Trades tab methods
   loadTrades(portfolioId: string): void {
+    // Check cache first
+    const cachedTrades = this.tradesCache.get(portfolioId);
+    const now = Date.now();
+    
+    if (cachedTrades && (now - cachedTrades.timestamp) < this.CACHE_DURATION_MS) {
+      // Use cached data
+      this.trades = cachedTrades.data;
+      this.tradesError = null;
+      return;
+    }
+    
     this.tradesLoading = true;
     this.tradesError = null;
     this.tradesRetryCount = 0;
@@ -879,6 +985,13 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           this.trades = Array.isArray(data) ? data : [];
+          
+          // Cache the data
+          this.tradesCache.set(portfolioId, {
+            data: this.trades,
+            timestamp: Date.now()
+          });
+          
           this.tradesError = null;
         },
         error: () => {
