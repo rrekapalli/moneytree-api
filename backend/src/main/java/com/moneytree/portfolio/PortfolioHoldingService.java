@@ -22,11 +22,11 @@ public class PortfolioHoldingService {
     }
 
     public List<PortfolioHolding> findByPortfolioId(UUID portfolioId) {
-        return repository.findByPortfolioId(portfolioId);
+        return repository.findByPortfolio_Id(portfolioId);
     }
 
     public Optional<PortfolioHolding> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol) {
-        return repository.findByPortfolioIdAndSymbol(portfolioId, symbol);
+        return repository.findByPortfolio_IdAndSymbol(portfolioId, symbol);
     }
 
     public PortfolioHolding save(PortfolioHolding holding) {

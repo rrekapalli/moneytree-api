@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
+import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { Subject, takeUntil, finalize, retry, timer, catchError, throwError, debounceTime, distinctUntilChanged, of } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
@@ -46,6 +47,7 @@ import { ToastService } from '../../services/toast.service';
     ToggleButtonModule,
     InputNumberModule,
     TableModule,
+    ScrollPanelModule,
     PageHeaderComponent
   ],
   templateUrl: './portfolios.component.html',
@@ -132,7 +134,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     private portfolioApiService: PortfolioApiService,
     private portfolioHoldingApiService: PortfolioHoldingApiService,
     private portfolioTradeApiService: PortfolioTradeApiService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -192,12 +195,14 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       // Use cached data
       this.portfolios = cachedData;
       this.applyFilters();
+      this.cdr.markForCheck();
       return;
     }
     
     this.loading = true;
     this.error = null;
     this.retryCount = 0;
+    this.cdr.markForCheck();
     
     this.portfolioApiService.getPortfolios()
       .pipe(
@@ -213,6 +218,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         finalize(() => {
           this.loading = false;
           this.retryCount = 0;
+          this.cdr.markForCheck();
         }),
         catchError((error) => {
           this.handlePortfolioLoadError(error);
@@ -232,12 +238,17 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
             
             this.applyFilters();
             this.error = null;
+            
+            // Trigger change detection
+            this.cdr.markForCheck();
           } else {
             this.error = 'Invalid data format received from API. Please contact support.';
+            this.cdr.markForCheck();
           }
         },
         error: () => {
           // Error already handled in catchError
+          this.cdr.markForCheck();
         }
       });
   }
@@ -288,6 +299,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // For demo purposes, create mock portfolios when API fails
     this.portfolios = this.createMockPortfolios();
     this.applyFilters();
+    this.cdr.markForCheck();
   }
 
   // Create mock portfolios for demonstration
@@ -849,12 +861,14 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       // Use cached data
       this.holdings = cachedHoldings.data;
       this.holdingsError = null;
+      this.cdr.markForCheck();
       return;
     }
     
     this.holdingsLoading = true;
     this.holdingsError = null;
     this.holdingsRetryCount = 0;
+    this.cdr.markForCheck();
     
     this.portfolioHoldingApiService.getHoldings(portfolioId)
       .pipe(
@@ -870,6 +884,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         finalize(() => {
           this.holdingsLoading = false;
           this.holdingsRetryCount = 0;
+          this.cdr.markForCheck();
         }),
         catchError((error) => {
           this.handleHoldingsLoadError(error);
@@ -887,9 +902,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           });
           
           this.holdingsError = null;
+          this.cdr.markForCheck();
         },
         error: () => {
           // Error already handled in catchError
+          this.cdr.markForCheck();
         }
       });
   }
@@ -955,12 +972,14 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       // Use cached data
       this.trades = cachedTrades.data;
       this.tradesError = null;
+      this.cdr.markForCheck();
       return;
     }
     
     this.tradesLoading = true;
     this.tradesError = null;
     this.tradesRetryCount = 0;
+    this.cdr.markForCheck();
     
     this.portfolioTradeApiService.getTrades(portfolioId)
       .pipe(
@@ -976,6 +995,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         finalize(() => {
           this.tradesLoading = false;
           this.tradesRetryCount = 0;
+          this.cdr.markForCheck();
         }),
         catchError((error) => {
           this.handleTradesLoadError(error);
@@ -993,9 +1013,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           });
           
           this.tradesError = null;
+          this.cdr.markForCheck();
         },
         error: () => {
           // Error already handled in catchError
+          this.cdr.markForCheck();
         }
       });
   }

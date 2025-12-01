@@ -84,78 +84,80 @@
       </div>
 
       <!-- Portfolio List -->
-      <div class="portfolio-list" *ngIf="!loading" role="list" aria-label="Available portfolios">
-        <div 
-          *ngFor="let portfolio of filteredPortfolios; trackBy: trackPortfolioById"
-          class="portfolio-card"
-          [class.selected]="selectedPortfolio?.id === portfolio.id"
-          (click)="selectPortfolio(portfolio)"
-          (keydown.enter)="selectPortfolio(portfolio)"
-          (keydown.space)="selectPortfolio(portfolio); $event.preventDefault()"
-          role="listitem"
-          tabindex="0"
-          [attr.aria-label]="'Portfolio: ' + portfolio.name + ', Return: ' + formatReturn(portfolio.totalReturn || 0) + ', ' + (portfolio.isActive ? 'Active' : 'Inactive')"
-          [attr.aria-selected]="selectedPortfolio?.id === portfolio.id">
-          
-          <div class="portfolio-card-header">
-            <h3 class="portfolio-name">{{ portfolio.name }}</h3>
-            <p-tag 
-              [value]="portfolio.isActive ? 'Active' : 'Inactive'" 
-              [severity]="portfolio.isActive ? 'success' : 'secondary'"
-              [attr.aria-label]="'Status: ' + (portfolio.isActive ? 'Active' : 'Inactive')">
-            </p-tag>
-          </div>
+      <p-scrollpanel *ngIf="!loading" class="portfolio-list-scroll" [style]="{ width: '100%', height: '100%' }">
+        <div class="portfolio-list" role="list" aria-label="Available portfolios">
+          <div 
+            *ngFor="let portfolio of filteredPortfolios; trackBy: trackPortfolioById"
+            class="portfolio-card"
+            [class.selected]="selectedPortfolio?.id === portfolio.id"
+            (click)="selectPortfolio(portfolio)"
+            (keydown.enter)="selectPortfolio(portfolio)"
+            (keydown.space)="selectPortfolio(portfolio); $event.preventDefault()"
+            role="listitem"
+            tabindex="0"
+            [attr.aria-label]="'Portfolio: ' + portfolio.name + ', Return: ' + formatReturn(portfolio.totalReturn || 0) + ', ' + (portfolio.isActive ? 'Active' : 'Inactive')"
+            [attr.aria-selected]="selectedPortfolio?.id === portfolio.id">
+            
+            <div class="portfolio-card-header">
+              <h3 class="portfolio-name">{{ portfolio.name }}</h3>
+              <p-tag 
+                [value]="portfolio.isActive ? 'Active' : 'Inactive'" 
+                [severity]="portfolio.isActive ? 'success' : 'secondary'"
+                [attr.aria-label]="'Status: ' + (portfolio.isActive ? 'Active' : 'Inactive')">
+              </p-tag>
+            </div>
 
-          <p class="portfolio-description">{{ portfolio.description }}</p>
+            <p class="portfolio-description">{{ portfolio.description }}</p>
 
-          <div class="portfolio-metrics">
-            <div class="metric">
-              <span class="metric-label">Return</span>
-              <span 
-                class="metric-value" 
-                [style.color]="getPerformanceColor(portfolio.totalReturn || 0)">
-                {{ formatReturn(portfolio.totalReturn || 0) }}
+            <div class="portfolio-metrics">
+              <div class="metric">
+                <span class="metric-label">Return</span>
+                <span 
+                  class="metric-value" 
+                  [style.color]="getPerformanceColor(portfolio.totalReturn || 0)">
+                  {{ formatReturn(portfolio.totalReturn || 0) }}
+                </span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Stocks</span>
+                <span class="metric-value">{{ portfolio.stockCount || 0 }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Outperformance</span>
+                <span 
+                  class="metric-value" 
+                  [style.color]="getPerformanceColor(portfolio.outperformance || 0)">
+                  {{ formatReturn(portfolio.outperformance || 0) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="portfolio-footer">
+              <span class="last-executed">
+                <i class="pi pi-clock"></i>
+                Last: {{ portfolio.lastRebalance || 'N/A' }}
+              </span>
+              <span class="risk-profile">
+                <i [class]="getPortfolioIcon(portfolio.riskProfile)"></i>
+                {{ getRiskProfileLabel(portfolio.riskProfile) }}
               </span>
             </div>
-            <div class="metric">
-              <span class="metric-label">Stocks</span>
-              <span class="metric-value">{{ portfolio.stockCount || 0 }}</span>
-            </div>
-            <div class="metric">
-              <span class="metric-label">Outperformance</span>
-              <span 
-                class="metric-value" 
-                [style.color]="getPerformanceColor(portfolio.outperformance || 0)">
-                {{ formatReturn(portfolio.outperformance || 0) }}
-              </span>
-            </div>
           </div>
 
-          <div class="portfolio-footer">
-            <span class="last-executed">
-              <i class="pi pi-clock"></i>
-              Last: {{ portfolio.lastRebalance || 'N/A' }}
-            </span>
-            <span class="risk-profile">
-              <i [class]="getPortfolioIcon(portfolio.riskProfile)"></i>
-              {{ getRiskProfileLabel(portfolio.riskProfile) }}
-            </span>
+          <!-- Empty State -->
+          <div *ngIf="filteredPortfolios.length === 0" class="empty-state" role="status" aria-live="polite">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            <p>No portfolios found</p>
+            <p-button 
+              label="Clear Filters" 
+              icon="pi pi-filter-slash" 
+              (onClick)="clearFilters()"
+              [text]="true"
+              aria-label="Clear all filters to show all portfolios">
+            </p-button>
           </div>
         </div>
-
-        <!-- Empty State -->
-        <div *ngIf="filteredPortfolios.length === 0" class="empty-state" role="status" aria-live="polite">
-          <i class="pi pi-inbox" aria-hidden="true"></i>
-          <p>No portfolios found</p>
-          <p-button 
-            label="Clear Filters" 
-            icon="pi pi-filter-slash" 
-            (onClick)="clearFilters()"
-            [text]="true"
-            aria-label="Clear all filters to show all portfolios">
-          </p-button>
-        </div>
-      </div>
+      </p-scrollpanel>
 
       <!-- Loading State -->
       <div *ngIf="loading" class="loading-state" role="status" aria-live="polite" aria-busy="true">

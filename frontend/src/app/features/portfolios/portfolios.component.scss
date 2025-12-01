@@ -96,6 +96,7 @@
 .search-section {
   padding: 1.5rem;
   border-bottom: 1px solid var(--surface-border, #e9ecef);
+  flex-shrink: 0;
 
   .p-input-icon-left {
     width: 100%;
@@ -119,9 +120,26 @@
   }
 }
 
-.portfolio-list {
+.portfolio-list-scroll {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+
+  ::ng-deep .p-scrollpanel-wrapper {
+    border-right: none;
+  }
+
+  ::ng-deep .p-scrollpanel-bar {
+    background-color: var(--primary-color, #667eea);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+.portfolio-list {
   padding: 1rem;
 }
 
