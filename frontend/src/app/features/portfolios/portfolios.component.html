@@ -463,9 +463,80 @@
 
             <!-- Trades Tab -->
             <p-tabpanel value="trades">
-              <div class="tab-content">
-                <h3>Trades - {{ selectedPortfolio.name }}</h3>
-                <p>Trades content will be implemented in future tasks</p>
+              <div class="tab-content trades-tab">
+                <h3 class="tab-title">Trades - {{ selectedPortfolio.name }}</h3>
+
+                <!-- Loading State -->
+                <div *ngIf="tradesLoading" class="trades-loading-state">
+                  <i class="pi pi-spin pi-spinner"></i>
+                  <p>Loading trades...</p>
+                </div>
+
+                <!-- Error State -->
+                <div *ngIf="tradesError && !tradesLoading" class="trades-error-state">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  <p>{{ tradesError }}</p>
+                  <p-button 
+                    label="Retry" 
+                    icon="pi pi-refresh" 
+                    (onClick)="loadTrades(selectedPortfolio.id)"
+                    [text]="true">
+                  </p-button>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="!tradesLoading && !tradesError && trades.length === 0" class="trades-empty-state">
+                  <i class="pi pi-inbox"></i>
+                  <p>No trades found</p>
+                  <p class="empty-state-hint">This portfolio doesn't have any completed trades yet.</p>
+                </div>
+
+                <!-- Trades Table -->
+                <div *ngIf="!tradesLoading && !tradesError && trades.length > 0" class="trades-table-container">
+                  <p-table 
+                    [value]="trades" 
+                    [tableStyle]="{ 'min-width': '70rem' }"
+                    styleClass="p-datatable-sm p-datatable-striped">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th>Symbol</th>
+                        <th class="text-right">Entry Date</th>
+                        <th class="text-right">Entry Price</th>
+                        <th class="text-right">Exit Date</th>
+                        <th class="text-right">Exit Price</th>
+                        <th class="text-right">Quantity</th>
+                        <th class="text-right">Profit</th>
+                        <th class="text-right">Profit %</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-trade>
+                      <tr>
+                        <td>
+                          <span class="symbol-cell">{{ trade.symbol }}</span>
+                        </td>
+                        <td class="text-right">{{ formatTradeDate(trade.entryDate) }}</td>
+                        <td class="text-right">{{ formatCurrency(trade.entryPrice) }}</td>
+                        <td class="text-right">{{ formatTradeDate(trade.exitDate) }}</td>
+                        <td class="text-right">{{ formatCurrency(trade.exitPrice) }}</td>
+                        <td class="text-right">{{ trade.quantity }}</td>
+                        <td class="text-right">
+                          <span 
+                            [style.color]="getPerformanceColor(trade.profit)"
+                            class="pnl-value">
+                            {{ formatCurrency(trade.profit) }}
+                          </span>
+                        </td>
+                        <td class="text-right">
+                          <span 
+                            [style.color]="getPerformanceColor(trade.profitPct)"
+                            class="pnl-value">
+                            {{ formatPercentage(trade.profitPct) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
               </div>
             </p-tabpanel>
           </p-tabpanels>

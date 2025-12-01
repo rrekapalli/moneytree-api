@@ -19,7 +19,8 @@ import { Subject, takeUntil, finalize } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
-import { PortfolioDto, PortfolioHolding } from '../../services/entities/portfolio.entities';
+import { PortfolioTradeApiService } from '../../services/apis/portfolio-trade.api';
+import { PortfolioDto, PortfolioHolding, PortfolioTrade } from '../../services/entities/portfolio.entities';
 import { PortfolioWithMetrics } from './portfolio.types';
 import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -103,9 +104,15 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     { label: 'Threshold-based', value: 'THRESHOLD' }
   ];
 
+  // Trades tab state
+  trades: PortfolioTrade[] = [];
+  tradesLoading = false;
+  tradesError: string | null = null;
+
   constructor(
     private portfolioApiService: PortfolioApiService,
     private portfolioHoldingApiService: PortfolioHoldingApiService,
+    private portfolioTradeApiService: PortfolioTradeApiService,
     private toastService: ToastService
   ) {}
 
@@ -409,6 +416,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         // Load data when switching to specific tabs
         if (tabValue === 'holdings' && this.selectedPortfolio) {
           this.loadHoldings(this.selectedPortfolio.id);
+        } else if (tabValue === 'trades' && this.selectedPortfolio) {
+          this.loadTrades(this.selectedPortfolio.id);
         }
       }
     }
@@ -723,6 +732,40 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   // Format percentage values
   formatPercentage(value: number): string {
     return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+  }
+
+  // Trades tab methods
+  loadTrades(portfolioId: string): void {
+    this.tradesLoading = true;
+    this.tradesError = null;
+    
+    this.portfolioTradeApiService.getTrades(portfolioId)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.tradesLoading = false)
+      )
+      .subscribe({
+        next: (data) => {
+          this.trades = data;
+        },
+        error: (error) => {
+          console.error('Error loading trades:', error);
+          this.tradesError = error.error?.message || 'Failed to load trades. Please try again.';
+        }
+      });
+  }
+
+  // Format date for trades table
+  formatTradeDate(dateString: string): string {
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
   }
 
 }

@@ -505,6 +505,105 @@
   }
 }
 
+/* Trades Tab Styles */
+.trades-tab {
+  .tab-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color, #495057);
+    margin: 0 0 2rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--surface-border, #e9ecef);
+  }
+
+  .trades-loading-state,
+  .trades-error-state,
+  .trades-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--text-color-secondary, #6c757d);
+
+    i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    p {
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+    }
+
+    .empty-state-hint {
+      font-size: 0.85rem;
+      color: var(--text-color-secondary, #6c757d);
+      font-style: italic;
+    }
+  }
+
+  .trades-loading-state i {
+    color: var(--primary-color, #667eea);
+    opacity: 1;
+  }
+
+  .trades-error-state i {
+    color: var(--red-500, #ef4444);
+    opacity: 1;
+  }
+
+  .trades-table-container {
+    background: var(--surface-card, white);
+    border-radius: 8px;
+    overflow: hidden;
+
+    .symbol-cell {
+      font-weight: 600;
+      color: var(--primary-color, #667eea);
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .text-muted {
+      color: var(--text-color-secondary, #6c757d);
+      font-style: italic;
+    }
+
+    .pnl-value {
+      font-weight: 600;
+    }
+  }
+}
+
+/* PrimeNG Table Overrides for Trades Tab */
+::ng-deep {
+  .trades-tab {
+    .p-datatable {
+      .p-datatable-thead > tr > th {
+        background: var(--surface-ground, #f8f9fa);
+        color: var(--text-color, #495057);
+        font-weight: 600;
+        padding: 1rem;
+        border-bottom: 2px solid var(--surface-border, #e9ecef);
+      }
+
+      .p-datatable-tbody > tr > td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--surface-border, #e9ecef);
+      }
+
+      .p-datatable-tbody > tr:hover {
+        background: var(--surface-hover, #f8f9fa);
+      }
+    }
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .two-panel-layout {
