@@ -53,8 +53,8 @@ describe('ScreenersConfigureComponent - API Integration', () => {
   it('should load existing screener criteria into query builder', () => {
     // Arrange: Create screener with criteria
     const mockScreener = {
-      screenerId: 1,
-      ownerUserId: 1,
+      screenerId: '1',
+      ownerUserId: '1',
       name: 'Test Screener',
       description: 'Test Description',
       isPublic: false,

@@ -11,7 +11,8 @@ describe('ScreenersOverviewComponent', () => {
   let fixture: ComponentFixture<ScreenersOverviewComponent>;
 
   const mockScreener: ScreenerResp = {
-    screenerId: 1,
+    screenerId: '1',
+    ownerUserId: '1',
     name: 'Test Screener',
     description: 'Test Description',
     isPublic: false,

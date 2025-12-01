@@ -14,10 +14,12 @@ import { TabsModule } from 'primeng/tabs';
 import { FormsModule } from '@angular/forms';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { TableModule } from 'primeng/table';
 import { Subject, takeUntil, finalize } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
-import { PortfolioDto } from '../../services/entities/portfolio.entities';
+import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
+import { PortfolioDto, PortfolioHolding } from '../../services/entities/portfolio.entities';
 import { PortfolioWithMetrics } from './portfolio.types';
 import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
@@ -42,6 +44,7 @@ import { ToastService } from '../../services/toast.service';
     FormsModule,
     ToggleButtonModule,
     InputNumberModule,
+    TableModule,
     PageHeaderComponent
   ],
   templateUrl: './portfolios.component.html',
@@ -76,6 +79,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   configFormDirty = false;
   savingConfig = false;
 
+  // Holdings tab state
+  holdings: PortfolioHolding[] = [];
+  holdingsLoading = false;
+  holdingsError: string | null = null;
+
   // Configure tab dropdown options
   riskProfileOptions = [
     { label: 'Conservative', value: 'CONSERVATIVE' },
@@ -97,6 +105,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
   constructor(
     private portfolioApiService: PortfolioApiService,
+    private portfolioHoldingApiService: PortfolioHoldingApiService,
     private toastService: ToastService
   ) {}
 
@@ -396,6 +405,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       const tabValue = typeof tab === 'string' ? tab : tab.toString();
       if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
+        
+        // Load data when switching to specific tabs
+        if (tabValue === 'holdings' && this.selectedPortfolio) {
+          this.loadHoldings(this.selectedPortfolio.id);
+        }
       }
     }
   }
@@ -657,6 +671,58 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // Restore original form values
     this.configForm = { ...this.originalConfigForm };
     this.configFormDirty = false;
+  }
+
+  // Holdings tab methods
+  loadHoldings(portfolioId: string): void {
+    this.holdingsLoading = true;
+    this.holdingsError = null;
+    
+    this.portfolioHoldingApiService.getHoldings(portfolioId)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.holdingsLoading = false)
+      )
+      .subscribe({
+        next: (data) => {
+          this.holdings = data;
+        },
+        error: (error) => {
+          console.error('Error loading holdings:', error);
+          this.holdingsError = error.error?.message || 'Failed to load holdings. Please try again.';
+        }
+      });
+  }
+
+  // Calculate unrealized P&L for a holding
+  calculateUnrealizedPnl(holding: PortfolioHolding): number {
+    if (!holding.currentPrice) {
+      return 0;
+    }
+    return (holding.currentPrice - holding.avgCost) * holding.quantity;
+  }
+
+  // Calculate unrealized P&L percentage for a holding
+  calculateUnrealizedPnlPct(holding: PortfolioHolding): number {
+    if (!holding.currentPrice || holding.avgCost === 0) {
+      return 0;
+    }
+    return ((holding.currentPrice - holding.avgCost) / holding.avgCost) * 100;
+  }
+
+  // Format currency values
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  }
+
+  // Format percentage values
+  formatPercentage(value: number): string {
+    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
   }
 
 }

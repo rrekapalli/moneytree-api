@@ -110,22 +110,22 @@
   - **Property 20: Form validation enables save button**
   - **Validates: Requirements 8.2**
 
-- [ ] 7. Implement save and reset functionality
+- [x] 7. Implement save and reset functionality
   - Implement save handler that calls portfolio API service
   - Handle successful save response (update UI, show notification)
   - Handle save errors (display error message)
   - Implement reset handler that restores original form values
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
 
-- [ ] 7.1 Write property test for reset functionality
+- [x] 7.1 Write property test for reset functionality
   - **Property 15: Reset restores original values**
   - **Validates: Requirements 5.5**
 
-- [ ] 7.2 Write property test for error handling
+- [x] 7.2 Write property test for error handling
   - **Property 14: API error handling displays error message**
   - **Validates: Requirements 5.4, 6.5, 7.5**
 
-- [ ] 8. Implement Holdings tab
+- [x] 8. Implement Holdings tab
   - Create Holdings tab component or template section
   - Implement data fetching from PortfolioHoldingApiService when tab is activated
   - Create holdings table with columns: symbol, quantity, average cost, current price, unrealized PnL
@@ -134,11 +134,11 @@
   - Implement error state for failed API calls
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 8.1 Write property test for holdings API fetch
+- [x] 8.1 Write property test for holdings API fetch
   - **Property 16: Holdings tab triggers API fetch**
   - **Validates: Requirements 6.1**
 
-- [ ] 8.2 Write property test for holdings display
+- [x] 8.2 Write property test for holdings display
   - **Property 17: Holdings data display completeness**
   - **Validates: Requirements 6.2**
 

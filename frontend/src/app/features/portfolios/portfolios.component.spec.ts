@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PortfoliosComponent } from './portfolios.component';
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
-import { of, throwError } from 'rxjs';
+import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
+import { ToastService } from '../../services/toast.service';
+import { of, throwError, Observable } from 'rxjs';
 import { PortfolioWithMetrics } from './portfolio.types';
 import * as fc from 'fast-check';
 import { DebugElement } from '@angular/core';
@@ -38,13 +40,19 @@ describe('PortfoliosComponent', () => {
 
   beforeEach(async () => {
     // Create a spy object for PortfolioApiService
-    mockPortfolioApiService = jasmine.createSpyObj('PortfolioApiService', ['getPortfolios']);
+    mockPortfolioApiService = jasmine.createSpyObj('PortfolioApiService', ['getPortfolios', 'updatePortfolio', 'createPortfolio']);
     mockPortfolioApiService.getPortfolios.and.returnValue(of([]));
+
+    // Create a spy object for PortfolioHoldingApiService
+    const mockPortfolioHoldingApiService = jasmine.createSpyObj('PortfolioHoldingApiService', ['getHoldings']);
+    mockPortfolioHoldingApiService.getHoldings.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
       imports: [PortfoliosComponent],
       providers: [
-        { provide: PortfolioApiService, useValue: mockPortfolioApiService }
+        { provide: PortfolioApiService, useValue: mockPortfolioApiService },
+        { provide: PortfolioHoldingApiService, useValue: mockPortfolioHoldingApiService },
+        ToastService
       ]
     }).compileComponents();
 
@@ -540,6 +548,73 @@ describe('PortfoliosComponent', () => {
       expect(component.configForm.description).toBe(originalDescription);
       expect(component.configFormDirty).toBe(false);
     });
+
+    // **Feature: portfolio-dashboard-refactor, Property 15: Reset restores original values**
+    // **Validates: Requirements 5.5**
+    describe('Property 15: Reset restores original values', () => {
+      it('should restore all form fields to original values after modifications', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ minLength: 1, maxLength: 200 }),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE')
+            }),
+            fc.record({
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ minLength: 1, maxLength: 200 }),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'),
+              riskTolerance: fc.constantFrom('LOW', 'MEDIUM', 'HIGH'),
+              rebalancingStrategy: fc.constantFrom('QUARTERLY', 'MONTHLY', 'THRESHOLD'),
+              rebalancingThreshold: fc.integer({ min: 1, max: 100 }),
+              automatedExecution: fc.boolean(),
+              notificationSettings: fc.boolean(),
+              taxHarvesting: fc.boolean()
+            }),
+            (portfolioData, modifications) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Select portfolio and load config form
+              component.selectPortfolio(portfolio);
+              
+              // Store original values
+              const originalForm = { ...component.configForm };
+
+              // Modify all form fields
+              component.configForm.name = modifications.name;
+              component.configForm.description = modifications.description;
+              component.configForm.riskProfile = modifications.riskProfile;
+              component.configForm.riskTolerance = modifications.riskTolerance;
+              component.configForm.rebalancingStrategy = modifications.rebalancingStrategy;
+              component.configForm.rebalancingThreshold = modifications.rebalancingThreshold;
+              component.configForm.automatedExecution = modifications.automatedExecution;
+              component.configForm.notificationSettings = modifications.notificationSettings;
+              component.configForm.taxHarvesting = modifications.taxHarvesting;
+              component.onConfigFormChange();
+
+              // Reset the form
+              component.resetConfiguration();
+
+              // Verify all fields are restored to original values
+              expect(component.configForm.name).toBe(originalForm.name);
+              expect(component.configForm.description).toBe(originalForm.description);
+              expect(component.configForm.riskProfile).toBe(originalForm.riskProfile);
+              expect(component.configForm.riskTolerance).toBe(originalForm.riskTolerance);
+              expect(component.configForm.rebalancingStrategy).toBe(originalForm.rebalancingStrategy);
+              expect(component.configForm.rebalancingThreshold).toBe(originalForm.rebalancingThreshold);
+              expect(component.configForm.automatedExecution).toBe(originalForm.automatedExecution);
+              expect(component.configForm.notificationSettings).toBe(originalForm.notificationSettings);
+              expect(component.configForm.taxHarvesting).toBe(originalForm.taxHarvesting);
+              
+              // Verify form is no longer dirty
+              expect(component.configFormDirty).toBe(false);
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
   });
 
   describe('Summary Statistics', () => {
@@ -591,6 +666,287 @@ describe('PortfoliosComponent', () => {
       ];
       component.portfolios = mockPortfolios;
       expect(component.aggressivePortfolios).toBe(2);
+    });
+  });
+
+  describe('Holdings Tab', () => {
+    let mockPortfolioHoldingApiService: jasmine.SpyObj<any>;
+
+    beforeEach(() => {
+      // Create a spy object for PortfolioHoldingApiService
+      mockPortfolioHoldingApiService = jasmine.createSpyObj('PortfolioHoldingApiService', ['getHoldings']);
+      mockPortfolioHoldingApiService.getHoldings.and.returnValue(of([]));
+      
+      // Replace the service in the component
+      (component as any).portfolioHoldingApiService = mockPortfolioHoldingApiService;
+    });
+
+    // **Feature: portfolio-dashboard-refactor, Property 16: Holdings tab triggers API fetch**
+    // **Validates: Requirements 6.1**
+    describe('Property 16: Holdings tab triggers API fetch', () => {
+      it('should fetch holdings when Holdings tab is selected', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ maxLength: 200 })
+            }),
+            (portfolioData) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Reset the spy
+              mockPortfolioHoldingApiService.getHoldings.calls.reset();
+              mockPortfolioHoldingApiService.getHoldings.and.returnValue(of([]));
+
+              // Select a portfolio
+              component.selectPortfolio(portfolio);
+              
+              // Switch to holdings tab
+              component.onTabChange('holdings');
+
+              // Verify API was called with the correct portfolio ID
+              expect(mockPortfolioHoldingApiService.getHoldings).toHaveBeenCalledWith(portfolio.id);
+              expect(mockPortfolioHoldingApiService.getHoldings).toHaveBeenCalledTimes(1);
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    // **Feature: portfolio-dashboard-refactor, Property 17: Holdings data display completeness**
+    // **Validates: Requirements 6.2**
+    describe('Property 17: Holdings data display completeness', () => {
+      it('should display all required columns for each holding', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 })
+            }),
+            fc.array(
+              fc.record({
+                id: fc.uuid(),
+                portfolioId: fc.uuid(),
+                symbol: fc.string({ minLength: 1, maxLength: 10 }).map(s => s.toUpperCase()),
+                quantity: fc.integer({ min: 1, max: 10000 }),
+                avgCost: fc.double({ min: 1, max: 10000, noNaN: true }),
+                realizedPnl: fc.double({ min: -10000, max: 10000, noNaN: true }),
+                lastUpdated: fc.date().map(d => d.toISOString()),
+                currentPrice: fc.option(fc.double({ min: 1, max: 10000, noNaN: true }), { nil: undefined })
+              }),
+              { minLength: 1, maxLength: 10 }
+            ),
+            (portfolioData, holdingsData) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Mock the API response
+              mockPortfolioHoldingApiService.getHoldings.and.returnValue(of(holdingsData));
+
+              // Select portfolio and switch to holdings tab
+              component.selectPortfolio(portfolio);
+              component.onTabChange('holdings');
+              fixture.detectChanges();
+
+              // Verify holdings are loaded
+              expect(component.holdings.length).toBe(holdingsData.length);
+
+              // Check that the table is rendered
+              const table = fixture.debugElement.query(By.css('.holdings-table-container p-table'));
+              expect(table).toBeTruthy();
+
+              // Verify each holding has all required data
+              component.holdings.forEach((holding, index) => {
+                const expectedHolding = holdingsData[index];
+                expect(holding.symbol).toBe(expectedHolding.symbol);
+                expect(holding.quantity).toBe(expectedHolding.quantity);
+                expect(holding.avgCost).toBe(expectedHolding.avgCost);
+                
+                // Verify computed properties can be calculated
+                const unrealizedPnl = component.calculateUnrealizedPnl(holding);
+                const unrealizedPnlPct = component.calculateUnrealizedPnlPct(holding);
+                
+                if (holding.currentPrice) {
+                  expect(typeof unrealizedPnl).toBe('number');
+                  expect(typeof unrealizedPnlPct).toBe('number');
+                  expect(isNaN(unrealizedPnl)).toBe(false);
+                  expect(isNaN(unrealizedPnlPct)).toBe(false);
+                }
+              });
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    it('should display loading state while fetching holdings', () => {
+      const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+      
+      // Mock a delayed response
+      mockPortfolioHoldingApiService.getHoldings.and.returnValue(
+        new Observable(subscriber => {
+          setTimeout(() => {
+            subscriber.next([]);
+            subscriber.complete();
+          }, 100);
+        })
+      );
+
+      component.selectPortfolio(portfolio);
+      component.onTabChange('holdings');
+      
+      // Check loading state is true
+      expect(component.holdingsLoading).toBe(true);
+    });
+
+    it('should display empty state when no holdings exist', () => {
+      const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+      
+      mockPortfolioHoldingApiService.getHoldings.and.returnValue(of([]));
+
+      component.selectPortfolio(portfolio);
+      component.onTabChange('holdings');
+      fixture.detectChanges();
+
+      expect(component.holdings.length).toBe(0);
+      expect(component.holdingsLoading).toBe(false);
+      
+      const emptyState = fixture.debugElement.query(By.css('.holdings-empty-state'));
+      expect(emptyState).toBeTruthy();
+    });
+
+    it('should display error state when API call fails', () => {
+      const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+      const errorMessage = 'Failed to load holdings';
+      
+      mockPortfolioHoldingApiService.getHoldings.and.returnValue(
+        throwError(() => ({ error: { message: errorMessage } }))
+      );
+
+      component.selectPortfolio(portfolio);
+      component.onTabChange('holdings');
+      fixture.detectChanges();
+
+      expect(component.holdingsError).toBeTruthy();
+      expect(component.holdingsLoading).toBe(false);
+      
+      const errorState = fixture.debugElement.query(By.css('.holdings-error-state'));
+      expect(errorState).toBeTruthy();
+    });
+  });
+
+  describe('API Error Handling', () => {
+    // **Feature: portfolio-dashboard-refactor, Property 14: API error handling displays error message**
+    // **Validates: Requirements 5.4, 6.5, 7.5**
+    describe('Property 14: API error handling displays error message', () => {
+      it('should display error message when save configuration fails', () => {
+        // Mock ToastService once before the property test runs
+        const toastService = TestBed.inject(ToastService);
+        const showErrorSpy = spyOn(toastService, 'showError');
+
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              // Generate non-whitespace strings for valid form data
+              name: fc.string({ minLength: 1, maxLength: 50 }).filter(s => s.trim().length > 0),
+              description: fc.string({ minLength: 1, maxLength: 200 }).filter(s => s.trim().length > 0),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE')
+            }),
+            fc.record({
+              status: fc.integer({ min: 400, max: 599 }),
+              message: fc.string({ minLength: 1, maxLength: 100 }).filter(s => s.trim().length > 0)
+            }),
+            (portfolioData, errorData) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Mock the API service to return an error
+              const updateSpy = jasmine.createSpy('updatePortfolio').and.returnValue(
+                throwError(() => ({
+                  status: errorData.status,
+                  error: { message: errorData.message }
+                }))
+              );
+              mockPortfolioApiService.updatePortfolio = updateSpy;
+
+              // Reset the spy for each iteration
+              showErrorSpy.calls.reset();
+
+              // Select portfolio and modify configuration with valid data
+              component.selectPortfolio(portfolio);
+              component.configForm.name = portfolioData.name;
+              component.configForm.description = portfolioData.description;
+              component.configForm.riskProfile = portfolioData.riskProfile;
+              component.configForm.riskTolerance = 'MEDIUM';
+              component.configForm.rebalancingStrategy = 'QUARTERLY';
+              component.configForm.rebalancingThreshold = 5;
+              component.onConfigFormChange();
+
+              // Attempt to save
+              component.saveConfiguration();
+
+              // Wait for async operation
+              fixture.detectChanges();
+
+              // Verify error handling was triggered
+              expect(showErrorSpy).toHaveBeenCalled();
+              
+              // Verify the error message contains relevant information
+              const errorCall = showErrorSpy.calls.mostRecent();
+              expect(errorCall).toBeDefined();
+              if (errorCall) {
+                const errorArg = errorCall.args[0];
+                expect(errorArg.summary).toBeTruthy();
+                expect(errorArg.detail).toBeTruthy();
+              }
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+
+      it('should handle network errors when loading portfolios', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              status: fc.integer({ min: 400, max: 599 }),
+              message: fc.string({ minLength: 1, maxLength: 100 })
+            }),
+            (errorData) => {
+              // Mock the API service to return an error
+              mockPortfolioApiService.getPortfolios.and.returnValue(
+                throwError(() => ({
+                  status: errorData.status,
+                  error: { message: errorData.message }
+                }))
+              );
+
+              // Reset component state
+              component.portfolios = [];
+              component.error = null;
+
+              // Attempt to load portfolios
+              component.loadPortfolios();
+
+              // Wait for async operation
+              fixture.detectChanges();
+
+              // For non-401 errors, component should create mock portfolios
+              // For 401 errors, component should set error message
+              if (errorData.status === 401) {
+                expect(component.error).toBeTruthy();
+                expect(component.error).toContain('Authentication');
+              } else {
+                // For other errors, mock portfolios are created for demo
+                expect(component.portfolios.length).toBeGreaterThan(0);
+              }
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
     });
   });
 });
