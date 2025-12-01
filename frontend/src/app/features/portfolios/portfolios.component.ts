@@ -17,9 +17,6 @@ import { Subject, takeUntil, finalize } from 'rxjs';
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioDto } from '../../services/entities/portfolio.entities';
 import { PortfolioWithMetrics } from './portfolio.types';
-import { PortfolioOverviewComponent } from './overview/overview.component';
-import { PortfolioConfigureComponent } from './configure/configure.component';
-import { PortfolioOptimizeComponent } from './optimize/optimize.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 @Component({
@@ -39,9 +36,6 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
     TooltipModule,
     TabsModule,
     FormsModule,
-    PortfolioOverviewComponent,
-    PortfolioConfigureComponent,
-    PortfolioOptimizeComponent,
     PageHeaderComponent
   ],
   templateUrl: './portfolios.component.html',
@@ -64,11 +58,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   sortField: string = 'name';
   sortOrder: number = 1;
   
-  // Selected portfolio for configuration/optimization
+  // Selected portfolio for detail view
   selectedPortfolio: PortfolioWithMetrics | null = null;
   
-  // Active tab index for switching between tabs
-  activeTab: string = "0";
+  // Active tab for the detail panel (overview, configure, holdings, trades)
+  activeTab: 'overview' | 'configure' | 'holdings' | 'trades' = 'overview';
 
 
   
@@ -359,58 +353,25 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       }
     };
     // Switch to Configure tab for new portfolio creation
-    this.activeTab = "1";
+    this.activeTab = 'configure';
   }
 
   selectPortfolio(portfolio: PortfolioWithMetrics): void {
-    // TODO: Navigate to portfolio details
-  }
-
-  editPortfolio(portfolio: PortfolioWithMetrics): void {
-    // TODO: Implement portfolio editing
-  }
-
-  configurePortfolio(portfolio: PortfolioWithMetrics): void {
     this.selectedPortfolio = portfolio;
-    this.activeTab = "1"; // Switch to Configure tab
-  }
-
-  optimizePortfolio(portfolio: PortfolioWithMetrics): void {
-    this.selectedPortfolio = portfolio;
-    this.activeTab = "2"; // Switch to Optimize tab
-  }
-
-  // Method to reset to Overview tab
-  resetToOverview(): void {
-    this.activeTab = "0";
-    this.selectedPortfolio = null;
+    // Default to overview tab when selecting a portfolio
+    this.activeTab = 'overview';
   }
 
   // Method to handle tab changes
-  onTabChange(index: string | number | undefined): void {
-    if (index !== undefined) {
-      this.activeTab = typeof index === 'string' ? index : index.toString();
+  onTabChange(tab: 'overview' | 'configure' | 'holdings' | 'trades' | string | number | undefined): void {
+    if (tab !== undefined) {
+      // Handle both string and number types from PrimeNG tabs
+      const tabValue = typeof tab === 'string' ? tab : tab.toString();
+      if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
+        this.activeTab = tabValue;
+      }
     }
   }
-
-  viewPortfolioData(portfolio: PortfolioWithMetrics): void {
-    // TODO: Navigate to portfolio data view
-  }
-
-  viewPortfolioInsights(portfolio: PortfolioWithMetrics): void {
-    // TODO: Navigate to portfolio insights
-  }
-
-  goToLogin(): void {
-    // AUTHENTICATION DISABLED - Redirect to dashboard instead
-    // TODO: Re-enable login redirect by uncommenting below when authentication is needed
-    // window.location.href = '/login';
-    
-    // Redirect to dashboard when authentication is disabled
-    window.location.href = '/dashboard';
-  }
-
-
 
   // Track function for ngFor
   trackPortfolioById(index: number, portfolio: PortfolioWithMetrics): string {
@@ -538,50 +499,5 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     return `linear-gradient(180deg, ${color}20 0%, ${color} 100%)`;
   }
 
-  // Methods for child component communication
-  onSaveChanges(portfolio: PortfolioWithMetrics): void {
-    if (!portfolio.id || portfolio.id === '') {
-      // This is a new portfolio creation
-      // TODO: Implement API call to create portfolio
-      // For now, simulate creation by adding to local array
-      const newPortfolio = {
-        ...portfolio,
-        id: Date.now().toString(), // Generate a unique ID
-        inceptionDate: new Date().toISOString().split('T')[0]
-      };
-      this.portfolios.push(newPortfolio);
-      
-      // For new portfolios, navigate to Overview to see the created portfolio
-      this.resetToOverview();
-    } else {
-      // This is an existing portfolio update
-      // TODO: Implement API call to update portfolio
-      const index = this.portfolios.findIndex(p => p.id === portfolio.id);
-      if (index !== -1) {
-        this.portfolios[index] = { ...portfolio };
-      }
-      
-      // For existing portfolio updates, stay on Configure tab to see the changes
-      // Don't call resetToOverview() - let user stay on current tab
-    }
-  }
 
-  onCancel(): void {
-    // TODO: Implement cancel logic
-    // Don't automatically navigate to Overview - let user decide where to go
-    // Just clear the selected portfolio to exit edit mode
-    this.selectedPortfolio = null;
-  }
-
-  onApplyOptimization(portfolio: PortfolioWithMetrics): void {
-    // TODO: Implement optimization logic
-    // Don't automatically navigate to Overview - let user decide where to go
-    // Just clear the selected portfolio to exit optimization mode
-    this.selectedPortfolio = null;
-  }
-
-  goToOverview(): void {
-    this.activeTab = "0";
-    this.selectedPortfolio = null;
-  }
 }

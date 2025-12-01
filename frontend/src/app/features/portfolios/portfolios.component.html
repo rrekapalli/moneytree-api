@@ -62,48 +62,174 @@
     </div>
   </div>
 
-  <!-- Portfolio Tabs -->
-  <p-tabs [(value)]="activeTab" class="portfolio-tabs" (valueChange)="onTabChange($event)">
-    <p-tablist>
-      <p-tab value="0">
+  <!-- Two-Panel Layout -->
+  <div class="two-panel-layout">
+    <!-- Left Sidebar -->
+    <div class="left-sidebar">
+      <!-- Search Input -->
+      <div class="search-section">
+        <span class="p-input-icon-left">
+          <i class="pi pi-search"></i>
+          <input 
+            type="text" 
+            pInputText 
+            [(ngModel)]="searchText" 
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search portfolios..." 
+            class="search-input" />
+        </span>
+      </div>
+
+      <!-- Portfolio List -->
+      <div class="portfolio-list" *ngIf="!loading">
+        <div 
+          *ngFor="let portfolio of filteredPortfolios; trackBy: trackPortfolioById"
+          class="portfolio-card"
+          [class.selected]="selectedPortfolio?.id === portfolio.id"
+          (click)="selectPortfolio(portfolio)">
+          
+          <div class="portfolio-card-header">
+            <h3 class="portfolio-name">{{ portfolio.name }}</h3>
+            <p-tag 
+              [value]="portfolio.isActive ? 'Active' : 'Inactive'" 
+              [severity]="portfolio.isActive ? 'success' : 'secondary'">
+            </p-tag>
+          </div>
+
+          <p class="portfolio-description">{{ portfolio.description }}</p>
+
+          <div class="portfolio-metrics">
+            <div class="metric">
+              <span class="metric-label">Return</span>
+              <span 
+                class="metric-value" 
+                [style.color]="getPerformanceColor(portfolio.totalReturn || 0)">
+                {{ formatReturn(portfolio.totalReturn || 0) }}
+              </span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Stocks</span>
+              <span class="metric-value">{{ portfolio.stockCount || 0 }}</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Outperformance</span>
+              <span 
+                class="metric-value" 
+                [style.color]="getPerformanceColor(portfolio.outperformance || 0)">
+                {{ formatReturn(portfolio.outperformance || 0) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="portfolio-footer">
+            <span class="last-executed">
+              <i class="pi pi-clock"></i>
+              Last: {{ portfolio.lastRebalance || 'N/A' }}
+            </span>
+            <span class="risk-profile">
+              <i [class]="getPortfolioIcon(portfolio.riskProfile)"></i>
+              {{ getRiskProfileLabel(portfolio.riskProfile) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div *ngIf="filteredPortfolios.length === 0" class="empty-state">
+          <i class="pi pi-inbox"></i>
+          <p>No portfolios found</p>
+          <p-button 
+            label="Clear Filters" 
+            icon="pi pi-filter-slash" 
+            (onClick)="clearFilters()"
+            [text]="true">
+          </p-button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>Loading portfolios...</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error" class="error-state">
+        <i class="pi pi-exclamation-triangle"></i>
+        <p>{{ error }}</p>
+        <p-button 
+          label="Retry" 
+          icon="pi pi-refresh" 
+          (onClick)="loadPortfolios()"
+          [text]="true">
+        </p-button>
+      </div>
+    </div>
+
+    <!-- Right Detail Panel -->
+    <div class="right-panel">
+      <!-- Show message when no portfolio is selected -->
+      <div *ngIf="!selectedPortfolio" class="no-selection-state">
         <i class="pi pi-chart-line"></i>
-        Overview
-      </p-tab>
-      <p-tab value="1">
-        <i class="pi pi-cog"></i>
-        Configure
-      </p-tab>
-      <p-tab value="2">
-        <i class="pi pi-chart-bar"></i>
-        Optimize
-      </p-tab>
-    </p-tablist>
-    <p-tabpanels>
-      <!-- Overview Tab Panel -->
-      <p-tabpanel value="0">
-        <app-portfolio-overview [portfolios]="portfolios" [filteredPortfolios]="filteredPortfolios" [loading]="loading"
-          [error]="error" [searchText]="searchText" [selectedRiskProfile]="selectedRiskProfile" [layout]="layout"
-          [sortField]="sortField" [sortOrder]="sortOrder" [riskProfileOptions]="riskProfileOptions"
-          (searchChange)="onSearchChange()" (riskProfileChange)="onRiskProfileChange()" (clearFilters)="clearFilters()"
-          (sortChange)="onSortChange($event)" (layoutChange)="layout = $event"
-          (configurePortfolio)="configurePortfolio($event)" (optimizePortfolio)="optimizePortfolio($event)"
-          (createPortfolio)="createPortfolio()" (goToLogin)="goToLogin()">
-        </app-portfolio-overview>
-      </p-tabpanel>
+        <h3>Select a Portfolio</h3>
+        <p>Choose a portfolio from the list to view details and manage settings</p>
+      </div>
 
-      <!-- Configure Tab Panel -->
-      <p-tabpanel value="1">
-        <app-portfolio-configure [selectedPortfolio]="selectedPortfolio" [riskProfileOptions]="riskProfileOptions"
-          (saveChanges)="onSaveChanges($event)" (cancel)="onCancel()" (goToOverview)="goToOverview()">
-        </app-portfolio-configure>
-      </p-tabpanel>
+      <!-- Show tabs when a portfolio is selected -->
+      <div *ngIf="selectedPortfolio" class="portfolio-detail">
+        <p-tabs [(value)]="activeTab" (valueChange)="onTabChange($event)">
+          <p-tablist>
+            <p-tab value="overview">
+              <i class="pi pi-chart-line"></i>
+              Overview
+            </p-tab>
+            <p-tab value="configure">
+              <i class="pi pi-cog"></i>
+              Configure
+            </p-tab>
+            <p-tab value="holdings">
+              <i class="pi pi-briefcase"></i>
+              Holdings
+            </p-tab>
+            <p-tab value="trades">
+              <i class="pi pi-history"></i>
+              Trades
+            </p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <!-- Overview Tab -->
+            <p-tabpanel value="overview">
+              <div class="tab-content">
+                <h3>Overview - {{ selectedPortfolio.name }}</h3>
+                <p>Overview content will be implemented in future tasks</p>
+              </div>
+            </p-tabpanel>
 
-      <!-- Optimize Tab Panel -->
-      <p-tabpanel value="2">
-        <app-portfolio-optimize [selectedPortfolio]="selectedPortfolio"
-          (applyOptimization)="onApplyOptimization($event)">
-        </app-portfolio-optimize>
-      </p-tabpanel>
-    </p-tabpanels>
-  </p-tabs>
+            <!-- Configure Tab -->
+            <p-tabpanel value="configure">
+              <div class="tab-content">
+                <h3>Configure - {{ selectedPortfolio.name }}</h3>
+                <p>Configure content will be implemented in future tasks</p>
+              </div>
+            </p-tabpanel>
+
+            <!-- Holdings Tab -->
+            <p-tabpanel value="holdings">
+              <div class="tab-content">
+                <h3>Holdings - {{ selectedPortfolio.name }}</h3>
+                <p>Holdings content will be implemented in future tasks</p>
+              </div>
+            </p-tabpanel>
+
+            <!-- Trades Tab -->
+            <p-tabpanel value="trades">
+              <div class="tab-content">
+                <h3>Trades - {{ selectedPortfolio.name }}</h3>
+                <p>Trades content will be implemented in future tasks</p>
+              </div>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      </div>
+    </div>
+  </div>
 </div>
