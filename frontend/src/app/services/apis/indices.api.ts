@@ -156,14 +156,11 @@ export class IndicesService {
     if (startDate && endDate && startDate.trim() !== '' && endDate.trim() !== '') {
       payload.start_date = startDate;
       payload.end_date = endDate;
-      console.log('📅 Using date range:', { start_date: startDate, end_date: endDate });
     } else {
       // Use provided days or default to 365
       payload.days = days !== undefined ? days : 365;
-      console.log('📅 Using days:', payload.days);
     }
     
-    console.log('📤 API Payload:', JSON.stringify(payload, null, 2));
     return this.apiService.post<IndexHistoricalData[]>(`${this.endpoint}/historical-data`, payload);
   }
 
@@ -192,14 +189,11 @@ export class IndicesService {
     if (startDate && endDate && startDate.trim() !== '' && endDate.trim() !== '') {
       payload.start_date = startDate;
       payload.end_date = endDate;
-      console.log('📅 Using date range:', { start_date: startDate, end_date: endDate });
     } else {
       // Use provided days or default to 365
       payload.days = days !== undefined ? days : 365;
-      console.log('📅 Using days:', payload.days);
     }
     
-    console.log('📤 API Payload:', JSON.stringify(payload, null, 2));
     return this.apiService.post<any[]>(`/api/v1/historical-data`, payload);
   }
 }

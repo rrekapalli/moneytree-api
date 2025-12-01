@@ -106,8 +106,6 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
    * Update stocks data from widget.data
    */
   private updateStocksFromWidget(): void {
-    console.log('🔄 StockListTable: Updating stocks from widget data:', this.widget?.data);
-    
     if (this.widget?.data?.stocks && this.widget.data.stocks.length > 0) {
       this.stocks = this.widget.data.stocks;
       this.isLoadingStocks = this.widget.data.isLoadingStocks || false;
@@ -115,14 +113,10 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
       // Update selected stock symbol from widget data
       if (this.widget.data.selectedStockSymbol !== undefined) {
         this.selectedStockSymbol = this.widget.data.selectedStockSymbol;
-        console.log('📊 StockListTable: Updated selected stock symbol to:', this.selectedStockSymbol);
       }
-      
-      console.log('✅ StockListTable: Updated with', this.stocks.length, 'stocks');
     } else if (!this.stocks || this.stocks.length === 0) {
       // Ensure stocks is initialized as empty array if no data
       this.stocks = [];
-      console.log('⚠️ StockListTable: No stock data available, using empty array');
     }
   }
 
@@ -204,8 +198,6 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
    * Handle row double-click event in the table
    */
   onRowDoubleClick(rowData: any): void {
-    console.log('📊 StockListTable: Row double-clicked:', rowData);
-    
     // Transform the row data to SelectedStockData format
     const selectedStockData: SelectedStockData = {
       id: rowData.symbol || 'unknown',
@@ -220,8 +212,6 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
       industry: rowData.industry,
       sector: rowData.sector
     };
-
-    console.log('📤 StockListTable: Emitting stockDoubleClicked event:', selectedStockData);
     
     // Emit the double-clicked stock data
     this.stockDoubleClicked.emit(selectedStockData);
@@ -264,8 +254,6 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
    * Load sample data for testing
    */
   loadSampleData(): void {
-    console.log('🎲 StockListTable: Loading sample data for testing');
-    
     const sampleStocks: StockListData[] = [
       {
         symbol: 'RELIANCE',
