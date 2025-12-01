@@ -171,7 +171,7 @@
   - **Property 22: Successful creation updates sidebar**
   - **Validates: Requirements 8.4**
 
-- [ ] 11. Implement visual styling and color coding
+- [x] 11. Implement visual styling and color coding
   - Apply color coding to portfolio return percentages (green for positive, red for negative)
   - Style portfolio cards with proper spacing and borders
   - Style selected portfolio with highlight
@@ -179,11 +179,11 @@
   - Ensure responsive layout for different screen sizes
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 11.1 Write property test for return color coding
+- [x] 11.1 Write property test for return color coding
   - **Property 23: Return color coding**
   - **Validates: Requirements 9.2**
 
-- [ ] 12. Checkpoint - Ensure all tests pass
+- [x] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 13. Implement error handling and loading states
