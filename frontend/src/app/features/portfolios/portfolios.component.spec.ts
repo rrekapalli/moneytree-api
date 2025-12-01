@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { PortfoliosComponent } from './portfolios.component';
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
+import { PortfolioTradeApiService } from '../../services/apis/portfolio-trade.api';
 import { ToastService } from '../../services/toast.service';
 import { of, throwError, Observable } from 'rxjs';
 import { PortfolioWithMetrics } from './portfolio.types';
@@ -47,11 +48,16 @@ describe('PortfoliosComponent', () => {
     const mockPortfolioHoldingApiService = jasmine.createSpyObj('PortfolioHoldingApiService', ['getHoldings']);
     mockPortfolioHoldingApiService.getHoldings.and.returnValue(of([]));
 
+    // Create a spy object for PortfolioTradeApiService
+    const mockPortfolioTradeApiService = jasmine.createSpyObj('PortfolioTradeApiService', ['getTrades']);
+    mockPortfolioTradeApiService.getTrades.and.returnValue(of([]));
+
     await TestBed.configureTestingModule({
       imports: [PortfoliosComponent],
       providers: [
         { provide: PortfolioApiService, useValue: mockPortfolioApiService },
         { provide: PortfolioHoldingApiService, useValue: mockPortfolioHoldingApiService },
+        { provide: PortfolioTradeApiService, useValue: mockPortfolioTradeApiService },
         ToastService
       ]
     }).compileComponents();
@@ -833,6 +839,184 @@ describe('PortfoliosComponent', () => {
       expect(component.holdingsLoading).toBe(false);
       
       const errorState = fixture.debugElement.query(By.css('.holdings-error-state'));
+      expect(errorState).toBeTruthy();
+    });
+  });
+
+  describe('Trades Tab', () => {
+    let mockPortfolioTradeApiService: jasmine.SpyObj<any>;
+
+    beforeEach(() => {
+      // Create a spy object for PortfolioTradeApiService
+      mockPortfolioTradeApiService = jasmine.createSpyObj('PortfolioTradeApiService', ['getTrades']);
+      mockPortfolioTradeApiService.getTrades.and.returnValue(of([]));
+      
+      // Replace the service in the component
+      (component as any).portfolioTradeApiService = mockPortfolioTradeApiService;
+    });
+
+    // **Feature: portfolio-dashboard-refactor, Property 18: Trades tab triggers API fetch**
+    // **Validates: Requirements 7.1**
+    describe('Property 18: Trades tab triggers API fetch', () => {
+      it('should fetch trades when Trades tab is selected', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ maxLength: 200 })
+            }),
+            (portfolioData) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Reset the spy
+              mockPortfolioTradeApiService.getTrades.calls.reset();
+              mockPortfolioTradeApiService.getTrades.and.returnValue(of([]));
+
+              // Select a portfolio
+              component.selectPortfolio(portfolio);
+              
+              // Switch to trades tab
+              component.onTabChange('trades');
+
+              // Verify API was called with the correct portfolio ID
+              expect(mockPortfolioTradeApiService.getTrades).toHaveBeenCalledWith(portfolio.id);
+              expect(mockPortfolioTradeApiService.getTrades).toHaveBeenCalledTimes(1);
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    // **Feature: portfolio-dashboard-refactor, Property 19: Trades data display completeness**
+    // **Validates: Requirements 7.2**
+    describe('Property 19: Trades data display completeness', () => {
+      it('should display all required columns for each trade', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 })
+            }),
+            fc.array(
+              fc.record({
+                tradeId: fc.uuid(),
+                portfolioId: fc.uuid(),
+                symbol: fc.string({ minLength: 1, maxLength: 10 }).map(s => s.toUpperCase()),
+                entryDate: fc.date({ min: new Date('2020-01-01'), max: new Date('2024-12-31') }).map(d => d.toISOString()),
+                entryPrice: fc.double({ min: 1, max: 10000, noNaN: true }),
+                exitDate: fc.date({ min: new Date('2020-01-01'), max: new Date('2024-12-31') }).map(d => d.toISOString()),
+                exitPrice: fc.double({ min: 1, max: 10000, noNaN: true }),
+                quantity: fc.integer({ min: 1, max: 10000 }),
+                principal: fc.double({ min: 1, max: 100000, noNaN: true }),
+                profit: fc.double({ min: -50000, max: 50000, noNaN: true }),
+                profitPct: fc.double({ min: -100, max: 500, noNaN: true }),
+                exitType: fc.constantFrom('TP', 'SL'),
+                holdingDays: fc.integer({ min: 1, max: 365 })
+              }),
+              { minLength: 1, maxLength: 10 }
+            ),
+            (portfolioData, tradesData) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Mock the API response
+              mockPortfolioTradeApiService.getTrades.and.returnValue(of(tradesData));
+
+              // Select portfolio and switch to trades tab
+              component.selectPortfolio(portfolio);
+              component.onTabChange('trades');
+              fixture.detectChanges();
+
+              // Verify trades are loaded
+              expect(component.trades.length).toBe(tradesData.length);
+
+              // Check that the table is rendered
+              const table = fixture.debugElement.query(By.css('.trades-table-container p-table'));
+              expect(table).toBeTruthy();
+
+              // Verify each trade has all required data
+              component.trades.forEach((trade, index) => {
+                const expectedTrade = tradesData[index];
+                expect(trade.symbol).toBe(expectedTrade.symbol);
+                expect(trade.entryDate).toBe(expectedTrade.entryDate);
+                expect(trade.entryPrice).toBe(expectedTrade.entryPrice);
+                expect(trade.exitDate).toBe(expectedTrade.exitDate);
+                expect(trade.exitPrice).toBe(expectedTrade.exitPrice);
+                expect(trade.quantity).toBe(expectedTrade.quantity);
+                expect(trade.profit).toBe(expectedTrade.profit);
+                expect(trade.profitPct).toBe(expectedTrade.profitPct);
+                
+                // Verify all values are valid numbers
+                expect(typeof trade.entryPrice).toBe('number');
+                expect(typeof trade.exitPrice).toBe('number');
+                expect(typeof trade.quantity).toBe('number');
+                expect(typeof trade.profit).toBe('number');
+                expect(typeof trade.profitPct).toBe('number');
+                expect(isNaN(trade.entryPrice)).toBe(false);
+                expect(isNaN(trade.exitPrice)).toBe(false);
+                expect(isNaN(trade.profit)).toBe(false);
+                expect(isNaN(trade.profitPct)).toBe(false);
+              });
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    it('should display loading state while fetching trades', () => {
+      const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+      
+      // Mock a delayed response
+      mockPortfolioTradeApiService.getTrades.and.returnValue(
+        new Observable(subscriber => {
+          setTimeout(() => {
+            subscriber.next([]);
+            subscriber.complete();
+          }, 100);
+        })
+      );
+
+      component.selectPortfolio(portfolio);
+      component.onTabChange('trades');
+      
+      // Check loading state is true
+      expect(component.tradesLoading).toBe(true);
+    });
+
+    it('should display empty state when no trades exist', () => {
+      const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+      
+      mockPortfolioTradeApiService.getTrades.and.returnValue(of([]));
+
+      component.selectPortfolio(portfolio);
+      component.onTabChange('trades');
+      fixture.detectChanges();
+
+      expect(component.trades.length).toBe(0);
+      expect(component.tradesLoading).toBe(false);
+      
+      const emptyState = fixture.debugElement.query(By.css('.trades-empty-state'));
+      expect(emptyState).toBeTruthy();
+    });
+
+    it('should display error state when API call fails', () => {
+      const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+      const errorMessage = 'Failed to load trades';
+      
+      mockPortfolioTradeApiService.getTrades.and.returnValue(
+        throwError(() => ({ error: { message: errorMessage } }))
+      );
+
+      component.selectPortfolio(portfolio);
+      component.onTabChange('trades');
+      fixture.detectChanges();
+
+      expect(component.tradesError).toBeTruthy();
+      expect(component.tradesLoading).toBe(false);
+      
+      const errorState = fixture.debugElement.query(By.css('.trades-error-state'));
       expect(errorState).toBeTruthy();
     });
   });
