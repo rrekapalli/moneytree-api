@@ -316,6 +316,96 @@ describe('PortfoliosComponent', () => {
     });
   });
 
+  describe('Tab Navigation', () => {
+    // **Feature: portfolio-dashboard-refactor, Property 10: Tab visibility on portfolio selection**
+    // **Validates: Requirements 3.1**
+    describe('Property 10: Tab visibility on portfolio selection', () => {
+      it('should display all four tabs when a portfolio is selected', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ maxLength: 200 }),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'),
+              isActive: fc.boolean()
+            }),
+            (portfolioData) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              component.selectedPortfolio = portfolio;
+              fixture.detectChanges();
+
+              // Check that all four tabs are rendered
+              const tabs = fixture.debugElement.queryAll(By.css('p-tab'));
+              expect(tabs.length).toBe(4);
+
+              // Verify each tab is present by checking their values
+              const tabValues = tabs.map(tab => tab.nativeElement.getAttribute('ng-reflect-value') || tab.nativeElement.getAttribute('value'));
+              expect(tabValues).toContain('overview');
+              expect(tabValues).toContain('configure');
+              expect(tabValues).toContain('holdings');
+              expect(tabValues).toContain('trades');
+
+              // Verify tabs are visible (not hidden)
+              tabs.forEach(tab => {
+                const isVisible = tab.nativeElement.offsetParent !== null || 
+                                  window.getComputedStyle(tab.nativeElement).display !== 'none';
+                expect(isVisible).toBe(true);
+              });
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    // **Feature: portfolio-dashboard-refactor, Property 11: Portfolio context preservation across tab switches**
+    // **Validates: Requirements 3.5**
+    describe('Property 11: Portfolio context preservation across tab switches', () => {
+      it('should preserve selected portfolio when switching between tabs', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ maxLength: 200 })
+            }),
+            fc.array(
+              fc.constantFrom('overview', 'configure', 'holdings', 'trades'),
+              { minLength: 1, maxLength: 10 }
+            ),
+            (portfolioData, tabSequence) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Select a portfolio
+              component.selectPortfolio(portfolio);
+              expect(component.selectedPortfolio).toBeTruthy();
+              expect(component.selectedPortfolio?.id).toBe(portfolio.id);
+
+              const originalPortfolioId = component.selectedPortfolio?.id;
+              const originalPortfolioName = component.selectedPortfolio?.name;
+
+              // Switch through the sequence of tabs
+              tabSequence.forEach(tab => {
+                component.onTabChange(tab);
+                
+                // Verify portfolio context is preserved
+                expect(component.selectedPortfolio).toBeTruthy();
+                expect(component.selectedPortfolio?.id).toBe(originalPortfolioId);
+                expect(component.selectedPortfolio?.name).toBe(originalPortfolioName);
+                
+                // Verify the active tab was updated
+                expect(component.activeTab).toBe(tab);
+              });
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+  });
+
   describe('Summary Statistics', () => {
     it('should calculate total portfolios correctly', () => {
       const mockPortfolios = [
