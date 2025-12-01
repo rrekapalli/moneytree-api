@@ -193,14 +193,14 @@
   - Implement retry mechanisms where appropriate
   - _Requirements: 5.4, 6.3, 6.5, 7.3, 7.5_
 
-- [ ] 14. Add accessibility features
+- [x] 14. Add accessibility features
   - Add ARIA labels to all interactive elements
   - Implement keyboard navigation support
   - Add screen reader announcements for dynamic content
   - Ensure proper focus management
   - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 14.1 Write unit tests for accessibility features
+- [x] 14.1 Write unit tests for accessibility features
   - Test ARIA labels presence
   - Test keyboard navigation
   - Test focus management

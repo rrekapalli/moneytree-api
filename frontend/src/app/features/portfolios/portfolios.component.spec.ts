@@ -1236,6 +1236,287 @@ describe('PortfoliosComponent', () => {
     });
   });
 
+  describe('Accessibility Features', () => {
+    describe('ARIA Labels', () => {
+      it('should have ARIA labels on summary cards', () => {
+        const mockPortfolios = [
+          createMockPortfolio({ id: '1', riskProfile: 'CONSERVATIVE', isActive: true }),
+          createMockPortfolio({ id: '2', riskProfile: 'MODERATE', isActive: true }),
+          createMockPortfolio({ id: '3', riskProfile: 'AGGRESSIVE', isActive: false })
+        ];
+        component.portfolios = mockPortfolios;
+        fixture.detectChanges();
+
+        const summaryCards = fixture.debugElement.queryAll(By.css('.summary-card'));
+        expect(summaryCards.length).toBeGreaterThan(0);
+
+        summaryCards.forEach(card => {
+          const ariaLabel = card.nativeElement.getAttribute('aria-label');
+          expect(ariaLabel).toBeTruthy();
+          expect(ariaLabel).toContain('count');
+        });
+      });
+
+      it('should have ARIA label on search input', () => {
+        fixture.detectChanges();
+        const searchInput = fixture.debugElement.query(By.css('#portfolio-search'));
+        expect(searchInput).toBeTruthy();
+        
+        const ariaLabel = searchInput.nativeElement.getAttribute('aria-label');
+        expect(ariaLabel).toBeTruthy();
+        expect(ariaLabel.toLowerCase()).toContain('search');
+      });
+
+      it('should have ARIA labels on portfolio cards', () => {
+        const mockPortfolios = [
+          createMockPortfolio({ id: '1', name: 'Test Portfolio 1', totalReturn: 10.5, isActive: true }),
+          createMockPortfolio({ id: '2', name: 'Test Portfolio 2', totalReturn: -5.2, isActive: false })
+        ];
+        component.portfolios = mockPortfolios;
+        component.filteredPortfolios = mockPortfolios;
+        fixture.detectChanges();
+
+        const portfolioCards = fixture.debugElement.queryAll(By.css('.portfolio-card'));
+        expect(portfolioCards.length).toBe(2);
+
+        portfolioCards.forEach((card, index) => {
+          const ariaLabel = card.nativeElement.getAttribute('aria-label');
+          expect(ariaLabel).toBeTruthy();
+          expect(ariaLabel).toContain(mockPortfolios[index].name);
+        });
+      });
+
+      it('should have ARIA labels on action buttons', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        component.selectPortfolio(portfolio);
+        component.activeTab = 'configure';
+        fixture.detectChanges();
+
+        const resetButton = fixture.debugElement.query(By.css('p-button[label="Reset"]'));
+        const saveButton = fixture.debugElement.query(By.css('p-button[label="Save Configuration"]'));
+
+        if (resetButton) {
+          const ariaLabel = resetButton.nativeElement.getAttribute('aria-label');
+          expect(ariaLabel).toBeTruthy();
+        }
+
+        if (saveButton) {
+          const ariaLabel = saveButton.nativeElement.getAttribute('aria-label');
+          expect(ariaLabel).toBeTruthy();
+        }
+      });
+
+      it('should have role attributes on tables', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        component.selectPortfolio(portfolio);
+        component.activeTab = 'holdings';
+        component.holdings = [{
+          id: '1',
+          portfolioId: '1',
+          symbol: 'AAPL',
+          quantity: 10,
+          avgCost: 150,
+          realizedPnl: 0,
+          lastUpdated: new Date().toISOString(),
+          currentPrice: 160
+        }];
+        fixture.detectChanges();
+
+        const table = fixture.debugElement.query(By.css('p-table'));
+        if (table) {
+          const ariaLabel = table.nativeElement.getAttribute('aria-label');
+          expect(ariaLabel).toBeTruthy();
+        }
+      });
+    });
+
+    describe('Keyboard Navigation', () => {
+      it('should allow keyboard navigation on portfolio cards', () => {
+        const mockPortfolios = [
+          createMockPortfolio({ id: '1', name: 'Portfolio 1' }),
+          createMockPortfolio({ id: '2', name: 'Portfolio 2' })
+        ];
+        component.portfolios = mockPortfolios;
+        component.filteredPortfolios = mockPortfolios;
+        fixture.detectChanges();
+
+        const portfolioCards = fixture.debugElement.queryAll(By.css('.portfolio-card'));
+        expect(portfolioCards.length).toBe(2);
+
+        portfolioCards.forEach(card => {
+          const tabindex = card.nativeElement.getAttribute('tabindex');
+          expect(tabindex).toBe('0');
+        });
+      });
+
+      it('should select portfolio on Enter key press', () => {
+        const mockPortfolios = [
+          createMockPortfolio({ id: '1', name: 'Portfolio 1' }),
+          createMockPortfolio({ id: '2', name: 'Portfolio 2' })
+        ];
+        component.portfolios = mockPortfolios;
+        component.filteredPortfolios = mockPortfolios;
+        component.selectedPortfolio = null;
+        fixture.detectChanges();
+
+        const firstCard = fixture.debugElement.query(By.css('.portfolio-card'));
+        expect(firstCard).toBeTruthy();
+
+        // Simulate Enter key press
+        const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter' });
+        firstCard.nativeElement.dispatchEvent(enterEvent);
+        fixture.detectChanges();
+
+        expect(component.selectedPortfolio).toBeTruthy();
+        expect(component.selectedPortfolio).not.toBeNull();
+        expect(component.selectedPortfolio!.id).toBe(mockPortfolios[0].id);
+      });
+
+      it('should select portfolio on Space key press', () => {
+        const mockPortfolios = [
+          createMockPortfolio({ id: '1', name: 'Portfolio 1' }),
+          createMockPortfolio({ id: '2', name: 'Portfolio 2' })
+        ];
+        component.portfolios = mockPortfolios;
+        component.filteredPortfolios = mockPortfolios;
+        component.selectedPortfolio = null;
+        fixture.detectChanges();
+
+        const firstCard = fixture.debugElement.query(By.css('.portfolio-card'));
+        expect(firstCard).toBeTruthy();
+
+        // Simulate Space key press
+        const spaceEvent = new KeyboardEvent('keydown', { key: ' ', code: 'Space' });
+        firstCard.nativeElement.dispatchEvent(spaceEvent);
+        fixture.detectChanges();
+
+        expect(component.selectedPortfolio).toBeTruthy();
+        expect(component.selectedPortfolio).not.toBeNull();
+        expect(component.selectedPortfolio!.id).toBe(mockPortfolios[0].id);
+      });
+    });
+
+    describe('Focus Management', () => {
+      it('should have visible focus indicator on portfolio cards', () => {
+        const mockPortfolios = [createMockPortfolio({ id: '1', name: 'Test Portfolio' })];
+        component.portfolios = mockPortfolios;
+        component.filteredPortfolios = mockPortfolios;
+        fixture.detectChanges();
+
+        const portfolioCard = fixture.debugElement.query(By.css('.portfolio-card'));
+        expect(portfolioCard).toBeTruthy();
+
+        // Focus the card
+        portfolioCard.nativeElement.focus();
+        fixture.detectChanges();
+
+        // Check if the element can receive focus
+        expect(document.activeElement).toBe(portfolioCard.nativeElement);
+      });
+
+      it('should maintain focus context when switching tabs', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        component.selectPortfolio(portfolio);
+        component.activeTab = 'overview';
+        fixture.detectChanges();
+
+        // Switch to configure tab
+        component.onTabChange('configure');
+        fixture.detectChanges();
+
+        // Verify portfolio context is maintained
+        expect(component.selectedPortfolio).toBeTruthy();
+        expect(component.selectedPortfolio?.id).toBe(portfolio.id);
+        expect(component.activeTab).toBe('configure');
+      });
+
+      it('should have proper aria-selected on portfolio cards', () => {
+        const mockPortfolios = [
+          createMockPortfolio({ id: '1', name: 'Portfolio 1' }),
+          createMockPortfolio({ id: '2', name: 'Portfolio 2' })
+        ];
+        component.portfolios = mockPortfolios;
+        component.filteredPortfolios = mockPortfolios;
+        component.selectedPortfolio = mockPortfolios[0];
+        fixture.detectChanges();
+
+        const portfolioCards = fixture.debugElement.queryAll(By.css('.portfolio-card'));
+        expect(portfolioCards.length).toBe(2);
+
+        const firstCardAriaSelected = portfolioCards[0].nativeElement.getAttribute('aria-selected');
+        const secondCardAriaSelected = portfolioCards[1].nativeElement.getAttribute('aria-selected');
+
+        expect(firstCardAriaSelected).toBe('true');
+        expect(secondCardAriaSelected).toBe('false');
+      });
+    });
+
+    describe('Screen Reader Announcements', () => {
+      it('should have aria-live regions for loading states', () => {
+        component.loading = true;
+        fixture.detectChanges();
+
+        const loadingState = fixture.debugElement.query(By.css('.loading-state'));
+        expect(loadingState).toBeTruthy();
+
+        const ariaLive = loadingState.nativeElement.getAttribute('aria-live');
+        expect(ariaLive).toBe('polite');
+      });
+
+      it('should have aria-live regions for error states', () => {
+        component.error = 'Test error message';
+        fixture.detectChanges();
+
+        const errorState = fixture.debugElement.query(By.css('.error-state'));
+        expect(errorState).toBeTruthy();
+
+        const ariaLive = errorState.nativeElement.getAttribute('aria-live');
+        expect(ariaLive).toBe('assertive');
+      });
+
+      it('should have aria-live on summary card values', () => {
+        const mockPortfolios = [createMockPortfolio({ id: '1' })];
+        component.portfolios = mockPortfolios;
+        fixture.detectChanges();
+
+        const cardValues = fixture.debugElement.queryAll(By.css('.card-value'));
+        expect(cardValues.length).toBeGreaterThan(0);
+
+        cardValues.forEach(value => {
+          const ariaLive = value.nativeElement.getAttribute('aria-live');
+          expect(ariaLive).toBe('polite');
+        });
+      });
+
+      it('should have aria-busy on loading states', () => {
+        component.loading = true;
+        fixture.detectChanges();
+
+        const loadingState = fixture.debugElement.query(By.css('.loading-state'));
+        expect(loadingState).toBeTruthy();
+
+        const ariaBusy = loadingState.nativeElement.getAttribute('aria-busy');
+        expect(ariaBusy).toBe('true');
+      });
+    });
+
+    describe('Decorative Icons', () => {
+      it('should mark decorative icons as aria-hidden', () => {
+        const mockPortfolios = [createMockPortfolio({ id: '1' })];
+        component.portfolios = mockPortfolios;
+        fixture.detectChanges();
+
+        const icons = fixture.debugElement.queryAll(By.css('.card-icon i'));
+        expect(icons.length).toBeGreaterThan(0);
+
+        icons.forEach(icon => {
+          const ariaHidden = icon.nativeElement.getAttribute('aria-hidden');
+          expect(ariaHidden).toBe('true');
+        });
+      });
+    });
+  });
+
   describe('API Error Handling', () => {
     // **Feature: portfolio-dashboard-refactor, Property 14: API error handling displays error message**
     // **Validates: Requirements 5.4, 6.5, 7.5**
