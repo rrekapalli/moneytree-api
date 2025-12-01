@@ -251,6 +251,13 @@
   opacity: 1;
 }
 
+.retry-info {
+  font-size: 0.85rem;
+  color: var(--text-color-secondary, #6c757d);
+  font-style: italic;
+  margin-top: 0.5rem;
+}
+
 .error-state i {
   color: var(--red-500, #ef4444);
   opacity: 1;

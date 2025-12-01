@@ -150,6 +150,7 @@
       <div *ngIf="loading" class="loading-state">
         <i class="pi pi-spin pi-spinner"></i>
         <p>Loading portfolios...</p>
+        <p *ngIf="retryCount > 0" class="retry-info">Retrying... (Attempt {{ retryCount + 1 }} of {{ maxRetries + 1 }})</p>
       </div>
 
       <!-- Error State -->
@@ -388,6 +389,7 @@
                 <div *ngIf="holdingsLoading" class="holdings-loading-state">
                   <i class="pi pi-spin pi-spinner"></i>
                   <p>Loading holdings...</p>
+                  <p *ngIf="holdingsRetryCount > 0" class="retry-info">Retrying... (Attempt {{ holdingsRetryCount + 1 }} of {{ maxRetries + 1 }})</p>
                 </div>
 
                 <!-- Error State -->
@@ -470,6 +472,7 @@
                 <div *ngIf="tradesLoading" class="trades-loading-state">
                   <i class="pi pi-spin pi-spinner"></i>
                   <p>Loading trades...</p>
+                  <p *ngIf="tradesRetryCount > 0" class="retry-info">Retrying... (Attempt {{ tradesRetryCount + 1 }} of {{ maxRetries + 1 }})</p>
                 </div>
 
                 <!-- Error State -->

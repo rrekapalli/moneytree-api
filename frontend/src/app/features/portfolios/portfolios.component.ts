@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { ToggleButtonModule } from 'primeng/togglebutton';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
-import { Subject, takeUntil, finalize } from 'rxjs';
+import { Subject, takeUntil, finalize, retry, timer, catchError, throwError } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
@@ -58,6 +58,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   filteredPortfolios: PortfolioWithMetrics[] = [];
   loading = false;
   error: string | null = null;
+  retryCount = 0;
+  maxRetries = 2;
   
   // Search and filter properties
   searchText = '';
@@ -84,6 +86,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   holdings: PortfolioHolding[] = [];
   holdingsLoading = false;
   holdingsError: string | null = null;
+  holdingsRetryCount = 0;
 
   // Configure tab dropdown options
   riskProfileOptions = [
@@ -108,6 +111,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   trades: PortfolioTrade[] = [];
   tradesLoading = false;
   tradesError: string | null = null;
+  tradesRetryCount = 0;
 
   constructor(
     private portfolioApiService: PortfolioApiService,
@@ -151,11 +155,27 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   loadPortfolios(): void {
     this.loading = true;
     this.error = null;
+    this.retryCount = 0;
     
     this.portfolioApiService.getPortfolios()
       .pipe(
+        retry({
+          count: this.maxRetries,
+          delay: (error, retryCount) => {
+            this.retryCount = retryCount;
+            // Exponential backoff: 1s, 2s, 4s
+            return timer(Math.pow(2, retryCount - 1) * 1000);
+          }
+        }),
         takeUntil(this.destroy$),
-        finalize(() => this.loading = false)
+        finalize(() => {
+          this.loading = false;
+          this.retryCount = 0;
+        }),
+        catchError((error) => {
+          this.handlePortfolioLoadError(error);
+          return throwError(() => error);
+        })
       )
       .subscribe({
         next: (data) => {
@@ -164,22 +184,47 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
             // Enhance portfolios with mock performance data for demonstration
             this.portfolios = this.enhancePortfoliosWithMetrics(data);
             this.applyFilters();
+            this.error = null;
           } else {
-            this.error = 'Invalid data format received from API';
+            this.error = 'Invalid data format received from API. Please contact support.';
           }
         },
-        error: (error) => {
-          if (error.status === 401) {
-            this.error = 'Authentication expired. Please log in again.';
-            // Clear invalid token
-            localStorage.removeItem('auth_token');
-          } else {
-            // For demo purposes, create mock portfolios when API fails
-            this.portfolios = this.createMockPortfolios();
-            this.applyFilters();
-          }
+        error: () => {
+          // Error already handled in catchError
         }
       });
+  }
+
+  private handlePortfolioLoadError(error: any): void {
+    console.error('Error loading portfolios:', error);
+    
+    if (error.status === 0) {
+      // Network error
+      this.error = 'Unable to connect to the server. Please check your internet connection and try again.';
+    } else if (error.status === 401) {
+      // Authentication error
+      this.error = 'Your session has expired. Please log in again.';
+      localStorage.removeItem('auth_token');
+    } else if (error.status === 403) {
+      // Authorization error
+      this.error = 'You do not have permission to view portfolios.';
+    } else if (error.status === 404) {
+      // Not found
+      this.error = 'Portfolio service not found. Please contact support.';
+    } else if (error.status >= 500) {
+      // Server error
+      this.error = 'Server error occurred. Please try again later or contact support.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      // Timeout error
+      this.error = 'Request timed out. Please check your connection and try again.';
+    } else {
+      // Generic error
+      this.error = error.error?.message || 'Failed to load portfolios. Please try again.';
+    }
+    
+    // For demo purposes, create mock portfolios when API fails
+    this.portfolios = this.createMockPortfolios();
+    this.applyFilters();
   }
 
   // Create mock portfolios for demonstration
@@ -623,8 +668,16 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
     apiCall
       .pipe(
+        retry({
+          count: 1,
+          delay: 1000
+        }),
         takeUntil(this.destroy$),
-        finalize(() => this.savingConfig = false)
+        finalize(() => this.savingConfig = false),
+        catchError((error) => {
+          this.handleSaveConfigError(error, isNewPortfolio);
+          return throwError(() => error);
+        })
       )
       .subscribe({
         next: (updatedPortfolio) => {
@@ -662,14 +715,41 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           this.originalConfigForm = { ...this.configForm };
           this.configFormDirty = false;
         },
-        error: (error) => {
-          console.error('Error saving portfolio configuration:', error);
-          this.toastService.showError({
-            summary: 'Save Failed',
-            detail: error.error?.message || 'Failed to save portfolio configuration. Please try again.'
-          });
+        error: () => {
+          // Error already handled in catchError
         }
       });
+  }
+
+  private handleSaveConfigError(error: any, isNewPortfolio: boolean): void {
+    console.error('Error saving portfolio configuration:', error);
+    
+    let errorMessage: string;
+    
+    if (error.status === 0) {
+      errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+    } else if (error.status === 400) {
+      errorMessage = error.error?.message || 'Invalid portfolio data. Please check your inputs and try again.';
+    } else if (error.status === 401) {
+      errorMessage = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      errorMessage = 'You do not have permission to ' + (isNewPortfolio ? 'create' : 'update') + ' portfolios.';
+    } else if (error.status === 404) {
+      errorMessage = 'Portfolio not found. It may have been deleted.';
+    } else if (error.status === 409) {
+      errorMessage = 'A portfolio with this name already exists. Please choose a different name.';
+    } else if (error.status >= 500) {
+      errorMessage = 'Server error occurred. Please try again later or contact support.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      errorMessage = 'Request timed out. Please try again.';
+    } else {
+      errorMessage = error.error?.message || 'Failed to save portfolio configuration. Please try again.';
+    }
+    
+    this.toastService.showError({
+      summary: isNewPortfolio ? 'Create Failed' : 'Save Failed',
+      detail: errorMessage
+    });
   }
 
   resetConfiguration(): void {
@@ -686,21 +766,57 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   loadHoldings(portfolioId: string): void {
     this.holdingsLoading = true;
     this.holdingsError = null;
+    this.holdingsRetryCount = 0;
     
     this.portfolioHoldingApiService.getHoldings(portfolioId)
       .pipe(
+        retry({
+          count: this.maxRetries,
+          delay: (error, retryCount) => {
+            this.holdingsRetryCount = retryCount;
+            // Exponential backoff: 1s, 2s
+            return timer(Math.pow(2, retryCount - 1) * 1000);
+          }
+        }),
         takeUntil(this.destroy$),
-        finalize(() => this.holdingsLoading = false)
+        finalize(() => {
+          this.holdingsLoading = false;
+          this.holdingsRetryCount = 0;
+        }),
+        catchError((error) => {
+          this.handleHoldingsLoadError(error);
+          return throwError(() => error);
+        })
       )
       .subscribe({
         next: (data) => {
-          this.holdings = data;
+          this.holdings = Array.isArray(data) ? data : [];
+          this.holdingsError = null;
         },
-        error: (error) => {
-          console.error('Error loading holdings:', error);
-          this.holdingsError = error.error?.message || 'Failed to load holdings. Please try again.';
+        error: () => {
+          // Error already handled in catchError
         }
       });
+  }
+
+  private handleHoldingsLoadError(error: any): void {
+    console.error('Error loading holdings:', error);
+    
+    if (error.status === 0) {
+      this.holdingsError = 'Unable to connect to the server. Please check your internet connection.';
+    } else if (error.status === 401) {
+      this.holdingsError = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      this.holdingsError = 'You do not have permission to view holdings for this portfolio.';
+    } else if (error.status === 404) {
+      this.holdingsError = 'Portfolio not found. It may have been deleted.';
+    } else if (error.status >= 500) {
+      this.holdingsError = 'Server error occurred. Please try again later.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      this.holdingsError = 'Request timed out. Please try again.';
+    } else {
+      this.holdingsError = error.error?.message || 'Failed to load holdings. Please try again.';
+    }
   }
 
   // Calculate unrealized P&L for a holding
@@ -738,21 +854,57 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   loadTrades(portfolioId: string): void {
     this.tradesLoading = true;
     this.tradesError = null;
+    this.tradesRetryCount = 0;
     
     this.portfolioTradeApiService.getTrades(portfolioId)
       .pipe(
+        retry({
+          count: this.maxRetries,
+          delay: (error, retryCount) => {
+            this.tradesRetryCount = retryCount;
+            // Exponential backoff: 1s, 2s
+            return timer(Math.pow(2, retryCount - 1) * 1000);
+          }
+        }),
         takeUntil(this.destroy$),
-        finalize(() => this.tradesLoading = false)
+        finalize(() => {
+          this.tradesLoading = false;
+          this.tradesRetryCount = 0;
+        }),
+        catchError((error) => {
+          this.handleTradesLoadError(error);
+          return throwError(() => error);
+        })
       )
       .subscribe({
         next: (data) => {
-          this.trades = data;
+          this.trades = Array.isArray(data) ? data : [];
+          this.tradesError = null;
         },
-        error: (error) => {
-          console.error('Error loading trades:', error);
-          this.tradesError = error.error?.message || 'Failed to load trades. Please try again.';
+        error: () => {
+          // Error already handled in catchError
         }
       });
+  }
+
+  private handleTradesLoadError(error: any): void {
+    console.error('Error loading trades:', error);
+    
+    if (error.status === 0) {
+      this.tradesError = 'Unable to connect to the server. Please check your internet connection.';
+    } else if (error.status === 401) {
+      this.tradesError = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      this.tradesError = 'You do not have permission to view trades for this portfolio.';
+    } else if (error.status === 404) {
+      this.tradesError = 'Portfolio not found. It may have been deleted.';
+    } else if (error.status >= 500) {
+      this.tradesError = 'Server error occurred. Please try again later.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      this.tradesError = 'Request timed out. Please try again.';
+    } else {
+      this.tradesError = error.error?.message || 'Failed to load trades. Please try again.';
+    }
   }
 
   // Format date for trades table
