@@ -189,3 +189,75 @@ export interface PortfolioWithMetrics extends PortfolioDto {
     labels: string[];
   };
 }
+
+// Portfolio interface for UI with extended properties
+export interface Portfolio {
+  id: string;
+  name: string;
+  description: string;
+  baseCurrency: string;
+  inceptionDate: string;
+  riskProfile: 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE';
+  isActive: boolean;
+  targetAllocation?: Record<string, any>;
+  initialCapital?: number;
+  currentCash?: number;
+  tradingMode?: 'paper' | 'live';
+  strategyName?: string;
+  strategyParams?: Record<string, any>;
+  // Extended properties for UI
+  totalReturn?: number;
+  benchmarkReturn?: number;
+  outperformance?: number;
+  stockCount?: number;
+  lastExecuted?: string;
+}
+
+// PortfolioHolding interface for UI
+export interface PortfolioHolding {
+  id: string;
+  portfolioId: string;
+  symbol: string;
+  quantity: number;
+  avgCost: number;
+  realizedPnl: number;
+  lastUpdated: string;
+  // Computed properties
+  currentPrice?: number;
+  unrealizedPnl?: number;
+  unrealizedPnlPct?: number;
+}
+
+// PortfolioTrade interface for UI
+export interface PortfolioTrade {
+  tradeId: string;
+  portfolioId: string;
+  symbol: string;
+  entryDate: string;
+  entryPrice: number;
+  exitDate: string;
+  exitPrice: number;
+  quantity: number;
+  principal: number;
+  profit: number;
+  profitPct: number;
+  exitType: 'TP' | 'SL';
+  keptShares?: number;
+  keptCash?: number;
+  holdingDays: number;
+  orderIdEntry?: string;
+  orderIdExit?: string;
+}
+
+// PortfolioConfigForm interface for Configure tab
+export interface PortfolioConfigForm {
+  name: string;
+  description: string;
+  riskProfile: string;
+  riskTolerance: string;
+  rebalancingStrategy: string;
+  rebalancingThreshold: number;
+  automatedExecution: boolean;
+  notificationSettings: boolean;
+  taxHarvesting: boolean;
+}
