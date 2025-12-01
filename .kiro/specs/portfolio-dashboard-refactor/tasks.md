@@ -142,7 +142,7 @@
   - **Property 17: Holdings data display completeness**
   - **Validates: Requirements 6.2**
 
-- [ ] 9. Implement Trades tab
+- [x] 9. Implement Trades tab
   - Create Trades tab component or template section
   - Implement data fetching from PortfolioTradeApiService when tab is activated
   - Create trades table with columns: symbol, entry date, entry price, exit date, exit price, quantity, profit, profit %
@@ -151,15 +151,15 @@
   - Implement error state for failed API calls
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 9.1 Write property test for trades API fetch
+- [x] 9.1 Write property test for trades API fetch
   - **Property 18: Trades tab triggers API fetch**
   - **Validates: Requirements 7.1**
 
-- [ ] 9.2 Write property test for trades display
+- [x] 9.2 Write property test for trades display
   - **Property 19: Trades data display completeness**
   - **Validates: Requirements 7.2**
 
-- [ ] 10. Implement create portfolio functionality
+- [x] 10. Implement create portfolio functionality
   - Update Create Portfolio button handler to initialize empty portfolio form
   - Switch to Configure tab when creating new portfolio
   - Implement POST request to create new portfolio
@@ -167,7 +167,7 @@
   - Handle creation errors (display error message)
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 10.1 Write property test for successful creation
+- [x] 10.1 Write property test for successful creation
   - **Property 22: Successful creation updates sidebar**
   - **Validates: Requirements 8.4**
 

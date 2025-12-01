@@ -1021,6 +1021,105 @@ describe('PortfoliosComponent', () => {
     });
   });
 
+  describe('Create Portfolio', () => {
+    // **Feature: portfolio-dashboard-refactor, Property 22: Successful creation updates sidebar**
+    // **Validates: Requirements 8.4**
+    describe('Property 22: Successful creation updates sidebar', () => {
+      it('should add newly created portfolio to sidebar list', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }).filter(s => s.trim().length > 0),
+              description: fc.string({ minLength: 1, maxLength: 200 }).filter(s => s.trim().length > 0),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'),
+              baseCurrency: fc.constantFrom('INR', 'USD', 'EUR'),
+              inceptionDate: fc.integer({ min: 2020, max: 2024 }).chain(year =>
+                fc.integer({ min: 1, max: 12 }).chain(month =>
+                  fc.integer({ min: 1, max: 28 }).map(day =>
+                    `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  )
+                )
+              )
+            }),
+            (newPortfolioData) => {
+              // Store initial portfolio count
+              const initialPortfolioCount = component.portfolios.length;
+
+              // Mock the createPortfolio API to return the new portfolio
+              const createdPortfolio = {
+                id: newPortfolioData.id,
+                name: newPortfolioData.name,
+                description: newPortfolioData.description,
+                riskProfile: newPortfolioData.riskProfile,
+                baseCurrency: newPortfolioData.baseCurrency,
+                inceptionDate: newPortfolioData.inceptionDate,
+                isActive: true
+              };
+
+              mockPortfolioApiService.createPortfolio.and.returnValue(of(createdPortfolio));
+              
+              // Mock getPortfolios to return updated list including the new portfolio
+              const updatedPortfolios = [...component.portfolios, createdPortfolio];
+              mockPortfolioApiService.getPortfolios.and.returnValue(of(updatedPortfolios));
+
+              // Trigger create portfolio flow
+              component.createPortfolio();
+              
+              // Verify we're in create mode (empty ID)
+              expect(component.selectedPortfolio).toBeTruthy();
+              expect(component.selectedPortfolio?.id).toBe('');
+              expect(component.activeTab).toBe('configure');
+
+              // Fill in the form with valid data
+              component.configForm.name = newPortfolioData.name;
+              component.configForm.description = newPortfolioData.description;
+              component.configForm.riskProfile = newPortfolioData.riskProfile;
+              component.configForm.riskTolerance = 'MEDIUM';
+              component.configForm.rebalancingStrategy = 'QUARTERLY';
+              component.configForm.rebalancingThreshold = 5;
+              component.onConfigFormChange();
+
+              // Verify form is valid and save button is enabled
+              expect(component.isConfigFormValid()).toBe(true);
+              expect(component.isSaveButtonEnabled()).toBe(true);
+
+              // Save the new portfolio
+              component.saveConfiguration();
+              fixture.detectChanges();
+
+              // Verify createPortfolio API was called with correct data
+              expect(mockPortfolioApiService.createPortfolio).toHaveBeenCalledWith(
+                jasmine.objectContaining({
+                  name: newPortfolioData.name,
+                  description: newPortfolioData.description,
+                  riskProfile: newPortfolioData.riskProfile,
+                  isActive: true
+                })
+              );
+
+              // Verify getPortfolios was called to refresh the list
+              expect(mockPortfolioApiService.getPortfolios).toHaveBeenCalled();
+
+              // Verify the portfolio list was updated
+              expect(component.portfolios.length).toBeGreaterThan(initialPortfolioCount);
+              
+              // Verify the new portfolio appears in the list
+              const newPortfolioInList = component.portfolios.find(p => p.id === newPortfolioData.id);
+              expect(newPortfolioInList).toBeTruthy();
+              if (newPortfolioInList) {
+                expect(newPortfolioInList.name).toBe(newPortfolioData.name);
+                expect(newPortfolioInList.description).toBe(newPortfolioData.description);
+                expect(newPortfolioInList.riskProfile).toBe(newPortfolioData.riskProfile);
+              }
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+  });
+
   describe('API Error Handling', () => {
     // **Feature: portfolio-dashboard-refactor, Property 14: API error handling displays error message**
     // **Validates: Requirements 5.4, 6.5, 7.5**
