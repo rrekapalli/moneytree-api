@@ -12,12 +12,16 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { FormsModule } from '@angular/forms';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { Subject, takeUntil, finalize } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioDto } from '../../services/entities/portfolio.entities';
 import { PortfolioWithMetrics } from './portfolio.types';
+import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-portfolios',
@@ -36,6 +40,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
     TooltipModule,
     TabsModule,
     FormsModule,
+    ToggleButtonModule,
+    InputNumberModule,
     PageHeaderComponent
   ],
   templateUrl: './portfolios.component.html',
@@ -64,16 +70,35 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   // Active tab for the detail panel (overview, configure, holdings, trades)
   activeTab: 'overview' | 'configure' | 'holdings' | 'trades' = 'overview';
 
+  // Configure tab form state
+  configForm: PortfolioConfigForm = this.getDefaultConfigForm();
+  originalConfigForm: PortfolioConfigForm = this.getDefaultConfigForm();
+  configFormDirty = false;
+  savingConfig = false;
 
-  
-  // Risk profile options for filter
+  // Configure tab dropdown options
   riskProfileOptions = [
     { label: 'Conservative', value: 'CONSERVATIVE' },
     { label: 'Moderate', value: 'MODERATE' },
     { label: 'Aggressive', value: 'AGGRESSIVE' }
   ];
 
-  constructor(private portfolioApiService: PortfolioApiService) {}
+  riskToleranceOptions = [
+    { label: 'Low', value: 'LOW' },
+    { label: 'Medium', value: 'MEDIUM' },
+    { label: 'High', value: 'HIGH' }
+  ];
+
+  rebalancingStrategyOptions = [
+    { label: 'Quarterly', value: 'QUARTERLY' },
+    { label: 'Monthly', value: 'MONTHLY' },
+    { label: 'Threshold-based', value: 'THRESHOLD' }
+  ];
+
+  constructor(
+    private portfolioApiService: PortfolioApiService,
+    private toastService: ToastService
+  ) {}
 
   ngOnInit(): void {
     // AUTHENTICATION DISABLED - Skip token check
@@ -360,6 +385,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     this.selectedPortfolio = portfolio;
     // Default to overview tab when selecting a portfolio
     this.activeTab = 'overview';
+    // Load portfolio configuration into form
+    this.loadConfigForm(portfolio);
   }
 
   // Method to handle tab changes
@@ -499,5 +526,137 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     return `linear-gradient(180deg, ${color}20 0%, ${color} 100%)`;
   }
 
+  // Configure tab methods
+  private getDefaultConfigForm(): PortfolioConfigForm {
+    return {
+      name: '',
+      description: '',
+      riskProfile: 'MODERATE',
+      riskTolerance: 'MEDIUM',
+      rebalancingStrategy: 'QUARTERLY',
+      rebalancingThreshold: 5,
+      automatedExecution: false,
+      notificationSettings: true,
+      taxHarvesting: false
+    };
+  }
+
+  private loadConfigForm(portfolio: PortfolioWithMetrics): void {
+    this.configForm = {
+      name: portfolio.name || '',
+      description: portfolio.description || '',
+      riskProfile: portfolio.riskProfile || 'MODERATE',
+      riskTolerance: 'MEDIUM', // Default value, not in DTO
+      rebalancingStrategy: 'QUARTERLY', // Default value, not in DTO
+      rebalancingThreshold: 5, // Default value, not in DTO
+      automatedExecution: false, // Default value, not in DTO
+      notificationSettings: true, // Default value, not in DTO
+      taxHarvesting: false // Default value, not in DTO
+    };
+    // Store original values for reset functionality
+    this.originalConfigForm = { ...this.configForm };
+    this.configFormDirty = false;
+  }
+
+  onConfigFormChange(): void {
+    // Check if form has been modified
+    this.configFormDirty = JSON.stringify(this.configForm) !== JSON.stringify(this.originalConfigForm);
+  }
+
+  isConfigFormValid(): boolean {
+    // Check if required fields are filled
+    return !!(
+      this.configForm.name.trim() &&
+      this.configForm.description.trim() &&
+      this.configForm.riskProfile &&
+      this.configForm.riskTolerance &&
+      this.configForm.rebalancingStrategy &&
+      this.configForm.rebalancingThreshold > 0
+    );
+  }
+
+  isSaveButtonEnabled(): boolean {
+    return this.configFormDirty && this.isConfigFormValid();
+  }
+
+  saveConfiguration(): void {
+    if (!this.selectedPortfolio || !this.isConfigFormValid()) {
+      return;
+    }
+
+    this.savingConfig = true;
+    const isNewPortfolio = !this.selectedPortfolio.id;
+
+    const portfolioData = {
+      name: this.configForm.name,
+      description: this.configForm.description,
+      riskProfile: this.configForm.riskProfile,
+      isActive: true
+    };
+
+    const apiCall = isNewPortfolio
+      ? this.portfolioApiService.createPortfolio(portfolioData)
+      : this.portfolioApiService.updatePortfolio(this.selectedPortfolio.id, portfolioData);
+
+    apiCall
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.savingConfig = false)
+      )
+      .subscribe({
+        next: (updatedPortfolio) => {
+          this.toastService.show(
+            'success',
+            isNewPortfolio ? 'Portfolio Created' : 'Configuration Saved',
+            isNewPortfolio
+              ? 'Portfolio has been created successfully'
+              : 'Portfolio configuration has been saved successfully'
+          );
+
+          // Update the portfolio in the list
+          if (isNewPortfolio) {
+            // Reload portfolios to get the new one
+            this.loadPortfolios();
+          } else {
+            // Update existing portfolio in the list
+            const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
+            if (index !== -1) {
+              this.portfolios[index] = {
+                ...this.portfolios[index],
+                ...updatedPortfolio
+              };
+              this.applyFilters();
+            }
+          }
+
+          // Update selected portfolio and form state
+          if (this.selectedPortfolio) {
+            this.selectedPortfolio = {
+              ...this.selectedPortfolio,
+              ...updatedPortfolio
+            };
+          }
+          this.originalConfigForm = { ...this.configForm };
+          this.configFormDirty = false;
+        },
+        error: (error) => {
+          console.error('Error saving portfolio configuration:', error);
+          this.toastService.showError({
+            summary: 'Save Failed',
+            detail: error.error?.message || 'Failed to save portfolio configuration. Please try again.'
+          });
+        }
+      });
+  }
+
+  resetConfiguration(): void {
+    if (!this.selectedPortfolio) {
+      return;
+    }
+
+    // Restore original form values
+    this.configForm = { ...this.originalConfigForm };
+    this.configFormDirty = false;
+  }
 
 }

@@ -206,9 +206,188 @@
 
             <!-- Configure Tab -->
             <p-tabpanel value="configure">
-              <div class="tab-content">
-                <h3>Configure - {{ selectedPortfolio.name }}</h3>
-                <p>Configure content will be implemented in future tasks</p>
+              <div class="tab-content configure-tab">
+                <h3 class="tab-title">Portfolio Configuration</h3>
+
+                <!-- Basic Settings Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Basic Settings</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="portfolio-name">Portfolio Name <span class="required">*</span></label>
+                      <input 
+                        id="portfolio-name"
+                        type="text" 
+                        pInputText 
+                        [(ngModel)]="configForm.name"
+                        (ngModelChange)="onConfigFormChange()"
+                        placeholder="Enter portfolio name"
+                        class="form-input" />
+                    </div>
+
+                    <div class="form-field full-width">
+                      <label for="portfolio-description">Description <span class="required">*</span></label>
+                      <textarea 
+                        id="portfolio-description"
+                        pTextarea 
+                        [(ngModel)]="configForm.description"
+                        (ngModelChange)="onConfigFormChange()"
+                        placeholder="Enter portfolio description"
+                        rows="3"
+                        class="form-input">
+                      </textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Risk Profile Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Risk Profile</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="risk-profile">Risk Profile <span class="required">*</span></label>
+                      <p-select 
+                        id="risk-profile"
+                        [(ngModel)]="configForm.riskProfile"
+                        (ngModelChange)="onConfigFormChange()"
+                        [options]="riskProfileOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select risk profile"
+                        class="form-input">
+                      </p-select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="risk-tolerance">Risk Tolerance <span class="required">*</span></label>
+                      <p-select 
+                        id="risk-tolerance"
+                        [(ngModel)]="configForm.riskTolerance"
+                        (ngModelChange)="onConfigFormChange()"
+                        [options]="riskToleranceOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select risk tolerance"
+                        class="form-input">
+                      </p-select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rebalancing Strategy Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Rebalancing Strategy</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="rebalancing-strategy">Strategy <span class="required">*</span></label>
+                      <p-select 
+                        id="rebalancing-strategy"
+                        [(ngModel)]="configForm.rebalancingStrategy"
+                        (ngModelChange)="onConfigFormChange()"
+                        [options]="rebalancingStrategyOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select rebalancing strategy"
+                        class="form-input">
+                      </p-select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="rebalancing-threshold">Threshold (%) <span class="required">*</span></label>
+                      <p-inputnumber 
+                        id="rebalancing-threshold"
+                        [(ngModel)]="configForm.rebalancingThreshold"
+                        (ngModelChange)="onConfigFormChange()"
+                        [min]="0"
+                        [max]="100"
+                        [step]="1"
+                        suffix="%"
+                        placeholder="Enter threshold"
+                        class="form-input">
+                      </p-inputnumber>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Execution Preferences Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Execution Preferences</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="automated-execution">Automated Execution</label>
+                      <div class="toggle-field">
+                        <p-togglebutton 
+                          id="automated-execution"
+                          [(ngModel)]="configForm.automatedExecution"
+                          (ngModelChange)="onConfigFormChange()"
+                          onLabel="Enabled"
+                          offLabel="Disabled"
+                          onIcon="pi pi-check"
+                          offIcon="pi pi-times">
+                        </p-togglebutton>
+                        <span class="field-hint">Automatically execute rebalancing trades</span>
+                      </div>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="notification-settings">Notification Settings</label>
+                      <div class="toggle-field">
+                        <p-togglebutton 
+                          id="notification-settings"
+                          [(ngModel)]="configForm.notificationSettings"
+                          (ngModelChange)="onConfigFormChange()"
+                          onLabel="Enabled"
+                          offLabel="Disabled"
+                          onIcon="pi pi-check"
+                          offIcon="pi pi-times">
+                        </p-togglebutton>
+                        <span class="field-hint">Receive notifications for portfolio events</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Advanced Options Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Advanced Options</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="tax-harvesting">Tax Loss Harvesting</label>
+                      <div class="toggle-field">
+                        <p-togglebutton 
+                          id="tax-harvesting"
+                          [(ngModel)]="configForm.taxHarvesting"
+                          (ngModelChange)="onConfigFormChange()"
+                          onLabel="Enabled"
+                          offLabel="Disabled"
+                          onIcon="pi pi-check"
+                          offIcon="pi pi-times">
+                        </p-togglebutton>
+                        <span class="field-hint">Optimize trades for tax efficiency</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="config-actions">
+                  <p-button 
+                    label="Reset"
+                    icon="pi pi-refresh"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="resetConfiguration()"
+                    [disabled]="!configFormDirty || savingConfig">
+                  </p-button>
+                  <p-button 
+                    label="Save Configuration"
+                    icon="pi pi-save"
+                    severity="primary"
+                    (onClick)="saveConfiguration()"
+                    [disabled]="!isSaveButtonEnabled() || savingConfig"
+                    [loading]="savingConfig">
+                  </p-button>
+                </div>
               </div>
             </p-tabpanel>
 

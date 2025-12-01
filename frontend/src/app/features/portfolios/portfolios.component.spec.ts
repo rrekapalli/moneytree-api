@@ -406,6 +406,142 @@ describe('PortfoliosComponent', () => {
     });
   });
 
+  describe('Configure Tab', () => {
+    // **Feature: portfolio-dashboard-refactor, Property 12: Configuration changes enable save button**
+    // **Validates: Requirements 5.1**
+    describe('Property 12: Configuration changes enable save button', () => {
+      it('should enable save button when configuration is modified and valid', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ minLength: 1, maxLength: 200 }),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE')
+            }),
+            fc.record({
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ minLength: 1, maxLength: 200 }),
+              riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'),
+              riskTolerance: fc.constantFrom('LOW', 'MEDIUM', 'HIGH'),
+              rebalancingThreshold: fc.integer({ min: 1, max: 100 })
+            }),
+            (portfolioData, modifications) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Select portfolio and load config form
+              component.selectPortfolio(portfolio);
+              
+              // Initially, form should not be dirty
+              expect(component.configFormDirty).toBe(false);
+              expect(component.isSaveButtonEnabled()).toBe(false);
+
+              // Modify the configuration
+              component.configForm.name = modifications.name;
+              component.configForm.description = modifications.description;
+              component.configForm.riskProfile = modifications.riskProfile;
+              component.configForm.riskTolerance = modifications.riskTolerance;
+              component.configForm.rebalancingThreshold = modifications.rebalancingThreshold;
+              component.onConfigFormChange();
+
+              // After modification, if form is valid, save button should be enabled
+              if (component.isConfigFormValid()) {
+                expect(component.configFormDirty).toBe(true);
+                expect(component.isSaveButtonEnabled()).toBe(true);
+              }
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    // **Feature: portfolio-dashboard-refactor, Property 20: Form validation enables save button**
+    // **Validates: Requirements 8.2**
+    describe('Property 20: Form validation enables save button', () => {
+      it('should enable save button only when all required fields are valid', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              name: fc.string({ maxLength: 50 }),
+              description: fc.string({ maxLength: 200 }),
+              riskProfile: fc.option(fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE'), { nil: undefined }),
+              riskTolerance: fc.option(fc.constantFrom('LOW', 'MEDIUM', 'HIGH'), { nil: undefined }),
+              rebalancingStrategy: fc.option(fc.constantFrom('QUARTERLY', 'MONTHLY', 'THRESHOLD'), { nil: undefined }),
+              rebalancingThreshold: fc.integer({ min: -10, max: 110 })
+            }),
+            (formData) => {
+              // Create a new portfolio (empty ID indicates new portfolio)
+              component.selectedPortfolio = createMockPortfolio({ id: '' });
+              
+              // Set form values
+              component.configForm.name = formData.name;
+              component.configForm.description = formData.description;
+              component.configForm.riskProfile = formData.riskProfile || '';
+              component.configForm.riskTolerance = formData.riskTolerance || '';
+              component.configForm.rebalancingStrategy = formData.rebalancingStrategy || '';
+              component.configForm.rebalancingThreshold = formData.rebalancingThreshold;
+              
+              // Mark form as dirty
+              component.configFormDirty = true;
+
+              // Check if form is valid
+              const isValid = component.isConfigFormValid();
+              const saveEnabled = component.isSaveButtonEnabled();
+
+              // Verify validation logic
+              const hasName = formData.name.trim().length > 0;
+              const hasDescription = formData.description.trim().length > 0;
+              const hasRiskProfile = !!formData.riskProfile;
+              const hasRiskTolerance = !!formData.riskTolerance;
+              const hasRebalancingStrategy = !!formData.rebalancingStrategy;
+              const hasValidThreshold = formData.rebalancingThreshold > 0;
+
+              const expectedValid = hasName && hasDescription && hasRiskProfile && 
+                                   hasRiskTolerance && hasRebalancingStrategy && hasValidThreshold;
+
+              expect(isValid).toBe(expectedValid);
+              
+              // Save button should be enabled only if form is dirty and valid
+              expect(saveEnabled).toBe(component.configFormDirty && expectedValid);
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    it('should reset form to original values when reset is clicked', () => {
+      const portfolio = createMockPortfolio({
+        id: '1',
+        name: 'Original Name',
+        description: 'Original Description',
+        riskProfile: 'MODERATE'
+      });
+
+      component.selectPortfolio(portfolio);
+      
+      // Store original values
+      const originalName = component.configForm.name;
+      const originalDescription = component.configForm.description;
+
+      // Modify the form
+      component.configForm.name = 'Modified Name';
+      component.configForm.description = 'Modified Description';
+      component.onConfigFormChange();
+
+      expect(component.configFormDirty).toBe(true);
+
+      // Reset the form
+      component.resetConfiguration();
+
+      // Verify form is reset to original values
+      expect(component.configForm.name).toBe(originalName);
+      expect(component.configForm.description).toBe(originalDescription);
+      expect(component.configFormDirty).toBe(false);
+    });
+  });
+
   describe('Summary Statistics', () => {
     it('should calculate total portfolios correctly', () => {
       const mockPortfolios = [

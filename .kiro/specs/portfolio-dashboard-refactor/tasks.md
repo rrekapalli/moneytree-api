@@ -77,21 +77,21 @@
   - **Property 9: Aggressive portfolios count accuracy**
   - **Validates: Requirements 2.5**
 
-- [ ] 5. Implement tab navigation structure
+- [x] 5. Implement tab navigation structure
   - Create new tab structure with Overview, Configure, Holdings, and Trades tabs
   - Implement tab switching logic
   - Ensure selected portfolio context is preserved across tab switches
   - _Requirements: 3.1, 3.5_
 
-- [ ] 5.1 Write property test for tab visibility
+- [x] 5.1 Write property test for tab visibility
   - **Property 10: Tab visibility on portfolio selection**
   - **Validates: Requirements 3.1**
 
-- [ ] 5.2 Write property test for portfolio context preservation
+- [x] 5.2 Write property test for portfolio context preservation
   - **Property 11: Portfolio context preservation across tab switches**
   - **Validates: Requirements 3.5**
 
-- [ ] 6. Implement Configure tab
+- [x] 6. Implement Configure tab
   - Create Configure tab component or template section
   - Implement Basic Settings section (name, description inputs)
   - Implement Risk Profile section (risk profile and risk tolerance dropdowns)
@@ -102,11 +102,11 @@
   - Implement form state management and validation
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 6.1 Write property test for configuration changes
+- [x] 6.1 Write property test for configuration changes
   - **Property 12: Configuration changes enable save button**
   - **Validates: Requirements 5.1**
 
-- [ ] 6.2 Write property test for form validation
+- [x] 6.2 Write property test for form validation
   - **Property 20: Form validation enables save button**
   - **Validates: Requirements 8.2**
 
