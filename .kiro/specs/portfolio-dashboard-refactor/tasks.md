@@ -17,14 +17,14 @@
   - **Property 21: Create portfolio API call**
   - **Validates: Requirements 8.3**
 
-- [ ] 2. Refactor main portfolios component structure
+- [x] 2. Refactor main portfolios component structure
   - Update portfolios.component.html to implement two-panel layout (left sidebar + right detail panel)
   - Remove existing tab structure and prepare for new tab implementation
   - Update portfolios.component.ts to manage selectedPortfolio state and activeTab state
   - Update portfolios.component.scss to style the two-panel layout
   - _Requirements: 9.1_
 
-- [ ] 3. Implement portfolio sidebar with search and list
+- [x] 3. Implement portfolio sidebar with search and list
   - Create portfolio sidebar section in the template with search input
   - Implement search filtering logic in component
   - Create portfolio card template for sidebar items
@@ -33,19 +33,19 @@
   - Add visual highlighting for selected portfolio
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-- [ ] 3.1 Write property test for search filtering
+- [x] 3.1 Write property test for search filtering
   - **Property 4: Search filtering accuracy**
   - **Validates: Requirements 1.5**
 
-- [ ] 3.2 Write property test for portfolio display
+- [x] 3.2 Write property test for portfolio display
   - **Property 1: Portfolio display completeness**
   - **Validates: Requirements 1.2**
 
-- [ ] 3.3 Write property test for portfolio selection
+- [x] 3.3 Write property test for portfolio selection
   - **Property 2: Portfolio selection updates detail panel**
   - **Validates: Requirements 1.3**
 
-- [ ] 3.4 Write property test for selection highlighting
+- [x] 3.4 Write property test for selection highlighting
   - **Property 3: Selected portfolio highlighting**
   - **Validates: Requirements 1.4**
 
