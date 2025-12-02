@@ -598,11 +598,10 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
         
-        // Update URL with deep link (replaceUrl to avoid cluttering browser history)
+        // Update URL with deep link using Location API to avoid full navigation
         if (this.selectedPortfolio) {
-          this.router.navigate(['/portfolios', this.selectedPortfolio.id, tabValue], { 
-            replaceUrl: true 
-          });
+          const url = `/portfolios/${this.selectedPortfolio.id}/${tabValue}`;
+          window.history.replaceState({}, '', url);
         }
         
         // Lazy load data when switching to specific tabs (only load once)
