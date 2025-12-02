@@ -65,6 +65,8 @@ import { PortfolioTradesComponent } from './trades/trades.component';
 export class PortfoliosComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private searchSubject$ = new Subject<string>();
+  private portfoliosLoaded = false; // Flag to prevent duplicate loads
+  private loadingPromise: Promise<void> | null = null; // Track ongoing load
   
   portfolios: PortfolioWithMetrics[] = [];
   filteredPortfolios: PortfolioWithMetrics[] = [];
@@ -174,9 +176,14 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         const portfolioId = params['id'];
         const tab = params['tab'];
         
+        // Load portfolios only once
+        const loadPromise = this.portfoliosLoaded 
+          ? Promise.resolve() 
+          : this.loadPortfolios();
+        
         if (portfolioId && tab) {
           // Deep link: select portfolio and tab from URL
-          this.loadPortfolios().then(() => {
+          loadPromise.then(() => {
             const portfolio = this.portfolios.find(p => p.id === portfolioId);
             if (portfolio) {
               // Only update if we're switching to a different portfolio
@@ -201,7 +208,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           });
         } else {
           // No deep link: load portfolios and select first one
-          this.loadPortfolios().then(() => {
+          loadPromise.then(() => {
             if (this.portfolios.length > 0 && !this.selectedPortfolio) {
               this.selectPortfolio(this.portfolios[0]);
               this.activeTab = 'overview';
@@ -238,7 +245,17 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   }
 
   loadPortfolios(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    // If already loading, return the existing promise
+    if (this.loadingPromise) {
+      return this.loadingPromise;
+    }
+    
+    // If already loaded, return resolved promise
+    if (this.portfoliosLoaded) {
+      return Promise.resolve();
+    }
+    
+    this.loadingPromise = new Promise((resolve, reject) => {
       // Check cache first
       const now = Date.now();
       const cachedData = this.portfolioCache.get('portfolios');
@@ -247,11 +264,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         // Use cached data
         this.portfolios = cachedData;
         this.applyFilters();
+        this.portfoliosLoaded = true; // Mark as loaded
         this.cdr.markForCheck();
         resolve();
         return;
       }
-    
     this.loading = true;
     this.error = null;
     this.retryCount = 0;
@@ -291,23 +308,29 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
             
             this.applyFilters();
             this.error = null;
+            this.portfoliosLoaded = true; // Mark as loaded
+            this.loadingPromise = null; // Clear loading promise
             
             // Trigger change detection
             this.cdr.markForCheck();
             resolve();
           } else {
             this.error = 'Invalid data format received from API. Please contact support.';
+            this.loadingPromise = null; // Clear loading promise
             this.cdr.markForCheck();
             reject(new Error('Invalid data format'));
           }
         },
         error: (err) => {
           // Error already handled in catchError
+          this.loadingPromise = null; // Clear loading promise
           this.cdr.markForCheck();
           reject(err);
         }
       });
     });
+    
+    return this.loadingPromise;
   }
 
   // Method to clear portfolio cache
