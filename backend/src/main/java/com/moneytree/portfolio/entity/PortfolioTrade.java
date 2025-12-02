@@ -1,5 +1,6 @@
 package com.moneytree.portfolio.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,6 +16,7 @@ public class PortfolioTrade {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "portfolio_trades_portfolio_id_fkey"))
+    @JsonIgnore
     private Portfolio portfolio;
 
     @Column(nullable = false, columnDefinition = "text")

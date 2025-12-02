@@ -6,6 +6,14 @@ export interface PortfolioDto {
   inceptionDate: string;
   riskProfile: string;
   isActive: boolean;
+  initialCapital?: number;
+  currentCash?: number;
+  strategyName?: string;
+  tradingMode?: string;
+  dematAccount?: string;
+  lastSignalCheck?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PortfolioCreateRequest {

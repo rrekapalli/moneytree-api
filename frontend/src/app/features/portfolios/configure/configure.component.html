@@ -1,89 +1,159 @@
 <div class="configure-tab-content">
   @if (editingPortfolio) {
-    <div class="portfolio-header">
-      <div class="header-content">
-        <!-- Edit Button at Top Right -->
-        <div class="edit-controls">
-          @if (!isEditing) {
-            <button class="edit-all-btn" (click)="startEditAll()" title="Edit portfolio">
-              <i class="pi pi-pencil"></i>
-              Edit
-            </button>
-          } @else {
-            <div class="edit-buttons">
-              <button class="save-all-btn" 
-                      (click)="saveEditAll()" 
-                      title="Save all changes"
-                      [disabled]="isSaving">
-                @if (isSaving) {
-                  <i class="pi pi-spin pi-spinner"></i>
-                  Saving...
-                } @else {
-                  <i class="pi pi-check"></i>
-                  Save
-                }
-              </button>
-              <button class="cancel-btn" 
-                      (click)="cancelEdit()" 
-                      title="Cancel editing"
-                      [disabled]="isSaving">
-                <i class="pi pi-times"></i>
-                Cancel
-              </button>
-            </div>
-          }
+    <!-- Configuration Form -->
+    <div class="configure-form">
+      <!-- Name and Description Row -->
+      <div class="form-row">
+        <div class="form-field">
+          <label for="portfolioName">Name</label>
+          <input pInputText 
+                 id="portfolioName"
+                 [(ngModel)]="editingPortfolio.name"
+                 placeholder="TestPortfolio"
+                 [disabled]="!isEditing || isSaving" />
         </div>
+        <div class="form-field">
+          <label for="portfolioDescription">Description</label>
+          <input pInputText 
+                 id="portfolioDescription"
+                 [(ngModel)]="editingPortfolio.description"
+                 placeholder="Test"
+                 [disabled]="!isEditing || isSaving" />
+        </div>
+      </div>
 
-        <div class="portfolio-title-section">
-          <!-- First row: Portfolio Name + Risk Profile -->
-          <div class="title-row">
-            <div class="portfolio-name">
-              @if (!isEditing) {
-                <span class="name-text">{{ editingPortfolio.name || 'Untitled Portfolio' }}</span>
-              } @else {
-                <textarea pInputTextarea 
-                          [(ngModel)]="editingPortfolio.name"
-                          placeholder="Enter portfolio name"
-                          class="inline-edit-textarea"
-                          rows="1"
-                          autoResize="true"
-                          [disabled]="isSaving">
-                </textarea>
-              }
-            </div>
-            
-            <div class="risk-profile-inline">
-              @if (!isEditing) {
-                <span class="risk-text">[{{ editingPortfolio.riskProfile || 'Not set' }}]</span>
-              } @else {
-                <p-select [options]="riskProfileOptions" 
-                         [(ngModel)]="editingPortfolio.riskProfile"
-                         optionLabel="label"
-                         optionValue="value"
-                         placeholder="Select risk profile"
-                         class="inline-edit-select"
-                         [disabled]="isSaving">
-                </p-select>
-              }
-            </div>
+      <!-- Base Currency and Risk Profile Row -->
+      <div class="form-row">
+        <div class="form-field">
+          <label for="baseCurrency">Base Currency</label>
+          <p-select id="baseCurrency"
+                   [options]="currencyOptions" 
+                   [(ngModel)]="editingPortfolio.baseCurrency"
+                   optionLabel="label"
+                   optionValue="value"
+                   placeholder="Select currency"
+                   [disabled]="!isEditing || isSaving">
+          </p-select>
+        </div>
+        <div class="form-field">
+          <label for="riskProfile">Risk Profile</label>
+          <p-select id="riskProfile"
+                   [options]="riskProfileOptions" 
+                   [(ngModel)]="editingPortfolio.riskProfile"
+                   optionLabel="label"
+                   optionValue="value"
+                   placeholder="Select risk profile"
+                   [disabled]="!isEditing || isSaving">
+          </p-select>
+        </div>
+      </div>
+
+      <!-- Initial Capital and Current Cash Row -->
+      <div class="form-row">
+        <div class="form-field">
+          <label for="initialCapital">Initial Capital</label>
+          <input pInputText 
+                 id="initialCapital"
+                 type="number"
+                 [(ngModel)]="editingPortfolio.initialCapital"
+                 placeholder="100000"
+                 [disabled]="!isEditing || isSaving" />
+        </div>
+        <div class="form-field">
+          <label for="currentCash">Current Cash</label>
+          <input pInputText 
+                 id="currentCash"
+                 type="number"
+                 [(ngModel)]="editingPortfolio.currentCash"
+                 placeholder="15000"
+                 [disabled]="!isEditing || isSaving" />
+        </div>
+      </div>
+
+      <!-- Strategy Name and Trading Mode Row -->
+      <div class="form-row">
+        <div class="form-field">
+          <label for="strategyName">Strategy Name</label>
+          <p-select id="strategyName"
+                   [options]="strategyOptions" 
+                   [(ngModel)]="editingPortfolio.strategyName"
+                   optionLabel="label"
+                   optionValue="value"
+                   placeholder="Select strategy"
+                   [disabled]="!isEditing || isSaving">
+          </p-select>
+        </div>
+        <div class="form-field">
+          <label for="tradingMode">Trading Mode</label>
+          <p-select id="tradingMode"
+                   [options]="tradingModeOptions" 
+                   [(ngModel)]="editingPortfolio.tradingMode"
+                   optionLabel="label"
+                   optionValue="value"
+                   placeholder="Select mode"
+                   [disabled]="!isEditing || isSaving">
+          </p-select>
+        </div>
+      </div>
+
+      <!-- Demat Account and Is Active Row -->
+      <div class="form-row">
+        <div class="form-field">
+          <label for="dematAccount">Demat Account</label>
+          <p-select id="dematAccount"
+                   [options]="dematAccountOptions" 
+                   [(ngModel)]="editingPortfolio.dematAccount"
+                   optionLabel="label"
+                   optionValue="value"
+                   placeholder="Select account"
+                   [disabled]="!isEditing || isSaving">
+          </p-select>
+        </div>
+        <div class="form-field toggle-field">
+          <label for="isActive">Is Active</label>
+          <p-toggleSwitch id="isActive"
+                         [(ngModel)]="editingPortfolio.isActive"
+                         [disabled]="!isEditing || isSaving">
+          </p-toggleSwitch>
+        </div>
+      </div>
+
+      <!-- Portfolio Information Section -->
+      <div class="portfolio-info-section">
+        <h3>Portfolio Information</h3>
+        <div class="info-row">
+          <div class="info-item">
+            <span class="info-label">Last Signal Check</span>
+            <span class="info-value">{{ editingPortfolio.lastSignalCheck || '-' }}</span>
           </div>
-          
-          <!-- Second row: Description -->
-          <div class="description-row">
-            @if (!isEditing) {
-              <span class="description-text">{{ editingPortfolio.description || 'No description provided' }}</span>
-            } @else {
-              <textarea pInputTextarea 
-                        [(ngModel)]="editingPortfolio.description"
-                        placeholder="Enter portfolio description (optional)"
-                        class="inline-edit-textarea"
-                        rows="2"
-                        autoResize="true"
-                        [disabled]="isSaving">
-              </textarea>
-            }
+          <div class="info-item">
+            <span class="info-label">Created At</span>
+            <span class="info-value">{{ editingPortfolio.createdAt || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Updated At</span>
+            <span class="info-value">{{ editingPortfolio.updatedAt || '-' }}</span>
           </div>
         </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="form-actions">
+        <button pButton 
+                label="Reset" 
+                class="p-button-outlined"
+                (click)="cancelEdit()"
+                [disabled]="isSaving">
+        </button>
+        <button pButton 
+                label="Save Configuration" 
+                class="p-button-success"
+                (click)="saveEditAll()"
+                [disabled]="isSaving">
+          @if (isSaving) {
+            <i class="pi pi-spin pi-spinner"></i>
+          }
+        </button>
       </div>
     </div>
 

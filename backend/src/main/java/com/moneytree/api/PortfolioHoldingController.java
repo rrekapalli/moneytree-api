@@ -1,13 +1,18 @@
 package com.moneytree.api;
 
 import com.moneytree.portfolio.PortfolioHoldingService;
+import com.moneytree.portfolio.dto.PortfolioHoldingDto;
 import com.moneytree.portfolio.entity.PortfolioHolding;
+import com.moneytree.portfolio.entity.PortfolioHoldingSummary;
+import com.moneytree.portfolio.mapper.PortfolioHoldingMapper;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/portfolio/{portfolioId}/holdings")
@@ -21,8 +26,14 @@ public class PortfolioHoldingController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PortfolioHolding>> listHoldings(@PathVariable UUID portfolioId) {
-        return ResponseEntity.ok(service.findByPortfolioId(portfolioId));
+    @Operation(summary = "Get portfolio holdings summary", 
+               description = "Returns comprehensive holdings summary from portfolio_holdings_summary view including open positions, metrics, and trade statistics")
+    public ResponseEntity<List<PortfolioHoldingDto>> listHoldings(@PathVariable UUID portfolioId) {
+        List<PortfolioHoldingSummary> summaries = service.findSummaryByPortfolioId(portfolioId);
+        List<PortfolioHoldingDto> dtos = summaries.stream()
+                .map(PortfolioHoldingMapper::toDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{symbol}")
