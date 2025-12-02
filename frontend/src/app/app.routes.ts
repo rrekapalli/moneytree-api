@@ -47,10 +47,15 @@ export const routes: Routes = [
         canActivate: [featureFlagGuard('portfolios')]
       },
       {
-        path: 'portfolios/:id',
+        path: 'portfolios/:id/:tab',
         component: PortfoliosComponent,
         title: 'Portfolio Details - MoneyPlant',
         canActivate: [featureFlagGuard('portfolios')]
+      },
+      {
+        path: 'portfolios/:id',
+        redirectTo: 'portfolios/:id/overview',
+        pathMatch: 'full'
       },
       {
         path: 'screeners',

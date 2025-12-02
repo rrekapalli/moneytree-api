@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DataViewModule } from 'primeng/dataview';
 import { CardModule } from 'primeng/card';
@@ -143,7 +143,9 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     private portfolioHoldingApiService: PortfolioHoldingApiService,
     private portfolioTradeApiService: PortfolioTradeApiService,
     private toastService: ToastService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -165,7 +167,48 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         this.applyFilters();
       });
     
-    this.loadPortfolios();
+    // Subscribe to route parameters for deep linking
+    this.route.params
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const portfolioId = params['id'];
+        const tab = params['tab'];
+        
+        if (portfolioId && tab) {
+          // Deep link: select portfolio and tab from URL
+          this.loadPortfolios().then(() => {
+            const portfolio = this.portfolios.find(p => p.id === portfolioId);
+            if (portfolio) {
+              // Only update if we're switching to a different portfolio
+              if (!this.selectedPortfolio || this.selectedPortfolio.id !== portfolioId) {
+                this.selectedPortfolio = portfolio;
+                this.loadConfigForm(portfolio);
+                this.holdingsLoaded = false;
+                this.tradesLoaded = false;
+              }
+              // Always update the active tab from URL
+              this.activeTab = tab;
+              
+              // Lazy load data for the active tab
+              if (tab === 'holdings' && !this.holdingsLoaded) {
+                this.loadHoldings(portfolioId);
+                this.holdingsLoaded = true;
+              } else if (tab === 'trades' && !this.tradesLoaded) {
+                this.loadTrades(portfolioId);
+                this.tradesLoaded = true;
+              }
+            }
+          });
+        } else {
+          // No deep link: load portfolios and select first one
+          this.loadPortfolios().then(() => {
+            if (this.portfolios.length > 0 && !this.selectedPortfolio) {
+              this.selectPortfolio(this.portfolios[0]);
+              this.activeTab = 'overview';
+            }
+          });
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -194,18 +237,20 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadPortfolios(): void {
-    // Check cache first
-    const now = Date.now();
-    const cachedData = this.portfolioCache.get('portfolios');
-    
-    if (cachedData && (now - this.portfolioCacheTimestamp) < this.CACHE_DURATION_MS) {
-      // Use cached data
-      this.portfolios = cachedData;
-      this.applyFilters();
-      this.cdr.markForCheck();
-      return;
-    }
+  loadPortfolios(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Check cache first
+      const now = Date.now();
+      const cachedData = this.portfolioCache.get('portfolios');
+      
+      if (cachedData && (now - this.portfolioCacheTimestamp) < this.CACHE_DURATION_MS) {
+        // Use cached data
+        this.portfolios = cachedData;
+        this.applyFilters();
+        this.cdr.markForCheck();
+        resolve();
+        return;
+      }
     
     this.loading = true;
     this.error = null;
@@ -249,16 +294,20 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
             
             // Trigger change detection
             this.cdr.markForCheck();
+            resolve();
           } else {
             this.error = 'Invalid data format received from API. Please contact support.';
             this.cdr.markForCheck();
+            reject(new Error('Invalid data format'));
           }
         },
-        error: () => {
+        error: (err) => {
           // Error already handled in catchError
           this.cdr.markForCheck();
+          reject(err);
         }
       });
+    });
   }
 
   // Method to clear portfolio cache
@@ -536,6 +585,9 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // Reset lazy loading flags when selecting a new portfolio
     this.holdingsLoaded = false;
     this.tradesLoaded = false;
+    
+    // Update URL with deep link
+    this.router.navigate(['/portfolios', portfolio.id, this.activeTab]);
   }
 
   // Method to handle tab changes
@@ -545,6 +597,13 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       const tabValue = typeof tab === 'string' ? tab : tab.toString();
       if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
+        
+        // Update URL with deep link (replaceUrl to avoid cluttering browser history)
+        if (this.selectedPortfolio) {
+          this.router.navigate(['/portfolios', this.selectedPortfolio.id, tabValue], { 
+            replaceUrl: true 
+          });
+        }
         
         // Lazy load data when switching to specific tabs (only load once)
         if (tabValue === 'holdings' && this.selectedPortfolio && !this.holdingsLoaded) {
