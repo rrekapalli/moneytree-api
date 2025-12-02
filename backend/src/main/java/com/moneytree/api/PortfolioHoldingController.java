@@ -54,6 +54,17 @@ public class PortfolioHoldingController {
         return ResponseEntity.ok(service.save(holding));
     }
 
+    @PatchMapping("/{symbol}")
+    @Operation(summary = "Update holding by symbol", 
+               description = "Updates quantity, avgCost, takeProfit, and stopLoss for a specific holding")
+    public ResponseEntity<Void> updateHoldingBySymbol(
+            @PathVariable UUID portfolioId, 
+            @PathVariable String symbol, 
+            @RequestBody com.moneytree.portfolio.dto.PortfolioHoldingUpdateRequest request) {
+        service.updateHolding(portfolioId, symbol, request);
+        return ResponseEntity.ok().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteHolding(@PathVariable UUID portfolioId, @PathVariable UUID id) {
         service.deleteById(id);

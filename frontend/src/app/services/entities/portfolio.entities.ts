@@ -221,15 +221,24 @@ export interface Portfolio {
   lastExecuted?: string;
 }
 
-// PortfolioHolding interface for UI
+// PortfolioHolding interface for UI (from portfolio_holdings_summary view)
 export interface PortfolioHolding {
-  id: string;
   portfolioId: string;
   symbol: string;
   quantity: number;
   avgCost: number;
   realizedPnl: number;
   lastUpdated: string;
+  // Additional fields from summary
+  entryDate?: string;
+  openPrincipal?: number;
+  takeProfit?: number;
+  stopLoss?: number;
+  lastPositionValue?: number;
+  lastEquity?: number;
+  totalTrades?: number;
+  winningTrades?: number;
+  losingTrades?: number;
   // Computed properties
   currentPrice?: number;
   unrealizedPnl?: number;

@@ -25,7 +25,18 @@ public class PortfolioHoldingMapper {
         dto.setQuantity(summary.getOpenQuantity());
         dto.setAvgCost(summary.getEntryPrice());
         dto.setRealizedPnl(summary.getRealizedProfit());
-        dto.setLastUpdated(LocalDateTime.now()); // Use current time as lastUpdated
+        dto.setLastUpdated(LocalDateTime.now());
+        
+        // Additional fields from summary
+        dto.setEntryDate(summary.getEntryDate());
+        dto.setOpenPrincipal(summary.getOpenPrincipal());
+        dto.setTakeProfit(summary.getTakeProfit());
+        dto.setStopLoss(summary.getStopLoss());
+        dto.setLastPositionValue(summary.getLastPositionValue());
+        dto.setLastEquity(summary.getLastEquity());
+        dto.setTotalTrades(summary.getTotalTrades());
+        dto.setWinningTrades(summary.getWinningTrades());
+        dto.setLosingTrades(summary.getLosingTrades());
 
         return dto;
     }

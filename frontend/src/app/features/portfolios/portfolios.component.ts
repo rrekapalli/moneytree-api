@@ -1187,4 +1187,39 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Handle holding update event from holdings component
+  onHoldingUpdated(event: { symbol: string; data: any }): void {
+    if (!this.selectedPortfolio) {
+      return;
+    }
+
+    const portfolioId = this.selectedPortfolio.id;
+    const { symbol, data } = event;
+
+    this.portfolioHoldingApiService.patchHolding(portfolioId, symbol, data)
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.error('Error updating holding:', error);
+          this.toastService.showError({
+            summary: 'Update Failed',
+            detail: error.error?.message || 'Failed to update holding. Please try again.'
+          });
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show('success', 'Success', `Updated ${symbol} successfully`);
+          
+          // Clear holdings cache and reload
+          this.clearHoldingsCache(portfolioId);
+          this.loadHoldings(portfolioId);
+        },
+        error: () => {
+          // Error already handled in catchError
+        }
+      });
+  }
+
 }

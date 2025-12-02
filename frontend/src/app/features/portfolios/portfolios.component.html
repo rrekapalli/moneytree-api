@@ -253,7 +253,8 @@
                 [selectedPortfolio]="selectedPortfolio"
                 [holdings]="holdings"
                 [holdingsLoading]="holdingsLoading"
-                [holdingsError]="holdingsError">
+                [holdingsError]="holdingsError"
+                (holdingUpdated)="onHoldingUpdated($event)">
               </app-portfolio-holdings>
             </p-tabpanel>
 

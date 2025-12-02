@@ -14,6 +14,17 @@ public class PortfolioHoldingDto {
     private BigDecimal avgCost;
     private BigDecimal realizedPnl;
     private LocalDateTime lastUpdated;
+    
+    // Additional fields from portfolio_holdings_summary
+    private LocalDateTime entryDate;
+    private BigDecimal openPrincipal;
+    private BigDecimal takeProfit;
+    private BigDecimal stopLoss;
+    private BigDecimal lastPositionValue;
+    private BigDecimal lastEquity;
+    private Long totalTrades;
+    private Long winningTrades;
+    private Long losingTrades;
 
     // Constructors
     public PortfolioHoldingDto() {
@@ -76,5 +87,77 @@ public class PortfolioHoldingDto {
 
     public void setLastUpdated(LocalDateTime lastUpdated) {
         this.lastUpdated = lastUpdated;
+    }
+
+    public LocalDateTime getEntryDate() {
+        return entryDate;
+    }
+
+    public void setEntryDate(LocalDateTime entryDate) {
+        this.entryDate = entryDate;
+    }
+
+    public BigDecimal getOpenPrincipal() {
+        return openPrincipal;
+    }
+
+    public void setOpenPrincipal(BigDecimal openPrincipal) {
+        this.openPrincipal = openPrincipal;
+    }
+
+    public BigDecimal getTakeProfit() {
+        return takeProfit;
+    }
+
+    public void setTakeProfit(BigDecimal takeProfit) {
+        this.takeProfit = takeProfit;
+    }
+
+    public BigDecimal getStopLoss() {
+        return stopLoss;
+    }
+
+    public void setStopLoss(BigDecimal stopLoss) {
+        this.stopLoss = stopLoss;
+    }
+
+    public BigDecimal getLastPositionValue() {
+        return lastPositionValue;
+    }
+
+    public void setLastPositionValue(BigDecimal lastPositionValue) {
+        this.lastPositionValue = lastPositionValue;
+    }
+
+    public BigDecimal getLastEquity() {
+        return lastEquity;
+    }
+
+    public void setLastEquity(BigDecimal lastEquity) {
+        this.lastEquity = lastEquity;
+    }
+
+    public Long getTotalTrades() {
+        return totalTrades;
+    }
+
+    public void setTotalTrades(Long totalTrades) {
+        this.totalTrades = totalTrades;
+    }
+
+    public Long getWinningTrades() {
+        return winningTrades;
+    }
+
+    public void setWinningTrades(Long winningTrades) {
+        this.winningTrades = winningTrades;
+    }
+
+    public Long getLosingTrades() {
+        return losingTrades;
+    }
+
+    public void setLosingTrades(Long losingTrades) {
+        this.losingTrades = losingTrades;
     }
 }
