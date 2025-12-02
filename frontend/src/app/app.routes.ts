@@ -11,17 +11,11 @@ import { ScreenerFormComponent } from './features/screeners/screener-form/screen
 import { ScreenerDetailComponent } from './features/screeners/screener-detail/screener-detail.component';
 import { StrategiesComponent } from './features/strategies/strategies.component';
 import { WatchlistComponent } from './features/watchlists/watchlist.component';
-import { IndicesComponent } from './features/indices/indices.component';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { OverallComponent } from './features/dashboard/overall/overall.component';
 import { StockInsightsComponent } from './features/dashboard/stock-insights/stock-insights.component';
-import { TodayComponent } from './features/dashboard/today/today.component';
-import { ThisWeekComponent } from './features/dashboard/this-week/this-week.component';
-import { ThisMonthComponent } from './features/dashboard/this-month/this-month.component';
-import { ThisYearComponent } from './features/dashboard/this-year/this-year.component';
 import { HoldingsComponent } from './features/holdings/holdings.component';
 import { PositionsComponent } from './features/positions/positions.component';
-import { MarketComponent } from './features/market/market.component';
 import { NotFoundComponent } from './features/not-found/not-found.component';
 
 export const routes: Routes = [
@@ -118,18 +112,6 @@ export const routes: Routes = [
         canActivate: [featureFlagGuard('watchlist')]
       },
       {
-        path: 'indices',
-        component: IndicesComponent,
-        title: 'Indices - MoneyPlant',
-        canActivate: [featureFlagGuard('indices')]
-      },
-      {
-        path: 'indices/:id',
-        component: IndicesComponent,
-        title: 'Indices Details - MoneyPlant',
-        canActivate: [featureFlagGuard('indices')]
-      },
-      {
         path: 'dashboard',
         component: DashboardComponent,
         title: 'Dashboard - MoneyPlant',
@@ -157,30 +139,6 @@ export const routes: Routes = [
             component: StockInsightsComponent,
             title: 'Stock Insights Dashboard - MoneyPlant',
             canActivate: [featureFlagGuard('dashboard-stock-insights')]
-          },
-          {
-            path: 'today',
-            component: TodayComponent,
-            title: 'Today Dashboard - MoneyPlant',
-            canActivate: [featureFlagGuard('dashboard-today')]
-          },
-          {
-            path: 'week',
-            component: ThisWeekComponent,
-            title: 'This Week Dashboard - MoneyPlant',
-            canActivate: [featureFlagGuard('dashboard-week')]
-          },
-          {
-            path: 'month',
-            component: ThisMonthComponent,
-            title: 'This Month Dashboard - MoneyPlant',
-            canActivate: [featureFlagGuard('dashboard-month')]
-          },
-          {
-            path: 'year',
-            component: ThisYearComponent,
-            title: 'This Year Dashboard - MoneyPlant',
-            canActivate: [featureFlagGuard('dashboard-year')]
           }
         ]
       },
@@ -207,18 +165,6 @@ export const routes: Routes = [
         component: PositionsComponent,
         title: 'Position Details - MoneyPlant',
         canActivate: [featureFlagGuard('positions')]
-      },
-      {
-        path: 'market',
-        component: MarketComponent,
-        title: 'Market - MoneyPlant',
-        canActivate: [featureFlagGuard('market')]
-      },
-      {
-        path: 'market/:id',
-        component: MarketComponent,
-        title: 'Market Details - MoneyPlant',
-        canActivate: [featureFlagGuard('market')]
       }
     ]
   },

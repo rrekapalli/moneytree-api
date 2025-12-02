@@ -251,27 +251,15 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
         command: updateStylesAfterClick
       },
       {
-        label: 'Markets',
-        //icon: 'pi pi-file',
-        routerLink: ['/market'],
-        command: updateStylesAfterClick
-      },
-      {
-        label: 'Holdings',
-        //icon: 'pi pi-briefcase',
-        routerLink: ['/holdings'],
-        command: updateStylesAfterClick
-      },
-      {
-        label: 'Positions',
-        //icon: 'pi pi-chart-line',
-        routerLink: ['/positions'],
-        command: updateStylesAfterClick
-      },
-      {
         label: 'Portfolios',
         //icon: 'pi pi-folder',
         routerLink: ['/portfolios'],
+        command: updateStylesAfterClick
+      },
+      {
+        label: 'Strategies',
+        //icon: 'pi pi-sitemap',
+        routerLink: ['/strategies'],
         command: updateStylesAfterClick
       },
       {
@@ -281,15 +269,15 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
         command: updateStylesAfterClick
       },
       {
-        label: 'Indices',
-        //icon: 'pi pi-chart-bar',
-        routerLink: ['/indices'],
+        label: 'Positions',
+        //icon: 'pi pi-chart-line',
+        routerLink: ['/positions'],
         command: updateStylesAfterClick
       },
       {
-        label: 'Strategies',
-        //icon: 'pi pi-sitemap',
-        routerLink: ['/strategies'],
+        label: 'Holdings',
+        //icon: 'pi pi-briefcase',
+        routerLink: ['/holdings'],
         command: updateStylesAfterClick
       }
     ];
