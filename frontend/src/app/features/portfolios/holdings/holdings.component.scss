@@ -1,0 +1,39 @@
+.holdings-tab {
+  padding: 1rem;
+
+  .tab-title {
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .loading-state,
+  .error-state,
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+
+    i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: var(--text-color-secondary);
+    }
+
+    p {
+      color: var(--text-color-secondary);
+      font-size: 1rem;
+    }
+  }
+
+  .error-state i {
+    color: var(--red-500);
+  }
+
+  .holdings-table-container {
+    margin-top: 1rem;
+  }
+}

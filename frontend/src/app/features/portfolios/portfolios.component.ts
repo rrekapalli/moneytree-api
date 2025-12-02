@@ -27,6 +27,9 @@ import { PortfolioConfigForm } from '../../services/entities/portfolio.entities'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
 import { PortfolioConfigureComponent } from './configure/configure.component';
+import { PortfolioOverviewComponent } from './overview/overview.component';
+import { PortfolioHoldingsComponent } from './holdings/holdings.component';
+import { PortfolioTradesComponent } from './trades/trades.component';
 
 @Component({
   selector: 'app-portfolios',
@@ -50,7 +53,10 @@ import { PortfolioConfigureComponent } from './configure/configure.component';
     TableModule,
     ScrollPanelModule,
     PageHeaderComponent,
-    PortfolioConfigureComponent
+    PortfolioConfigureComponent,
+    PortfolioOverviewComponent,
+    PortfolioHoldingsComponent,
+    PortfolioTradesComponent
   ],
   templateUrl: './portfolios.component.html',
   styleUrls: ['./portfolios.component.scss'],
