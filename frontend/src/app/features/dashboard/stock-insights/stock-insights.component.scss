@@ -72,13 +72,15 @@
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  height: 80vh;
+  height: calc(100vh - 120px);
   padding: 0.5rem;
+  overflow: hidden;
 }
 
 vis-dashboard-container {
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 

@@ -1,10 +1,9 @@
-<p-card>
-    <!-- Main stock table -->
-    <p-table
+<!-- Main stock table -->
+<p-table
             [value]="stocks"
             [globalFilterFields]="['symbol', 'companyName', 'industry', 'sector']"
             [scrollable]="true"
-            scrollHeight="90vh"
+            [scrollHeight]="tableScrollHeight"
             styleClass="p-datatable-sm"
             selectionMode="single">
 
@@ -80,8 +79,7 @@
                 </td>
             </tr>
         </ng-template>
-    </p-table>
-</p-card>
+</p-table>
 
 <!-- Tooltip Template -->
 <ng-template #stockTooltipTemplate>

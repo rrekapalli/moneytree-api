@@ -1172,7 +1172,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     const stockListWidget = StockListChartBuilder.create()
       .setData(this.filteredDashboardData)
       .setStockPerformanceConfiguration()
-      .setHeader('Index List')
+      .setHeader('Stock List')
       .setCurrencyFormatter('INR', 'en-IN')
       .setPredefinedPalette('finance')
       .setAccessor('tradingsymbol')
@@ -1182,8 +1182,8 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
     const metricTiles = this.createMetricTiles([]);
 
-    // Position charts with proper spacing
-    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
+    // Position charts with proper spacing - Stock List extends to bottom of viewport
+    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 20 };
     candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
     
     // Use the Fluent API to build the dashboard config

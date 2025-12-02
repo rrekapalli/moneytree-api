@@ -1,4 +1,4 @@
-import { Component, OnInit, OnChanges, DoCheck, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnInit, OnChanges, DoCheck, AfterViewInit, Input, Output, EventEmitter, ChangeDetectionStrategy, ChangeDetectorRef, ViewChild, TemplateRef, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -51,7 +51,7 @@ export interface SelectedStockData {
   templateUrl: './stock-list-table.component.html',
   styleUrls: ['./stock-list-table.component.scss']
 })
-export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
+export class StockListTableComponent implements OnInit, OnChanges, DoCheck, AfterViewInit {
   @Input() widget!: IWidget;
   @Input() stocks: StockListData[] = [];
   @Input() isLoadingStocks: boolean = false;
@@ -77,14 +77,28 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
   private previousStocksLength: number = 0;
   private previousIsLoading: boolean = false;
 
-  constructor(private cdr: ChangeDetectorRef) {}
+  // Scroll height for table
+  public tableScrollHeight: string = '800px';
+
+  constructor(private cdr: ChangeDetectorRef, private elementRef: ElementRef) {}
 
   ngOnInit(): void {
     this.updateStocksFromWidget();
+    this.calculateScrollHeight();
+  }
+
+  ngAfterViewInit(): void {
+    // Recalculate after view is initialized to get accurate height
+    // Use longer delay to ensure gridster has finished layout
+    setTimeout(() => {
+      this.calculateScrollHeight();
+      this.cdr.detectChanges();
+    }, 500);
   }
 
   ngOnChanges(): void {
     this.updateStocksFromWidget();
+    this.calculateScrollHeight();
   }
 
   ngDoCheck(): void {
@@ -99,6 +113,40 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck {
       
       this.updateStocksFromWidget();
       this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Calculate scroll height based on widget height
+   */
+  private calculateScrollHeight(): void {
+    if (this.widget?.height) {
+      // Use the full widget height minus header and padding (110px)
+      const scrollHeight = this.widget.height - 110;
+      this.tableScrollHeight = `${scrollHeight}px`;
+    } else {
+      // Try to find the gridster-item parent element
+      let element = this.elementRef?.nativeElement;
+      let gridsterItem = null;
+      
+      // Traverse up to find gridster-item
+      while (element && element.parentElement) {
+        element = element.parentElement;
+        if (element.tagName === 'GRIDSTER-ITEM' || element.classList?.contains('gridster-item')) {
+          gridsterItem = element;
+          break;
+        }
+      }
+      
+      const parentHeight = gridsterItem?.offsetHeight || this.elementRef?.nativeElement?.parentElement?.parentElement?.offsetHeight;
+      if (parentHeight && parentHeight > 200) {
+        // Subtract 85px for header and padding
+        const scrollHeight = parentHeight - 85;
+        this.tableScrollHeight = `${scrollHeight}px`;
+      } else {
+        // Fallback to a large value that will work for most viewports
+        this.tableScrollHeight = '800px';
+      }
     }
   }
 
