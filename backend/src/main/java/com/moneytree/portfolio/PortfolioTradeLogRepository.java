@@ -20,7 +20,7 @@ public interface PortfolioTradeLogRepository extends JpaRepository<PortfolioTrad
 
     List<PortfolioTradeLog> findByPortfolioIdAndCycleTimestampBetween(UUID portfolioId, Instant start, Instant end);
 
-    @Query("SELECT ptl FROM PortfolioTradeLog ptl WHERE ptl.portfolio.id = ?1 ORDER BY ptl.cycleTimestamp DESC")
+    @Query("SELECT ptl FROM PortfolioTradeLog ptl WHERE ptl.portfolio.id = :portfolioId ORDER BY ptl.cycleTimestamp DESC")
     List<PortfolioTradeLog> findByPortfolioIdOrderByCycleTimestampDesc(UUID portfolioId);
 }
 

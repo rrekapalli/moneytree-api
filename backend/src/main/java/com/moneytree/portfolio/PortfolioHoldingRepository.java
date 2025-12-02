@@ -11,9 +11,9 @@ import java.util.UUID;
 @Repository
 public interface PortfolioHoldingRepository extends JpaRepository<PortfolioHolding, UUID> {
 
-    List<PortfolioHolding> findByPortfolioId(UUID portfolioId);
+    List<PortfolioHolding> findByPortfolio_Id(UUID portfolioId);
 
-    Optional<PortfolioHolding> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol);
+    Optional<PortfolioHolding> findByPortfolio_IdAndSymbol(UUID portfolioId, String symbol);
 
     List<PortfolioHolding> findBySymbol(String symbol);
 }

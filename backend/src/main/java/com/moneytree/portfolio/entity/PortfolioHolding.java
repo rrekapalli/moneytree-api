@@ -1,5 +1,6 @@
 package com.moneytree.portfolio.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -15,6 +16,7 @@ public class PortfolioHolding {
     @Column(name = "id", columnDefinition = "uuid")
     private UUID id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "portfolio_holdings_portfolio_id_fkey"))
     private Portfolio portfolio;
@@ -49,6 +51,10 @@ public class PortfolioHolding {
 
     public void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
+    }
+
+    public UUID getPortfolioId() {
+        return portfolio != null ? portfolio.getId() : null;
     }
 
     public String getSymbol() {

@@ -81,7 +81,10 @@ export class IndicesService {
    * @param segment Segment name (default INDICES)
    */
   getIndicesByExchangeSegment(exchange: string = 'NSE', segment: string = 'INDICES'): Observable<IndexResponseDto[]> {
-    return this.apiService.get<IndexResponseDto[]>(`${this.endpoint}/exchange/${exchange}/segment/${segment}`);
+    // URL encode path parameters to handle special characters
+    const encodedExchange = encodeURIComponent(exchange);
+    const encodedSegment = encodeURIComponent(segment);
+    return this.apiService.get<IndexResponseDto[]>(`${this.endpoint}/exchange/${encodedExchange}/segment/${encodedSegment}`);
   }
 
   /**
@@ -153,14 +156,44 @@ export class IndicesService {
     if (startDate && endDate && startDate.trim() !== '' && endDate.trim() !== '') {
       payload.start_date = startDate;
       payload.end_date = endDate;
-      console.log('📅 Using date range:', { start_date: startDate, end_date: endDate });
     } else {
       // Use provided days or default to 365
       payload.days = days !== undefined ? days : 365;
-      console.log('📅 Using days:', payload.days);
     }
     
-    console.log('📤 API Payload:', JSON.stringify(payload, null, 2));
     return this.apiService.post<IndexHistoricalData[]>(`${this.endpoint}/historical-data`, payload);
+  }
+
+  /**
+   * Gets historical data for a given tradingsymbol
+   * @param tradingsymbol The trading symbol (e.g., "BEL", "RELIANCE", "NIFTY 50")
+   * @param exchange The exchange (defaults to "NSE")
+   * @param days Number of days to retrieve (defaults to 365) - used if startDate and endDate are not provided
+   * @param startDate Start date for the date range (ISO date string, e.g., '2024-01-01')
+   * @param endDate End date for the date range (ISO date string, e.g., '2024-12-31')
+   * @returns An Observable of historical data array
+   */
+  getHistoricalData(
+    tradingsymbol: string,
+    exchange: string = 'NSE',
+    days?: number,
+    startDate?: string,
+    endDate?: string
+  ): Observable<any[]> {
+    const payload: any = {
+      tradingsymbol,
+      exchange
+    };
+    
+    // Use date range if provided (check for truthy and non-empty strings), otherwise use days
+    if (startDate && endDate && startDate.trim() !== '' && endDate.trim() !== '') {
+      payload.start_date = startDate;
+      payload.end_date = endDate;
+    } else {
+      // Use provided days or default to 365
+      payload.days = days !== undefined ? days : 365;
+    }
+    
+    return this.apiService.post<any[]>(`/api/v1/historical-data`, payload);
   }
 }

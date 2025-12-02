@@ -10,100 +10,563 @@
 <div class="page-container">
 
   <!-- Summary Cards Section -->
-  <div class="summary-cards">
-    <div class="summary-card">
+  <div class="summary-cards" role="region" aria-label="Portfolio summary statistics">
+    <div class="summary-card" role="article" aria-label="Total portfolios count">
       <div class="card-content">
-        <div class="card-value">{{ totalPortfolios }}</div>
+        <div class="card-value" aria-live="polite">{{ totalPortfolios }}</div>
         <div class="card-label">Total Portfolios</div>
       </div>
-      <div class="card-icon">
+      <div class="card-icon" aria-hidden="true">
         <i class="pi pi-chart-line"></i>
       </div>
     </div>
 
-    <div class="summary-card">
+    <div class="summary-card" role="article" aria-label="Active portfolios count">
       <div class="card-content">
-        <div class="card-value">{{ activePortfolios }}</div>
+        <div class="card-value" aria-live="polite">{{ activePortfolios }}</div>
         <div class="card-label">Active Portfolios</div>
       </div>
-      <div class="card-icon">
+      <div class="card-icon" aria-hidden="true">
         <i class="pi pi-check-circle"></i>
       </div>
     </div>
 
-    <div class="summary-card">
+    <div class="summary-card" role="article" aria-label="Conservative portfolios count">
       <div class="card-content">
-        <div class="card-value">{{ conservativePortfolios }}</div>
+        <div class="card-value" aria-live="polite">{{ conservativePortfolios }}</div>
         <div class="card-label">Conservative</div>
       </div>
-      <div class="card-icon">
+      <div class="card-icon" aria-hidden="true">
         <i class="pi pi-shield"></i>
       </div>
     </div>
 
-    <div class="summary-card">
+    <div class="summary-card" role="article" aria-label="Moderate portfolios count">
       <div class="card-content">
-        <div class="card-value">{{ moderatePortfolios }}</div>
+        <div class="card-value" aria-live="polite">{{ moderatePortfolios }}</div>
         <div class="card-label">Moderate</div>
       </div>
-      <div class="card-icon">
+      <div class="card-icon" aria-hidden="true">
         <i class="pi pi-balance-scale"></i>
       </div>
     </div>
 
-    <div class="summary-card">
+    <div class="summary-card" role="article" aria-label="Aggressive portfolios count">
       <div class="card-content">
-        <div class="card-value">{{ aggressivePortfolios }}</div>
+        <div class="card-value" aria-live="polite">{{ aggressivePortfolios }}</div>
         <div class="card-label">Aggressive</div>
       </div>
-      <div class="card-icon">
+      <div class="card-icon" aria-hidden="true">
         <i class="pi pi-rocket"></i>
       </div>
     </div>
   </div>
 
-  <!-- Portfolio Tabs -->
-  <p-tabs [(value)]="activeTab" class="portfolio-tabs" (valueChange)="onTabChange($event)">
-    <p-tablist>
-      <p-tab value="0">
-        <i class="pi pi-chart-line"></i>
-        Overview
-      </p-tab>
-      <p-tab value="1">
-        <i class="pi pi-cog"></i>
-        Configure
-      </p-tab>
-      <p-tab value="2">
-        <i class="pi pi-chart-bar"></i>
-        Optimize
-      </p-tab>
-    </p-tablist>
-    <p-tabpanels>
-      <!-- Overview Tab Panel -->
-      <p-tabpanel value="0">
-        <app-portfolio-overview [portfolios]="portfolios" [filteredPortfolios]="filteredPortfolios" [loading]="loading"
-          [error]="error" [searchText]="searchText" [selectedRiskProfile]="selectedRiskProfile" [layout]="layout"
-          [sortField]="sortField" [sortOrder]="sortOrder" [riskProfileOptions]="riskProfileOptions"
-          (searchChange)="onSearchChange()" (riskProfileChange)="onRiskProfileChange()" (clearFilters)="clearFilters()"
-          (sortChange)="onSortChange($event)" (layoutChange)="layout = $event"
-          (configurePortfolio)="configurePortfolio($event)" (optimizePortfolio)="optimizePortfolio($event)"
-          (createPortfolio)="createPortfolio()" (goToLogin)="goToLogin()">
-        </app-portfolio-overview>
-      </p-tabpanel>
+  <!-- Two-Panel Layout -->
+  <div class="two-panel-layout">
+    <!-- Left Sidebar -->
+    <div class="left-sidebar" role="navigation" aria-label="Portfolio list">
+      <!-- Search Input -->
+      <div class="search-section">
+        <label for="portfolio-search" class="sr-only">Search portfolios</label>
+        <span class="p-input-icon-left">
+          <i class="pi pi-search" aria-hidden="true"></i>
+          <input 
+            id="portfolio-search"
+            type="text" 
+            pInputText 
+            [(ngModel)]="searchText" 
+            (ngModelChange)="onSearchChange()"
+            placeholder="Search portfolios..." 
+            class="search-input"
+            aria-label="Search portfolios by name or description" />
+        </span>
+      </div>
 
-      <!-- Configure Tab Panel -->
-      <p-tabpanel value="1">
-        <app-portfolio-configure [selectedPortfolio]="selectedPortfolio" [riskProfileOptions]="riskProfileOptions"
-          (saveChanges)="onSaveChanges($event)" (cancel)="onCancel()" (goToOverview)="goToOverview()">
-        </app-portfolio-configure>
-      </p-tabpanel>
+      <!-- Portfolio List -->
+      <p-scrollpanel *ngIf="!loading" class="portfolio-list-scroll" [style]="{ width: '100%', height: '100%' }">
+        <div class="portfolio-list" role="list" aria-label="Available portfolios">
+          <div 
+            *ngFor="let portfolio of filteredPortfolios; trackBy: trackPortfolioById"
+            class="portfolio-card"
+            [class.selected]="selectedPortfolio?.id === portfolio.id"
+            (click)="selectPortfolio(portfolio)"
+            (keydown.enter)="selectPortfolio(portfolio)"
+            (keydown.space)="selectPortfolio(portfolio); $event.preventDefault()"
+            role="listitem"
+            tabindex="0"
+            [attr.aria-label]="'Portfolio: ' + portfolio.name + ', Return: ' + formatReturn(portfolio.totalReturn || 0) + ', ' + (portfolio.isActive ? 'Active' : 'Inactive')"
+            [attr.aria-selected]="selectedPortfolio?.id === portfolio.id">
+            
+            <div class="portfolio-card-header">
+              <h3 class="portfolio-name">{{ portfolio.name }}</h3>
+              <p-tag 
+                [value]="portfolio.isActive ? 'Active' : 'Inactive'" 
+                [severity]="portfolio.isActive ? 'success' : 'secondary'"
+                [attr.aria-label]="'Status: ' + (portfolio.isActive ? 'Active' : 'Inactive')">
+              </p-tag>
+            </div>
 
-      <!-- Optimize Tab Panel -->
-      <p-tabpanel value="2">
-        <app-portfolio-optimize [selectedPortfolio]="selectedPortfolio"
-          (applyOptimization)="onApplyOptimization($event)">
-        </app-portfolio-optimize>
-      </p-tabpanel>
-    </p-tabpanels>
-  </p-tabs>
+            <p class="portfolio-description">{{ portfolio.description }}</p>
+
+            <div class="portfolio-metrics">
+              <div class="metric">
+                <span class="metric-label">Return</span>
+                <span 
+                  class="metric-value" 
+                  [style.color]="getPerformanceColor(portfolio.totalReturn || 0)">
+                  {{ formatReturn(portfolio.totalReturn || 0) }}
+                </span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Stocks</span>
+                <span class="metric-value">{{ portfolio.stockCount || 0 }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Outperformance</span>
+                <span 
+                  class="metric-value" 
+                  [style.color]="getPerformanceColor(portfolio.outperformance || 0)">
+                  {{ formatReturn(portfolio.outperformance || 0) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="portfolio-footer">
+              <span class="last-executed">
+                <i class="pi pi-clock"></i>
+                Last: {{ portfolio.lastRebalance || 'N/A' }}
+              </span>
+              <span class="risk-profile">
+                <i [class]="getPortfolioIcon(portfolio.riskProfile)"></i>
+                {{ getRiskProfileLabel(portfolio.riskProfile) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="filteredPortfolios.length === 0" class="empty-state" role="status" aria-live="polite">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            <p>No portfolios found</p>
+            <p-button 
+              label="Clear Filters" 
+              icon="pi pi-filter-slash" 
+              (onClick)="clearFilters()"
+              [text]="true"
+              aria-label="Clear all filters to show all portfolios">
+            </p-button>
+          </div>
+        </div>
+      </p-scrollpanel>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state" role="status" aria-live="polite" aria-busy="true">
+        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+        <p>Loading portfolios...</p>
+        <p *ngIf="retryCount > 0" class="retry-info">Retrying... (Attempt {{ retryCount + 1 }} of {{ maxRetries + 1 }})</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error" class="error-state" role="alert" aria-live="assertive">
+        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+        <p>{{ error }}</p>
+        <p-button 
+          label="Retry" 
+          icon="pi pi-refresh" 
+          (onClick)="loadPortfolios()"
+          [text]="true"
+          aria-label="Retry loading portfolios">
+        </p-button>
+      </div>
+    </div>
+
+    <!-- Right Detail Panel -->
+    <div class="right-panel" role="main" aria-label="Portfolio details">
+      <!-- Show message when no portfolio is selected -->
+      <div *ngIf="!selectedPortfolio" class="no-selection-state" role="status">
+        <i class="pi pi-chart-line" aria-hidden="true"></i>
+        <h3>Select a Portfolio</h3>
+        <p>Choose a portfolio from the list to view details and manage settings</p>
+      </div>
+
+      <!-- Show tabs when a portfolio is selected -->
+      <div *ngIf="selectedPortfolio" class="portfolio-detail">
+        <p-tabs [(value)]="activeTab" (valueChange)="onTabChange($event)" role="tablist" [attr.aria-label]="'Portfolio details for ' + selectedPortfolio.name">
+          <p-tablist>
+            <p-tab value="overview" role="tab" [attr.aria-selected]="activeTab === 'overview'" [attr.aria-controls]="'overview-panel'">
+              <i class="pi pi-chart-line" aria-hidden="true"></i>
+              Overview
+            </p-tab>
+            <p-tab value="configure" role="tab" [attr.aria-selected]="activeTab === 'configure'" [attr.aria-controls]="'configure-panel'">
+              <i class="pi pi-cog" aria-hidden="true"></i>
+              Configure
+            </p-tab>
+            <p-tab value="holdings" role="tab" [attr.aria-selected]="activeTab === 'holdings'" [attr.aria-controls]="'holdings-panel'">
+              <i class="pi pi-briefcase" aria-hidden="true"></i>
+              Holdings
+            </p-tab>
+            <p-tab value="trades" role="tab" [attr.aria-selected]="activeTab === 'trades'" [attr.aria-controls]="'trades-panel'">
+              <i class="pi pi-history" aria-hidden="true"></i>
+              Trades
+            </p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <!-- Overview Tab -->
+            <p-tabpanel value="overview" role="tabpanel" id="overview-panel" [attr.aria-labelledby]="'Overview tab for ' + selectedPortfolio.name">
+              <div class="tab-content">
+                <h3>Overview - {{ selectedPortfolio.name }}</h3>
+                <p>Overview content will be implemented in future tasks</p>
+              </div>
+            </p-tabpanel>
+
+            <!-- Configure Tab -->
+            <p-tabpanel value="configure" role="tabpanel" id="configure-panel" [attr.aria-labelledby]="'Configure tab for ' + selectedPortfolio.name">
+              <div class="tab-content configure-tab">
+                <h3 class="tab-title">Portfolio Configuration</h3>
+
+                <!-- Basic Settings Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Basic Settings</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="portfolio-name">Portfolio Name <span class="required">*</span></label>
+                      <input 
+                        id="portfolio-name"
+                        type="text" 
+                        pInputText 
+                        [(ngModel)]="configForm.name"
+                        (ngModelChange)="onConfigFormChange()"
+                        placeholder="Enter portfolio name"
+                        class="form-input" />
+                    </div>
+
+                    <div class="form-field full-width">
+                      <label for="portfolio-description">Description <span class="required">*</span></label>
+                      <textarea 
+                        id="portfolio-description"
+                        pTextarea 
+                        [(ngModel)]="configForm.description"
+                        (ngModelChange)="onConfigFormChange()"
+                        placeholder="Enter portfolio description"
+                        rows="3"
+                        class="form-input">
+                      </textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Risk Profile Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Risk Profile</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="risk-profile">Risk Profile <span class="required">*</span></label>
+                      <p-select 
+                        id="risk-profile"
+                        [(ngModel)]="configForm.riskProfile"
+                        (ngModelChange)="onConfigFormChange()"
+                        [options]="riskProfileOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select risk profile"
+                        class="form-input">
+                      </p-select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="risk-tolerance">Risk Tolerance <span class="required">*</span></label>
+                      <p-select 
+                        id="risk-tolerance"
+                        [(ngModel)]="configForm.riskTolerance"
+                        (ngModelChange)="onConfigFormChange()"
+                        [options]="riskToleranceOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select risk tolerance"
+                        class="form-input">
+                      </p-select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rebalancing Strategy Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Rebalancing Strategy</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="rebalancing-strategy">Strategy <span class="required">*</span></label>
+                      <p-select 
+                        id="rebalancing-strategy"
+                        [(ngModel)]="configForm.rebalancingStrategy"
+                        (ngModelChange)="onConfigFormChange()"
+                        [options]="rebalancingStrategyOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select rebalancing strategy"
+                        class="form-input">
+                      </p-select>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="rebalancing-threshold">Threshold (%) <span class="required">*</span></label>
+                      <p-inputnumber 
+                        id="rebalancing-threshold"
+                        [(ngModel)]="configForm.rebalancingThreshold"
+                        (ngModelChange)="onConfigFormChange()"
+                        [min]="0"
+                        [max]="100"
+                        [step]="1"
+                        suffix="%"
+                        placeholder="Enter threshold"
+                        class="form-input">
+                      </p-inputnumber>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Execution Preferences Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Execution Preferences</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="automated-execution">Automated Execution</label>
+                      <div class="toggle-field">
+                        <p-togglebutton 
+                          id="automated-execution"
+                          [(ngModel)]="configForm.automatedExecution"
+                          (ngModelChange)="onConfigFormChange()">
+                        </p-togglebutton>
+                        <span class="field-hint">Automatically execute rebalancing trades</span>
+                      </div>
+                    </div>
+
+                    <div class="form-field">
+                      <label for="notification-settings">Notification Settings</label>
+                      <div class="toggle-field">
+                        <p-togglebutton 
+                          id="notification-settings"
+                          [(ngModel)]="configForm.notificationSettings"
+                          (ngModelChange)="onConfigFormChange()">
+                        </p-togglebutton>
+                        <span class="field-hint">Receive notifications for portfolio events</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Advanced Options Section -->
+                <div class="config-section">
+                  <h4 class="section-title">Advanced Options</h4>
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label for="tax-harvesting">Tax Loss Harvesting</label>
+                      <div class="toggle-field">
+                        <p-togglebutton 
+                          id="tax-harvesting"
+                          [(ngModel)]="configForm.taxHarvesting"
+                          (ngModelChange)="onConfigFormChange()">
+                        </p-togglebutton>
+                        <span class="field-hint">Optimize trades for tax efficiency</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="config-actions" role="group" aria-label="Configuration actions">
+                  <p-button 
+                    label="Reset"
+                    icon="pi pi-refresh"
+                    severity="secondary"
+                    [outlined]="true"
+                    (onClick)="resetConfiguration()"
+                    [disabled]="!configFormDirty || savingConfig"
+                    aria-label="Reset configuration to original values">
+                  </p-button>
+                  <p-button 
+                    label="Save Configuration"
+                    icon="pi pi-save"
+                    severity="primary"
+                    (onClick)="saveConfiguration()"
+                    [disabled]="!isSaveButtonEnabled() || savingConfig"
+                    [loading]="savingConfig"
+                    [attr.aria-label]="savingConfig ? 'Saving configuration...' : 'Save configuration changes'">
+                  </p-button>
+                </div>
+              </div>
+            </p-tabpanel>
+
+            <!-- Holdings Tab -->
+            <p-tabpanel value="holdings" role="tabpanel" id="holdings-panel" [attr.aria-labelledby]="'Holdings tab for ' + selectedPortfolio.name">
+              <div class="tab-content holdings-tab">
+                <h3 class="tab-title">Holdings - {{ selectedPortfolio.name }}</h3>
+
+                <!-- Loading State -->
+                <div *ngIf="holdingsLoading" class="holdings-loading-state" role="status" aria-live="polite" aria-busy="true">
+                  <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                  <p>Loading holdings...</p>
+                  <p *ngIf="holdingsRetryCount > 0" class="retry-info">Retrying... (Attempt {{ holdingsRetryCount + 1 }} of {{ maxRetries + 1 }})</p>
+                </div>
+
+                <!-- Error State -->
+                <div *ngIf="holdingsError && !holdingsLoading" class="holdings-error-state" role="alert" aria-live="assertive">
+                  <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  <p>{{ holdingsError }}</p>
+                  <p-button 
+                    label="Retry" 
+                    icon="pi pi-refresh" 
+                    (onClick)="loadHoldings(selectedPortfolio.id)"
+                    [text]="true"
+                    aria-label="Retry loading holdings">
+                  </p-button>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="!holdingsLoading && !holdingsError && holdings.length === 0" class="holdings-empty-state" role="status" aria-live="polite">
+                  <i class="pi pi-inbox" aria-hidden="true"></i>
+                  <p>No holdings found</p>
+                  <p class="empty-state-hint">This portfolio doesn't have any holdings yet.</p>
+                </div>
+
+                <!-- Holdings Table -->
+                <div *ngIf="!holdingsLoading && !holdingsError && holdings.length > 0" class="holdings-table-container">
+                  <p-table 
+                    [value]="holdings" 
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-striped"
+                    role="table"
+                    aria-label="Portfolio holdings">
+                    <ng-template pTemplate="header">
+                      <tr role="row">
+                        <th role="columnheader" scope="col">Symbol</th>
+                        <th role="columnheader" scope="col" class="text-right">Quantity</th>
+                        <th role="columnheader" scope="col" class="text-right">Avg Cost</th>
+                        <th role="columnheader" scope="col" class="text-right">Current Price</th>
+                        <th role="columnheader" scope="col" class="text-right">Unrealized P&L</th>
+                        <th role="columnheader" scope="col" class="text-right">Unrealized P&L %</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-holding>
+                      <tr>
+                        <td>
+                          <span class="symbol-cell">{{ holding.symbol }}</span>
+                        </td>
+                        <td class="text-right">{{ holding.quantity }}</td>
+                        <td class="text-right">{{ formatCurrency(holding.avgCost) }}</td>
+                        <td class="text-right">
+                          <span *ngIf="holding.currentPrice">{{ formatCurrency(holding.currentPrice) }}</span>
+                          <span *ngIf="!holding.currentPrice" class="text-muted">N/A</span>
+                        </td>
+                        <td class="text-right">
+                          <span 
+                            *ngIf="holding.currentPrice"
+                            [style.color]="getPerformanceColor(calculateUnrealizedPnl(holding))"
+                            class="pnl-value">
+                            {{ formatCurrency(calculateUnrealizedPnl(holding)) }}
+                          </span>
+                          <span *ngIf="!holding.currentPrice" class="text-muted">N/A</span>
+                        </td>
+                        <td class="text-right">
+                          <span 
+                            *ngIf="holding.currentPrice"
+                            [style.color]="getPerformanceColor(calculateUnrealizedPnlPct(holding))"
+                            class="pnl-value">
+                            {{ formatPercentage(calculateUnrealizedPnlPct(holding)) }}
+                          </span>
+                          <span *ngIf="!holding.currentPrice" class="text-muted">N/A</span>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              </div>
+            </p-tabpanel>
+
+            <!-- Trades Tab -->
+            <p-tabpanel value="trades" role="tabpanel" id="trades-panel" [attr.aria-labelledby]="'Trades tab for ' + selectedPortfolio.name">
+              <div class="tab-content trades-tab">
+                <h3 class="tab-title">Trades - {{ selectedPortfolio.name }}</h3>
+
+                <!-- Loading State -->
+                <div *ngIf="tradesLoading" class="trades-loading-state" role="status" aria-live="polite" aria-busy="true">
+                  <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+                  <p>Loading trades...</p>
+                  <p *ngIf="tradesRetryCount > 0" class="retry-info">Retrying... (Attempt {{ tradesRetryCount + 1 }} of {{ maxRetries + 1 }})</p>
+                </div>
+
+                <!-- Error State -->
+                <div *ngIf="tradesError && !tradesLoading" class="trades-error-state" role="alert" aria-live="assertive">
+                  <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  <p>{{ tradesError }}</p>
+                  <p-button 
+                    label="Retry" 
+                    icon="pi pi-refresh" 
+                    (onClick)="loadTrades(selectedPortfolio.id)"
+                    [text]="true"
+                    aria-label="Retry loading trades">
+                  </p-button>
+                </div>
+
+                <!-- Empty State -->
+                <div *ngIf="!tradesLoading && !tradesError && trades.length === 0" class="trades-empty-state" role="status" aria-live="polite">
+                  <i class="pi pi-inbox" aria-hidden="true"></i>
+                  <p>No trades found</p>
+                  <p class="empty-state-hint">This portfolio doesn't have any completed trades yet.</p>
+                </div>
+
+                <!-- Trades Table -->
+                <div *ngIf="!tradesLoading && !tradesError && trades.length > 0" class="trades-table-container">
+                  <p-table 
+                    [value]="trades" 
+                    [tableStyle]="{ 'min-width': '70rem' }"
+                    styleClass="p-datatable-sm p-datatable-striped"
+                    role="table"
+                    aria-label="Portfolio trades">
+                    <ng-template pTemplate="header">
+                      <tr role="row">
+                        <th role="columnheader" scope="col">Symbol</th>
+                        <th role="columnheader" scope="col" class="text-right">Entry Date</th>
+                        <th role="columnheader" scope="col" class="text-right">Entry Price</th>
+                        <th role="columnheader" scope="col" class="text-right">Exit Date</th>
+                        <th role="columnheader" scope="col" class="text-right">Exit Price</th>
+                        <th role="columnheader" scope="col" class="text-right">Quantity</th>
+                        <th role="columnheader" scope="col" class="text-right">Profit</th>
+                        <th role="columnheader" scope="col" class="text-right">Profit %</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-trade>
+                      <tr>
+                        <td>
+                          <span class="symbol-cell">{{ trade.symbol }}</span>
+                        </td>
+                        <td class="text-right">{{ formatTradeDate(trade.entryDate) }}</td>
+                        <td class="text-right">{{ formatCurrency(trade.entryPrice) }}</td>
+                        <td class="text-right">{{ formatTradeDate(trade.exitDate) }}</td>
+                        <td class="text-right">{{ formatCurrency(trade.exitPrice) }}</td>
+                        <td class="text-right">{{ trade.quantity }}</td>
+                        <td class="text-right">
+                          <span 
+                            [style.color]="getPerformanceColor(trade.profit)"
+                            class="pnl-value">
+                            {{ formatCurrency(trade.profit) }}
+                          </span>
+                        </td>
+                        <td class="text-right">
+                          <span 
+                            [style.color]="getPerformanceColor(trade.profitPct)"
+                            class="pnl-value">
+                            {{ formatPercentage(trade.profitPct) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              </div>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      </div>
+    </div>
+  </div>
 </div>

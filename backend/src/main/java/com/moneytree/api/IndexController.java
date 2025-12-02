@@ -7,8 +7,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.moneytree.config.CacheConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -202,8 +204,73 @@ public class IndexController {
         }
     }
 
+    @PostMapping("/historical-data")
+    @Operation(summary = "Get historical data", description = "Retrieve historical OHLCV data for any instrument (stocks, indices, etc.) from kite_ohlcv_historic")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved historical data"),
+        @ApiResponse(responseCode = "400", description = "Invalid request payload"),
+        @ApiResponse(responseCode = "404", description = "Instrument not found")
+    })
+    public ResponseEntity<?> getHistoricalData(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Historical data request payload", required = true)
+            @Valid @RequestBody com.moneytree.api.dto.HistoricalDataRequest request) {
+        try {
+            if (request == null || request.getTradingsymbol() == null || request.getTradingsymbol().isBlank()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "tradingsymbol is required"));
+            }
+
+            String tradingsymbol = request.getTradingsymbol().trim();
+            // Exchange is currently not used in repository methods, but kept for future use
+            // String exchange = request.getExchange() != null && !request.getExchange().isBlank() 
+            //     ? request.getExchange().trim().toUpperCase() 
+            //     : "NSE"; // Default to NSE
+            
+            List<Map<String, Object>> historicalData;
+            
+            // Use date range if provided, otherwise use days
+            if (request.getStartDate() != null && request.getEndDate() != null) {
+                historicalData = repository.getHistoricalDataByDateRange(
+                    tradingsymbol, 
+                    request.getStartDate(), 
+                    request.getEndDate()
+                );
+            } else {
+                int days = request.getDays() == null || request.getDays() <= 0 ? 365 : request.getDays();
+                historicalData = repository.getHistoricalData(tradingsymbol, days);
+            }
+            
+            if (historicalData.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Historical data not found for tradingsymbol: " + tradingsymbol));
+            }
+            
+            // Map to response format
+            List<Map<String, Object>> response = historicalData.stream()
+                .map(data -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("tradingsymbol", data.get("tradingsymbol"));
+                    item.put("name", data.get("name"));
+                    item.put("date", data.get("date").toString());
+                    item.put("open", data.get("open"));
+                    item.put("high", data.get("high"));
+                    item.put("low", data.get("low"));
+                    item.put("close", data.get("close"));
+                    item.put("volume", data.get("volume"));
+                    return item;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception ex) {
+            log.error("Error getting historical data for tradingsymbol: {}", request != null ? request.getTradingsymbol() : "unknown", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal error fetching historical data"));
+        }
+    }
+
     @GetMapping("/index/exchange/{exchange}/segment/{segment}")
-    @Operation(summary = "List indices by exchange and segment", description = "Retrieve indices filtered by exchange and segment from kite_instrument_master")
+    @Operation(summary = "List indices by exchange and segment", description = "Retrieve indices filtered by exchange and segment from kite_instrument_master. Response is cached for 9 hours.")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Successfully retrieved indices")
     })
@@ -212,42 +279,74 @@ public class IndexController {
             @PathVariable String exchange,
             @Parameter(description = "Segment name", example = "INDICES")
             @PathVariable String segment) {
+        long requestStart = System.currentTimeMillis();
         try {
             String effectiveExchange = (exchange == null || exchange.isBlank()) ? "NSE" : exchange;
             String effectiveSegment = (segment == null || segment.isBlank()) ? "INDICES" : segment;
 
-            List<Map<String, Object>> instruments = repository.getInstrumentsByExchangeAndSegment(
-                    effectiveExchange,
-                    effectiveSegment
-            );
+            log.debug("Request received for exchange={}, segment={}", effectiveExchange, effectiveSegment);
+            
+            // Get cached or fresh data
+            List<Map<String, Object>> response = getIndicesData(effectiveExchange, effectiveSegment);
 
-            // Map to IndexResponseDto-like structure
-            List<Map<String, Object>> response = instruments.stream()
-                    .map(instrument -> {
-                        Map<String, Object> item = new HashMap<>();
-                        item.put("id", String.valueOf(instrument.getOrDefault("instrument_token", "")));
-                        item.put("indexName", instrument.getOrDefault("name", instrument.get("tradingsymbol")));
-                        item.put("indexSymbol", instrument.getOrDefault("tradingsymbol", instrument.get("name")));
-                        // Use close price from OHLCV data, fallback to last_price if not available
-                        Object closePrice = instrument.get("close");
-                        Object lastPrice = instrument.get("last_price");
-                        item.put("lastPrice", closePrice != null ? closePrice : (lastPrice != null ? lastPrice : 0));
-                        item.put("close", closePrice);
-                        item.put("previousClose", instrument.get("previous_close"));
-                        item.put("date", instrument.get("date"));
-                        item.put("keyCategory", "Index");
-                        item.put("createdAt", java.time.Instant.now().toString());
-                        item.put("updatedAt", java.time.Instant.now().toString());
-                        return item;
-                    })
-                    .toList();
-
+            long totalDuration = System.currentTimeMillis() - requestStart;
+            if (totalDuration > 1000) {
+                log.warn("⚠️ Slow response: {} ms for exchange={}, segment={} (consider checking cache)", 
+                    totalDuration, effectiveExchange, effectiveSegment);
+            } else {
+                log.debug("✅ Fast response: {} ms for exchange={}, segment={}", 
+                    totalDuration, effectiveExchange, effectiveSegment);
+            }
             return ResponseEntity.ok(response);
         } catch (Exception ex) {
             log.error("Error listing indices for exchange {} segment {}", exchange, segment, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Internal error listing indices"));
         }
+    }
+
+    /**
+     * Get indices data - cached method that returns the response body.
+     * This method is cached, not the ResponseEntity wrapper.
+     */
+    @Cacheable(
+        value = CacheConfig.INDICES_BY_EXCHANGE_SEGMENT_CACHE, 
+        key = "'indices:' + #exchange + ':' + #segment", 
+        unless = "#result == null || #result.isEmpty()"
+    )
+    public List<Map<String, Object>> getIndicesData(String exchange, String segment) {
+        long startTime = System.currentTimeMillis();
+        log.warn("🔍 CACHE MISS - Querying database for exchange={}, segment={}", exchange, segment);
+        
+        List<Map<String, Object>> instruments = repository.getInstrumentsByExchangeAndSegment(
+                exchange,
+                segment
+        );
+
+        // Map to IndexResponseDto-like structure - optimized for performance
+        List<Map<String, Object>> response = new java.util.ArrayList<>(instruments.size());
+        for (Map<String, Object> instrument : instruments) {
+            Map<String, Object> item = new HashMap<>(12); // Pre-size for performance
+            item.put("id", String.valueOf(instrument.getOrDefault("instrument_token", "")));
+            item.put("indexName", instrument.getOrDefault("name", instrument.get("tradingsymbol")));
+            item.put("indexSymbol", instrument.getOrDefault("tradingsymbol", instrument.get("name")));
+            // Use close price from OHLCV data, fallback to last_price if not available
+            Object closePrice = instrument.get("close");
+            Object lastPrice = instrument.get("last_price");
+            item.put("lastPrice", closePrice != null ? closePrice : (lastPrice != null ? lastPrice : 0));
+            item.put("close", closePrice);
+            item.put("previousClose", instrument.get("previous_close"));
+            item.put("date", instrument.get("date"));
+            item.put("keyCategory", "Index");
+            String now = java.time.Instant.now().toString();
+            item.put("createdAt", now);
+            item.put("updatedAt", now);
+            response.add(item);
+        }
+
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("✅ Retrieved {} indices in {} ms (will be cached for 9 hours)", response.size(), duration);
+        return response;
     }
 
 }

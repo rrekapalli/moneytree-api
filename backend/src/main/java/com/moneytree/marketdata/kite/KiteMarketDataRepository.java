@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Repository façade over TimescaleDB kite_* tables.
@@ -21,9 +22,11 @@ public class KiteMarketDataRepository {
     private static final Logger log = LoggerFactory.getLogger(KiteMarketDataRepository.class);
 
     private final JdbcTemplate jdbcTemplate;
+    private final RedisCacheService redisCacheService;
 
-    public KiteMarketDataRepository(JdbcTemplate jdbcTemplate) {
+    public KiteMarketDataRepository(JdbcTemplate jdbcTemplate, RedisCacheService redisCacheService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.redisCacheService = redisCacheService;
     }
 
     public List<Map<String, Object>> loadHistoricalCandles(String instrumentToken,
@@ -32,17 +35,18 @@ public class KiteMarketDataRepository {
                                                            String interval) {
         log.debug("Loading historical candles instrumentToken={}, from={}, to={}, interval={}",
                 instrumentToken, from, to, interval);
+        // Optimized for TimescaleDB: filter by time first (enables chunk exclusion), then by instrument
         String sql = """
                 SELECT date, open, high, low, close, volume, candle_interval
                 FROM kite_ohlcv_historic
-                WHERE instrument_token = ?
-                  AND exchange IN ('NSE')
-                  AND date >= ?
+                WHERE date >= ?
                   AND date <= ?
+                  AND instrument_token = ?
+                  AND exchange = 'NSE'
                   AND candle_interval = ?
-                ORDER BY date
+                ORDER BY date ASC
                 """;
-        return jdbcTemplate.queryForList(sql, instrumentToken, from, to, interval);
+        return jdbcTemplate.queryForList(sql, from, to, instrumentToken, interval);
     }
 
     private String normalizeSymbol(String symbol) {
@@ -54,52 +58,73 @@ public class KiteMarketDataRepository {
 
     /**
      * List instruments by exchange and segment filters with previous day's close price.
+     * Optimized for performance: filters master table first, then joins with hypertable.
      */
     public List<Map<String, Object>> getInstrumentsByExchangeAndSegment(String exchange, String segment) {
         String normalizedExchange = exchange != null && !exchange.isBlank() ? exchange.trim().toUpperCase() : null;
         String normalizedSegment = segment != null && !segment.isBlank() ? segment.trim().toUpperCase() : null;
 
-        log.debug("Listing instruments by exchange={}, segment={}", normalizedExchange, normalizedSegment);
+        log.info("Listing instruments by exchange={}, segment={}", normalizedExchange, normalizedSegment);
+        long startTime = System.currentTimeMillis();
 
+        // Ultra-optimized: Pre-calculate previous date, then efficient indexed join
+        // Reduced to 500 rows max for better performance
         String sql = """
+                WITH prev_date AS (
+                    SELECT MAX(date) as prev_date
+                    FROM kite_ohlcv_historic
+                    WHERE date < CURRENT_DATE
+                      AND candle_interval = 'day'
+                      AND exchange IN ('NSE', 'NSE_INDEX')
+                    LIMIT 1
+                ),
+                filtered_instruments AS (
+                    SELECT 
+                        kim.instrument_token,
+                        kim.tradingsymbol,
+                        kim."name",
+                        kim.exchange,
+                        kim.segment
+                    FROM kite_instrument_master kim
+                    WHERE ( ? IS NULL
+                            OR kim.exchange = ?
+                            OR (? = 'NSE' AND kim.exchange IN ('NSE', 'NSE_INDEX'))
+                            OR (? = 'NSE_INDEX' AND kim.exchange IN ('NSE', 'NSE_INDEX')) )
+                      AND ( ? IS NULL OR kim.segment = ? )
+                      AND kim.instrument_type = 'EQ'
+                      AND kim.expiry IS NULL
+                      AND kim.name IS NOT NULL
+                    LIMIT 500
+                )
                 SELECT 
-                    kim.instrument_token,
-                    kim.tradingsymbol,
-                    kim."name",
-                    kim.exchange,
-                    kim.segment,
-                    koh.date,
-                    koh."close",
-                    LAG(koh."close", 1) OVER (
-                        PARTITION BY koh.instrument_token 
-                        ORDER BY koh.date
-                    ) AS previous_close
-                FROM kite_instrument_master kim
-                INNER JOIN kite_ohlcv_historic koh 
-                    ON kim.instrument_token = koh.instrument_token
-                   AND kim.exchange = koh.exchange
-                WHERE ( ? IS NULL
-                        OR UPPER(kim.exchange) = ?
-                        OR (? = 'NSE' AND UPPER(kim.exchange) IN ('NSE', 'NSE_INDEX'))
-                        OR (? = 'NSE_INDEX' AND UPPER(kim.exchange) IN ('NSE', 'NSE_INDEX')) )
-                  AND ( ? IS NULL OR UPPER(kim.segment) = ? )
-                  AND kim.instrument_type = 'EQ'
-                  AND kim.expiry IS NULL
-                  AND koh.date = (
-                      SELECT MAX(date)
-                      FROM kite_ohlcv_historic
-                      WHERE date < CURRENT_DATE
-                  )
-                  AND kim.name IS NOT NULL
-                ORDER BY kim.tradingsymbol ASC
+                    fi.instrument_token,
+                    fi.tradingsymbol,
+                    fi."name",
+                    fi.exchange,
+                    fi.segment,
+                    curr.date,
+                    curr."close",
+                    NULL::float8 AS previous_close
+                FROM filtered_instruments fi
+                CROSS JOIN prev_date pd
+                INNER JOIN kite_ohlcv_historic curr
+                    ON curr.instrument_token = fi.instrument_token
+                   AND curr.exchange = fi.exchange
+                   AND curr.date = pd.prev_date
+                   AND curr.candle_interval = 'day'
+                ORDER BY fi.tradingsymbol ASC
                 """;
 
-        return jdbcTemplate.queryForList(
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(
                 sql,
                 normalizedExchange, normalizedExchange,
                 normalizedExchange, normalizedExchange,
                 normalizedSegment, normalizedSegment
         );
+        
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Retrieved {} instruments in {} ms", results.size(), duration);
+        return results;
     }
 
     /**
@@ -139,21 +164,32 @@ public class KiteMarketDataRepository {
      */
     public Map<String, Object> getPreviousDayData(String tradingsymbol) {
         log.debug("Getting previous day data for tradingsymbol: {}", tradingsymbol);
+        
+        // First, get instrument_token to avoid complex regex joins
+        Map<String, Object> instrument = getInstrumentByName(tradingsymbol);
+        if (instrument == null) {
+            log.warn("Instrument not found for: {}", tradingsymbol);
+            return null;
+        }
+        
+        String instrumentToken = (String) instrument.get("instrument_token");
+        String exchange = (String) instrument.get("exchange");
+        
+        if (instrumentToken == null) {
+            log.warn("Instrument token not found for: {}", tradingsymbol);
+            return null;
+        }
+        
+        // Optimized for TimescaleDB: filter by time first (enables chunk exclusion), then by instrument_token
         // Get the most recent day's data before today
-        String normalized = normalizeSymbol(tradingsymbol);
         String sql = """
                 SELECT o.date, o.open, o.high, o.low, o.close, o.volume,
                        m.name, m.tradingsymbol, m.last_price
                 FROM kite_ohlcv_historic o
                 JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
                     AND o.exchange = m.exchange
-                WHERE (
-                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
-                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
-                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
-                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
-                  )
-                  AND o.exchange IN ('NSE', 'NSE_INDEX')
+                WHERE o.instrument_token = ?
+                  AND o.exchange = ?
                   AND o.candle_interval = 'day'
                   AND o.date < CURRENT_DATE
                 ORDER BY o.date DESC
@@ -161,8 +197,8 @@ public class KiteMarketDataRepository {
                 """;
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
                 sql,
-                tradingsymbol, tradingsymbol,
-                normalized, normalized
+                instrumentToken,
+                exchange != null ? exchange : "NSE"
         );
         return results.isEmpty() ? null : results.get(0);
     }
@@ -170,10 +206,90 @@ public class KiteMarketDataRepository {
     /**
      * Get historical data for an index from kite_ohlcv_historic
      * For indices, prioritize volume from nse_idx_ohlcv_historic as it has accurate volume data
+     * This method checks Redis cache first, then falls back to database if cache miss.
      */
     public List<Map<String, Object>> getHistoricalData(String tradingsymbol, int days) {
-        log.debug("Getting historical data for tradingsymbol: {}, days: {}", tradingsymbol, days);
-        String normalized = normalizeSymbol(tradingsymbol);
+        log.info("Getting historical data for tradingsymbol: {}, days: {}", tradingsymbol, days);
+        
+        // Try Redis cache first - use tradingsymbol from DB as the key
+        try {
+            // First, get the actual tradingsymbol from database - this is what's used as the Redis key
+            Map<String, Object> instrument = getInstrumentByName(tradingsymbol);
+            String redisKey = null;
+            
+            if (instrument != null) {
+                redisKey = (String) instrument.get("tradingsymbol");
+                if (redisKey == null || redisKey.isEmpty()) {
+                    // Fallback to name if tradingsymbol is not available
+                    redisKey = (String) instrument.get("name");
+                }
+            }
+            
+            // If we couldn't get from DB, try the input directly (might already be a tradingsymbol)
+            if (redisKey == null || redisKey.isEmpty()) {
+                redisKey = tradingsymbol;
+            }
+            
+            // Normalize the key (uppercase, trimmed)
+            redisKey = redisKey != null ? redisKey.toUpperCase().trim() : tradingsymbol.toUpperCase().trim();
+            
+            log.debug("Using tradingsymbol '{}' as Redis key for lookup", redisKey);
+            
+            // Check Redis cache using the tradingsymbol
+            if (redisCacheService.isSymbolCached(redisKey)) {
+                log.info("Found symbol in Redis cache with key: {}", redisKey);
+                List<Map<String, Object>> cachedData = redisCacheService.getHistoricalDataByDaysFromCache(redisKey, days);
+                if (!cachedData.isEmpty()) {
+                    log.info("✅ Retrieved {} records from Redis cache for symbol: {} ({} days)", 
+                        cachedData.size(), redisKey, days);
+                    // Add name and tradingsymbol fields if missing (for compatibility with existing code)
+                    String finalName = instrument != null ? (String) instrument.get("name") : tradingsymbol;
+                    String finalTradingsymbol = redisKey;
+                    for (Map<String, Object> record : cachedData) {
+                        if (!record.containsKey("name")) {
+                            record.put("name", finalName);
+                        }
+                        if (!record.containsKey("tradingsymbol")) {
+                            record.put("tradingsymbol", finalTradingsymbol);
+                        }
+                    }
+                    return cachedData;
+                } else {
+                    log.warn("Symbol {} found in Redis but no data for {} days", redisKey, days);
+                }
+            } else {
+                log.warn("Symbol '{}' not found in Redis cache", redisKey);
+            }
+        } catch (Exception ex) {
+            log.error("Error retrieving from Redis cache, falling back to database: {}", ex.getMessage(), ex);
+        }
+        
+        // Fallback to database - Optimized for TimescaleDB
+        log.warn("⚠️ Cache miss - querying database for symbol: {} (this will be slower)", tradingsymbol);
+        
+        // First, get instrument_token to avoid complex regex joins
+        Map<String, Object> instrument = getInstrumentByName(tradingsymbol);
+        if (instrument == null) {
+            log.warn("Instrument not found for: {}", tradingsymbol);
+            return List.of();
+        }
+        
+        String instrumentToken = (String) instrument.get("instrument_token");
+        String exchange = (String) instrument.get("exchange");
+        String instrumentName = (String) instrument.get("name");
+        String instrumentTradingsymbol = (String) instrument.get("tradingsymbol");
+        
+        if (instrumentToken == null) {
+            log.warn("Instrument token not found for: {}", tradingsymbol);
+            return List.of();
+        }
+        
+        // Calculate date range for TimescaleDB chunk exclusion
+        java.time.LocalDate endDate = java.time.LocalDate.now();
+        java.time.LocalDate startDate = endDate.minusDays(days);
+        
+        // Optimized query: filter by time first (enables TimescaleDB chunk exclusion), then by instrument_token
+        // Use direct instrument_token lookup instead of complex joins with regex
         String sql = """
                 SELECT o.date, o.open, o.high, o.low, o.close, 
                        COALESCE(
@@ -181,70 +297,14 @@ public class KiteMarketDataRepository {
                            NULLIF(o.volume, 0),      -- Fallback to kite_ohlcv_historic volume if not 0
                            0                         -- Default to 0 if both are 0 or NULL
                        ) as volume,
-                       m.name, m.tradingsymbol
+                       ? as name,
+                       ? as tradingsymbol
                 FROM kite_ohlcv_historic o
-                JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
-                    AND o.exchange = m.exchange
                 LEFT JOIN nse_idx_ohlcv_historic nidx ON 
-                    (
-                        UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.name))
-                        OR UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.tradingsymbol))
-                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g')
-                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g')
-                    )
-                    AND DATE(nidx.date) = DATE(o.date)
-                WHERE (
-                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
-                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
-                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
-                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
-                  )
-                  AND o.exchange IN ('NSE', 'NSE_INDEX')
-                  AND o.candle_interval = 'day'
-                  AND o.date >= CURRENT_DATE - (? || ' days')::interval
-                ORDER BY o.date ASC
-                """;
-        return jdbcTemplate.queryForList(
-                sql,
-                tradingsymbol, tradingsymbol,
-                normalized, normalized,
-                String.valueOf(days)
-        );
-    }
-
-    /**
-     * Get historical data for an index from kite_ohlcv_historic using date range
-     * For indices, prioritize volume from nse_idx_ohlcv_historic as it has accurate volume data
-     */
-    public List<Map<String, Object>> getHistoricalDataByDateRange(String tradingsymbol, java.time.LocalDate startDate, java.time.LocalDate endDate) {
-        log.debug("Getting historical data for tradingsymbol: {}, startDate: {}, endDate: {}", tradingsymbol, startDate, endDate);
-        String normalized = normalizeSymbol(tradingsymbol);
-        String sql = """
-                SELECT o.date, o.open, o.high, o.low, o.close, 
-                       COALESCE(
-                           NULLIF(nidx.volume, 0),  -- Use nse_idx_ohlcv_historic volume if not 0
-                           NULLIF(o.volume, 0),      -- Fallback to kite_ohlcv_historic volume if not 0
-                           0                         -- Default to 0 if both are 0 or NULL
-                       ) as volume,
-                       m.name, m.tradingsymbol
-                FROM kite_ohlcv_historic o
-                JOIN kite_instrument_master m ON o.instrument_token = m.instrument_token 
-                    AND o.exchange = m.exchange
-                LEFT JOIN nse_idx_ohlcv_historic nidx ON 
-                    (
-                        UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.name))
-                        OR UPPER(TRIM(nidx.index_name)) = UPPER(TRIM(m.tradingsymbol))
-                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g')
-                        OR REGEXP_REPLACE(UPPER(nidx.index_name), '[^A-Z0-9]', '', 'g') = REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g')
-                    )
-                    AND DATE(nidx.date) = DATE(o.date)
-                WHERE (
-                        UPPER(TRIM(m.tradingsymbol)) = UPPER(TRIM(?))
-                     OR UPPER(TRIM(m.name)) = UPPER(TRIM(?))
-                     OR REGEXP_REPLACE(UPPER(m.tradingsymbol), '[^A-Z0-9]', '', 'g') = ?
-                     OR REGEXP_REPLACE(UPPER(m.name), '[^A-Z0-9]', '', 'g') = ?
-                  )
-                  AND o.exchange IN ('NSE', 'NSE_INDEX')
+                    nidx.index_name = ?
+                    AND nidx.date = DATE(o.date)
+                WHERE o.instrument_token = ?
+                  AND o.exchange = ?
                   AND o.candle_interval = 'day'
                   AND o.date >= ?
                   AND o.date <= ?
@@ -252,9 +312,140 @@ public class KiteMarketDataRepository {
                 """;
         return jdbcTemplate.queryForList(
                 sql,
-                tradingsymbol, tradingsymbol,
-                normalized, normalized,
-                startDate, endDate
+                instrumentName != null ? instrumentName : tradingsymbol,
+                instrumentTradingsymbol != null ? instrumentTradingsymbol : tradingsymbol,
+                instrumentName != null ? instrumentName : instrumentTradingsymbol, // For nidx join
+                instrumentToken,
+                exchange != null ? exchange : "NSE",
+                startDate,
+                endDate
+        );
+    }
+
+    /**
+     * Get historical data for an index from kite_ohlcv_historic using date range
+     * For indices, prioritize volume from nse_idx_ohlcv_historic as it has accurate volume data
+     * This method checks Redis cache first, then falls back to database if cache miss.
+     */
+    public List<Map<String, Object>> getHistoricalDataByDateRange(String tradingsymbol, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        log.info("Getting historical data for tradingsymbol: {}, startDate: {}, endDate: {}", tradingsymbol, startDate, endDate);
+        
+        // Try Redis cache first - use tradingsymbol from DB as the key
+        try {
+            // First, get the actual tradingsymbol from database - this is what's used as the Redis key
+            Map<String, Object> instrument = getInstrumentByName(tradingsymbol);
+            String redisKey = null;
+            
+            if (instrument != null) {
+                redisKey = (String) instrument.get("tradingsymbol");
+                if (redisKey == null || redisKey.isEmpty()) {
+                    // Fallback to name if tradingsymbol is not available
+                    redisKey = (String) instrument.get("name");
+                }
+            }
+            
+            // If we couldn't get from DB, try the input directly (might already be a tradingsymbol)
+            if (redisKey == null || redisKey.isEmpty()) {
+                redisKey = tradingsymbol;
+            }
+            
+            // Normalize the key (uppercase, trimmed)
+            redisKey = redisKey != null ? redisKey.toUpperCase().trim() : tradingsymbol.toUpperCase().trim();
+            
+            log.debug("Using tradingsymbol '{}' as Redis key for lookup", redisKey);
+            
+            // Check Redis cache using the tradingsymbol
+            if (redisCacheService.isSymbolCached(redisKey)) {
+                log.info("Found symbol in Redis cache with key: {}", redisKey);
+                List<Map<String, Object>> cachedData = redisCacheService.getHistoricalDataFromCache(redisKey, startDate, endDate);
+                if (!cachedData.isEmpty()) {
+                    log.info("✅ Retrieved {} records from Redis cache for symbol: {} (date range: {} to {})", 
+                        cachedData.size(), redisKey, startDate, endDate);
+                    // Add name and tradingsymbol fields if missing (for compatibility with existing code)
+                    String finalName = instrument != null ? (String) instrument.get("name") : tradingsymbol;
+                    String finalTradingsymbol = redisKey;
+                    for (Map<String, Object> record : cachedData) {
+                        if (!record.containsKey("name")) {
+                            record.put("name", finalName);
+                        }
+                        if (!record.containsKey("tradingsymbol")) {
+                            record.put("tradingsymbol", finalTradingsymbol);
+                        }
+                    }
+                    return cachedData;
+                } else {
+                    log.warn("Symbol {} found in Redis but no data in date range {} to {}", redisKey, startDate, endDate);
+                }
+            } else {
+                log.debug("Symbol '{}' not found in Redis cache", redisKey);
+                // Don't call getCachedSymbols() on every request - it's slow!
+                // Only log available symbols in debug mode or when explicitly needed
+                if (log.isDebugEnabled()) {
+                    try {
+                        Set<Object> cachedSymbols = redisCacheService.getCachedSymbols();
+                        log.debug("Available cached symbols in Redis (first 20): {}", 
+                            cachedSymbols.stream().limit(20).map(Object::toString).collect(java.util.stream.Collectors.joining(", ")));
+                    } catch (Exception ex) {
+                        log.debug("Could not retrieve cached symbols list: {}", ex.getMessage());
+                    }
+                }
+            }
+            
+        } catch (Exception ex) {
+            log.error("Error retrieving from Redis cache, falling back to database: {}", ex.getMessage(), ex);
+        }
+        
+        // Fallback to database - Optimized for TimescaleDB
+        log.warn("⚠️ Cache miss - querying database for symbol: {} (this will be slower)", tradingsymbol);
+        
+        // First, get instrument_token to avoid complex regex joins
+        Map<String, Object> instrument = getInstrumentByName(tradingsymbol);
+        if (instrument == null) {
+            log.warn("Instrument not found for: {}", tradingsymbol);
+            return List.of();
+        }
+        
+        String instrumentToken = (String) instrument.get("instrument_token");
+        String exchange = (String) instrument.get("exchange");
+        String instrumentName = (String) instrument.get("name");
+        String instrumentTradingsymbol = (String) instrument.get("tradingsymbol");
+        
+        if (instrumentToken == null) {
+            log.warn("Instrument token not found for: {}", tradingsymbol);
+            return List.of();
+        }
+        
+        // Optimized query: filter by time first (enables TimescaleDB chunk exclusion), then by instrument_token
+        // Use direct instrument_token lookup instead of complex joins with regex
+        String sql = """
+                SELECT o.date, o.open, o.high, o.low, o.close, 
+                       COALESCE(
+                           NULLIF(nidx.volume, 0),  -- Use nse_idx_ohlcv_historic volume if not 0
+                           NULLIF(o.volume, 0),      -- Fallback to kite_ohlcv_historic volume if not 0
+                           0                         -- Default to 0 if both are 0 or NULL
+                       ) as volume,
+                       ? as name,
+                       ? as tradingsymbol
+                FROM kite_ohlcv_historic o
+                LEFT JOIN nse_idx_ohlcv_historic nidx ON 
+                    nidx.index_name = ?
+                    AND nidx.date = DATE(o.date)
+                WHERE o.instrument_token = ?
+                  AND o.exchange = ?
+                  AND o.candle_interval = 'day'
+                  AND o.date >= ?
+                  AND o.date <= ?
+                ORDER BY o.date ASC
+                """;
+        return jdbcTemplate.queryForList(
+                sql,
+                instrumentName != null ? instrumentName : tradingsymbol,
+                instrumentTradingsymbol != null ? instrumentTradingsymbol : tradingsymbol,
+                instrumentName != null ? instrumentName : instrumentTradingsymbol, // For nidx join
+                instrumentToken,
+                exchange != null ? exchange : "NSE",
+                startDate,
+                endDate
         );
     }
 
@@ -331,5 +522,6 @@ public class KiteMarketDataRepository {
         return results.isEmpty() ? null : results.get(0);
     }
 }
+
 
 

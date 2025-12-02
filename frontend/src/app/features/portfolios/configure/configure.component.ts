@@ -7,6 +7,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
 
 import { PortfolioWithMetrics } from '../portfolio.types';
@@ -31,6 +32,7 @@ import { IndexResponseDto } from '../../../services/entities/indices';
     SelectModule,
     TableModule,
     DialogModule,
+    ToggleSwitchModule,
     FormsModule
   ],
   templateUrl: './configure.component.html',
@@ -43,6 +45,29 @@ export class PortfolioConfigureComponent implements OnInit {
   @Output() saveChanges = new EventEmitter<PortfolioWithMetrics>();
   @Output() cancel = new EventEmitter<void>();
   @Output() goToOverview = new EventEmitter<void>();
+
+  // Dropdown options
+  currencyOptions = [
+    { label: 'INR', value: 'INR' },
+    { label: 'USD', value: 'USD' },
+    { label: 'EUR', value: 'EUR' }
+  ];
+
+  strategyOptions = [
+    { label: 'Momentum Investing', value: 'Momentum Investing' },
+    { label: 'Value Investing', value: 'Value Investing' },
+    { label: 'Growth Investing', value: 'Growth Investing' }
+  ];
+
+  tradingModeOptions = [
+    { label: 'paper', value: 'paper' },
+    { label: 'live', value: 'live' }
+  ];
+
+  dematAccountOptions = [
+    { label: 'AB1234567B', value: 'AB1234567B' },
+    { label: 'CD9876543C', value: 'CD9876543C' }
+  ];
 
   // Inject the portfolio API service
   private portfolioApiService = inject(PortfolioApiService);
@@ -123,10 +148,8 @@ export class PortfolioConfigureComponent implements OnInit {
       // Create a deep copy for editing
       this.editingPortfolio = { ...this.selectedPortfolio };
       
-      // Automatically enter edit mode for new portfolios
-      if (this.isCreationMode) {
-        this.isEditing = true;
-      }
+      // Automatically enter edit mode (always editable in Configure tab)
+      this.isEditing = true;
 
       // Load holdings for existing portfolios
       if (!this.isCreationMode && this.selectedPortfolio.id && this.selectedPortfolio.id !== '') {

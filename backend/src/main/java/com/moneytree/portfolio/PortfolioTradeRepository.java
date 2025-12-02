@@ -22,7 +22,7 @@ public interface PortfolioTradeRepository extends JpaRepository<PortfolioTrade, 
 
     List<PortfolioTrade> findByPortfolioIdAndEntryDateBetween(UUID portfolioId, Instant start, Instant end);
 
-    @Query("SELECT pt FROM PortfolioTrade pt WHERE pt.portfolio.id = ?1 ORDER BY pt.entryDate DESC")
+    @Query("SELECT pt FROM PortfolioTrade pt WHERE pt.portfolio.id = :portfolioId ORDER BY pt.entryDate DESC")
     List<PortfolioTrade> findByPortfolioIdOrderByEntryDateDesc(UUID portfolioId);
 }
 

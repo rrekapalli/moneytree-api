@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -12,15 +12,20 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { TabsModule } from 'primeng/tabs';
 import { FormsModule } from '@angular/forms';
-import { Subject, takeUntil, finalize } from 'rxjs';
+import { ToggleButtonModule } from 'primeng/togglebutton';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { TableModule } from 'primeng/table';
+import { ScrollPanelModule } from 'primeng/scrollpanel';
+import { Subject, takeUntil, finalize, retry, timer, catchError, throwError, debounceTime, distinctUntilChanged, of } from 'rxjs';
 
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
-import { PortfolioDto } from '../../services/entities/portfolio.entities';
+import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
+import { PortfolioTradeApiService } from '../../services/apis/portfolio-trade.api';
+import { PortfolioDto, PortfolioHolding, PortfolioTrade } from '../../services/entities/portfolio.entities';
 import { PortfolioWithMetrics } from './portfolio.types';
-import { PortfolioOverviewComponent } from './overview/overview.component';
-import { PortfolioConfigureComponent } from './configure/configure.component';
-import { PortfolioOptimizeComponent } from './optimize/optimize.component';
+import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-portfolios',
@@ -39,21 +44,26 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
     TooltipModule,
     TabsModule,
     FormsModule,
-    PortfolioOverviewComponent,
-    PortfolioConfigureComponent,
-    PortfolioOptimizeComponent,
+    ToggleButtonModule,
+    InputNumberModule,
+    TableModule,
+    ScrollPanelModule,
     PageHeaderComponent
   ],
   templateUrl: './portfolios.component.html',
-  styleUrls: ['./portfolios.component.scss']
+  styleUrls: ['./portfolios.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PortfoliosComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
+  private searchSubject$ = new Subject<string>();
   
   portfolios: PortfolioWithMetrics[] = [];
   filteredPortfolios: PortfolioWithMetrics[] = [];
   loading = false;
   error: string | null = null;
+  retryCount = 0;
+  maxRetries = 2;
   
   // Search and filter properties
   searchText = '';
@@ -64,22 +74,69 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   sortField: string = 'name';
   sortOrder: number = 1;
   
-  // Selected portfolio for configuration/optimization
+  // Selected portfolio for detail view
   selectedPortfolio: PortfolioWithMetrics | null = null;
   
-  // Active tab index for switching between tabs
-  activeTab: string = "0";
-
-
+  // Active tab for the detail panel (overview, configure, holdings, trades)
+  activeTab: 'overview' | 'configure' | 'holdings' | 'trades' = 'overview';
   
-  // Risk profile options for filter
+  // Cache for portfolio data
+  private portfolioCache: Map<string, PortfolioWithMetrics[]> = new Map();
+  private portfolioCacheTimestamp: number = 0;
+  private readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+  
+  // Cache for holdings and trades
+  private holdingsCache: Map<string, { data: PortfolioHolding[], timestamp: number }> = new Map();
+  private tradesCache: Map<string, { data: PortfolioTrade[], timestamp: number }> = new Map();
+  
+  // Lazy loading flags for tabs
+  private holdingsLoaded = false;
+  private tradesLoaded = false;
+
+  // Configure tab form state
+  configForm: PortfolioConfigForm = this.getDefaultConfigForm();
+  originalConfigForm: PortfolioConfigForm = this.getDefaultConfigForm();
+  configFormDirty = false;
+  savingConfig = false;
+
+  // Holdings tab state
+  holdings: PortfolioHolding[] = [];
+  holdingsLoading = false;
+  holdingsError: string | null = null;
+  holdingsRetryCount = 0;
+
+  // Configure tab dropdown options
   riskProfileOptions = [
     { label: 'Conservative', value: 'CONSERVATIVE' },
     { label: 'Moderate', value: 'MODERATE' },
     { label: 'Aggressive', value: 'AGGRESSIVE' }
   ];
 
-  constructor(private portfolioApiService: PortfolioApiService) {}
+  riskToleranceOptions = [
+    { label: 'Low', value: 'LOW' },
+    { label: 'Medium', value: 'MEDIUM' },
+    { label: 'High', value: 'HIGH' }
+  ];
+
+  rebalancingStrategyOptions = [
+    { label: 'Quarterly', value: 'QUARTERLY' },
+    { label: 'Monthly', value: 'MONTHLY' },
+    { label: 'Threshold-based', value: 'THRESHOLD' }
+  ];
+
+  // Trades tab state
+  trades: PortfolioTrade[] = [];
+  tradesLoading = false;
+  tradesError: string | null = null;
+  tradesRetryCount = 0;
+
+  constructor(
+    private portfolioApiService: PortfolioApiService,
+    private portfolioHoldingApiService: PortfolioHoldingApiService,
+    private portfolioTradeApiService: PortfolioTradeApiService,
+    private toastService: ToastService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     // AUTHENTICATION DISABLED - Skip token check
@@ -89,12 +146,28 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     //   return;
     // }
     
+    // Set up debounced search
+    this.searchSubject$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyFilters();
+      });
+    
     this.loadPortfolios();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Clear caches on destroy
+    this.portfolioCache.clear();
+    this.holdingsCache.clear();
+    this.tradesCache.clear();
   }
 
   private hasValidToken(): boolean {
@@ -114,13 +187,43 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   }
 
   loadPortfolios(): void {
+    // Check cache first
+    const now = Date.now();
+    const cachedData = this.portfolioCache.get('portfolios');
+    
+    if (cachedData && (now - this.portfolioCacheTimestamp) < this.CACHE_DURATION_MS) {
+      // Use cached data
+      this.portfolios = cachedData;
+      this.applyFilters();
+      this.cdr.markForCheck();
+      return;
+    }
+    
     this.loading = true;
     this.error = null;
+    this.retryCount = 0;
+    this.cdr.markForCheck();
     
     this.portfolioApiService.getPortfolios()
       .pipe(
+        retry({
+          count: this.maxRetries,
+          delay: (error, retryCount) => {
+            this.retryCount = retryCount;
+            // Exponential backoff: 1s, 2s, 4s
+            return timer(Math.pow(2, retryCount - 1) * 1000);
+          }
+        }),
         takeUntil(this.destroy$),
-        finalize(() => this.loading = false)
+        finalize(() => {
+          this.loading = false;
+          this.retryCount = 0;
+          this.cdr.markForCheck();
+        }),
+        catchError((error) => {
+          this.handlePortfolioLoadError(error);
+          return throwError(() => error);
+        })
       )
       .subscribe({
         next: (data) => {
@@ -128,23 +231,75 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           if (Array.isArray(data)) {
             // Enhance portfolios with mock performance data for demonstration
             this.portfolios = this.enhancePortfoliosWithMetrics(data);
+            
+            // Cache the data
+            this.portfolioCache.set('portfolios', this.portfolios);
+            this.portfolioCacheTimestamp = Date.now();
+            
             this.applyFilters();
+            this.error = null;
+            
+            // Trigger change detection
+            this.cdr.markForCheck();
           } else {
-            this.error = 'Invalid data format received from API';
+            this.error = 'Invalid data format received from API. Please contact support.';
+            this.cdr.markForCheck();
           }
         },
-        error: (error) => {
-          if (error.status === 401) {
-            this.error = 'Authentication expired. Please log in again.';
-            // Clear invalid token
-            localStorage.removeItem('auth_token');
-          } else {
-            // For demo purposes, create mock portfolios when API fails
-            this.portfolios = this.createMockPortfolios();
-            this.applyFilters();
-          }
+        error: () => {
+          // Error already handled in catchError
+          this.cdr.markForCheck();
         }
       });
+  }
+
+  // Method to clear portfolio cache
+  private clearPortfolioCache(): void {
+    this.portfolioCache.clear();
+    this.portfolioCacheTimestamp = 0;
+  }
+  
+  // Method to clear holdings cache for a specific portfolio
+  private clearHoldingsCache(portfolioId: string): void {
+    this.holdingsCache.delete(portfolioId);
+  }
+  
+  // Method to clear trades cache for a specific portfolio
+  private clearTradesCache(portfolioId: string): void {
+    this.tradesCache.delete(portfolioId);
+  }
+
+  private handlePortfolioLoadError(error: any): void {
+    console.error('Error loading portfolios:', error);
+    
+    if (error.status === 0) {
+      // Network error
+      this.error = 'Unable to connect to the server. Please check your internet connection and try again.';
+    } else if (error.status === 401) {
+      // Authentication error
+      this.error = 'Your session has expired. Please log in again.';
+      localStorage.removeItem('auth_token');
+    } else if (error.status === 403) {
+      // Authorization error
+      this.error = 'You do not have permission to view portfolios.';
+    } else if (error.status === 404) {
+      // Not found
+      this.error = 'Portfolio service not found. Please contact support.';
+    } else if (error.status >= 500) {
+      // Server error
+      this.error = 'Server error occurred. Please try again later or contact support.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      // Timeout error
+      this.error = 'Request timed out. Please check your connection and try again.';
+    } else {
+      // Generic error
+      this.error = error.error?.message || 'Failed to load portfolios. Please try again.';
+    }
+    
+    // For demo purposes, create mock portfolios when API fails
+    this.portfolios = this.createMockPortfolios();
+    this.applyFilters();
+    this.cdr.markForCheck();
   }
 
   // Create mock portfolios for demonstration
@@ -269,7 +424,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
 
   // Search and filtering methods
   onSearchChange(): void {
-    this.applyFilters();
+    // Use debounced search subject instead of immediate filtering
+    this.searchSubject$.next(this.searchText);
   }
 
   onRiskProfileChange(): void {
@@ -359,58 +515,40 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       }
     };
     // Switch to Configure tab for new portfolio creation
-    this.activeTab = "1";
+    this.activeTab = 'configure';
   }
 
   selectPortfolio(portfolio: PortfolioWithMetrics): void {
-    // TODO: Navigate to portfolio details
-  }
-
-  editPortfolio(portfolio: PortfolioWithMetrics): void {
-    // TODO: Implement portfolio editing
-  }
-
-  configurePortfolio(portfolio: PortfolioWithMetrics): void {
     this.selectedPortfolio = portfolio;
-    this.activeTab = "1"; // Switch to Configure tab
-  }
-
-  optimizePortfolio(portfolio: PortfolioWithMetrics): void {
-    this.selectedPortfolio = portfolio;
-    this.activeTab = "2"; // Switch to Optimize tab
-  }
-
-  // Method to reset to Overview tab
-  resetToOverview(): void {
-    this.activeTab = "0";
-    this.selectedPortfolio = null;
+    // Default to overview tab when selecting a portfolio
+    this.activeTab = 'overview';
+    // Load portfolio configuration into form
+    this.loadConfigForm(portfolio);
+    
+    // Reset lazy loading flags when selecting a new portfolio
+    this.holdingsLoaded = false;
+    this.tradesLoaded = false;
   }
 
   // Method to handle tab changes
-  onTabChange(index: string | number | undefined): void {
-    if (index !== undefined) {
-      this.activeTab = typeof index === 'string' ? index : index.toString();
+  onTabChange(tab: 'overview' | 'configure' | 'holdings' | 'trades' | string | number | undefined): void {
+    if (tab !== undefined) {
+      // Handle both string and number types from PrimeNG tabs
+      const tabValue = typeof tab === 'string' ? tab : tab.toString();
+      if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
+        this.activeTab = tabValue;
+        
+        // Lazy load data when switching to specific tabs (only load once)
+        if (tabValue === 'holdings' && this.selectedPortfolio && !this.holdingsLoaded) {
+          this.loadHoldings(this.selectedPortfolio.id);
+          this.holdingsLoaded = true;
+        } else if (tabValue === 'trades' && this.selectedPortfolio && !this.tradesLoaded) {
+          this.loadTrades(this.selectedPortfolio.id);
+          this.tradesLoaded = true;
+        }
+      }
     }
   }
-
-  viewPortfolioData(portfolio: PortfolioWithMetrics): void {
-    // TODO: Navigate to portfolio data view
-  }
-
-  viewPortfolioInsights(portfolio: PortfolioWithMetrics): void {
-    // TODO: Navigate to portfolio insights
-  }
-
-  goToLogin(): void {
-    // AUTHENTICATION DISABLED - Redirect to dashboard instead
-    // TODO: Re-enable login redirect by uncommenting below when authentication is needed
-    // window.location.href = '/login';
-    
-    // Redirect to dashboard when authentication is disabled
-    window.location.href = '/dashboard';
-  }
-
-
 
   // Track function for ngFor
   trackPortfolioById(index: number, portfolio: PortfolioWithMetrics): string {
@@ -538,50 +676,383 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     return `linear-gradient(180deg, ${color}20 0%, ${color} 100%)`;
   }
 
-  // Methods for child component communication
-  onSaveChanges(portfolio: PortfolioWithMetrics): void {
-    if (!portfolio.id || portfolio.id === '') {
-      // This is a new portfolio creation
-      // TODO: Implement API call to create portfolio
-      // For now, simulate creation by adding to local array
-      const newPortfolio = {
-        ...portfolio,
-        id: Date.now().toString(), // Generate a unique ID
-        inceptionDate: new Date().toISOString().split('T')[0]
-      };
-      this.portfolios.push(newPortfolio);
-      
-      // For new portfolios, navigate to Overview to see the created portfolio
-      this.resetToOverview();
+  // Configure tab methods
+  private getDefaultConfigForm(): PortfolioConfigForm {
+    return {
+      name: '',
+      description: '',
+      riskProfile: 'MODERATE',
+      riskTolerance: 'MEDIUM',
+      rebalancingStrategy: 'QUARTERLY',
+      rebalancingThreshold: 5,
+      automatedExecution: false,
+      notificationSettings: true,
+      taxHarvesting: false
+    };
+  }
+
+  private loadConfigForm(portfolio: PortfolioWithMetrics): void {
+    this.configForm = {
+      name: portfolio.name || '',
+      description: portfolio.description || '',
+      riskProfile: portfolio.riskProfile || 'MODERATE',
+      riskTolerance: 'MEDIUM', // Default value, not in DTO
+      rebalancingStrategy: 'QUARTERLY', // Default value, not in DTO
+      rebalancingThreshold: 5, // Default value, not in DTO
+      automatedExecution: false, // Default value, not in DTO
+      notificationSettings: true, // Default value, not in DTO
+      taxHarvesting: false // Default value, not in DTO
+    };
+    // Store original values for reset functionality
+    this.originalConfigForm = { ...this.configForm };
+    this.configFormDirty = false;
+  }
+
+  onConfigFormChange(): void {
+    // Check if form has been modified
+    this.configFormDirty = JSON.stringify(this.configForm) !== JSON.stringify(this.originalConfigForm);
+  }
+
+  isConfigFormValid(): boolean {
+    // Check if required fields are filled
+    return !!(
+      this.configForm.name.trim() &&
+      this.configForm.description.trim() &&
+      this.configForm.riskProfile &&
+      this.configForm.riskTolerance &&
+      this.configForm.rebalancingStrategy &&
+      this.configForm.rebalancingThreshold > 0
+    );
+  }
+
+  isSaveButtonEnabled(): boolean {
+    return this.configFormDirty && this.isConfigFormValid();
+  }
+
+  saveConfiguration(): void {
+    if (!this.selectedPortfolio || !this.isConfigFormValid()) {
+      return;
+    }
+
+    this.savingConfig = true;
+    const isNewPortfolio = !this.selectedPortfolio.id;
+
+    const portfolioData = {
+      name: this.configForm.name,
+      description: this.configForm.description,
+      riskProfile: this.configForm.riskProfile,
+      isActive: true
+    };
+
+    const apiCall = isNewPortfolio
+      ? this.portfolioApiService.createPortfolio(portfolioData)
+      : this.portfolioApiService.updatePortfolio(this.selectedPortfolio.id, portfolioData);
+
+    apiCall
+      .pipe(
+        retry({
+          count: 1,
+          delay: 1000
+        }),
+        takeUntil(this.destroy$),
+        finalize(() => this.savingConfig = false),
+        catchError((error) => {
+          this.handleSaveConfigError(error, isNewPortfolio);
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: (updatedPortfolio) => {
+          this.toastService.show(
+            'success',
+            isNewPortfolio ? 'Portfolio Created' : 'Configuration Saved',
+            isNewPortfolio
+              ? 'Portfolio has been created successfully'
+              : 'Portfolio configuration has been saved successfully'
+          );
+
+          // Clear portfolio cache to force refresh
+          this.clearPortfolioCache();
+
+          // Update the portfolio in the list
+          if (isNewPortfolio) {
+            // Reload portfolios to get the new one
+            this.loadPortfolios();
+          } else {
+            // Update existing portfolio in the list
+            const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
+            if (index !== -1) {
+              this.portfolios[index] = {
+                ...this.portfolios[index],
+                ...updatedPortfolio
+              };
+              this.applyFilters();
+            }
+            
+            // Clear holdings and trades cache for this portfolio
+            this.clearHoldingsCache(updatedPortfolio.id);
+            this.clearTradesCache(updatedPortfolio.id);
+          }
+
+          // Update selected portfolio and form state
+          if (this.selectedPortfolio) {
+            this.selectedPortfolio = {
+              ...this.selectedPortfolio,
+              ...updatedPortfolio
+            };
+          }
+          this.originalConfigForm = { ...this.configForm };
+          this.configFormDirty = false;
+        },
+        error: () => {
+          // Error already handled in catchError
+        }
+      });
+  }
+
+  private handleSaveConfigError(error: any, isNewPortfolio: boolean): void {
+    console.error('Error saving portfolio configuration:', error);
+    
+    let errorMessage: string;
+    
+    if (error.status === 0) {
+      errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+    } else if (error.status === 400) {
+      errorMessage = error.error?.message || 'Invalid portfolio data. Please check your inputs and try again.';
+    } else if (error.status === 401) {
+      errorMessage = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      errorMessage = 'You do not have permission to ' + (isNewPortfolio ? 'create' : 'update') + ' portfolios.';
+    } else if (error.status === 404) {
+      errorMessage = 'Portfolio not found. It may have been deleted.';
+    } else if (error.status === 409) {
+      errorMessage = 'A portfolio with this name already exists. Please choose a different name.';
+    } else if (error.status >= 500) {
+      errorMessage = 'Server error occurred. Please try again later or contact support.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      errorMessage = 'Request timed out. Please try again.';
     } else {
-      // This is an existing portfolio update
-      // TODO: Implement API call to update portfolio
-      const index = this.portfolios.findIndex(p => p.id === portfolio.id);
-      if (index !== -1) {
-        this.portfolios[index] = { ...portfolio };
-      }
-      
-      // For existing portfolio updates, stay on Configure tab to see the changes
-      // Don't call resetToOverview() - let user stay on current tab
+      errorMessage = error.error?.message || 'Failed to save portfolio configuration. Please try again.';
+    }
+    
+    this.toastService.showError({
+      summary: isNewPortfolio ? 'Create Failed' : 'Save Failed',
+      detail: errorMessage
+    });
+  }
+
+  resetConfiguration(): void {
+    if (!this.selectedPortfolio) {
+      return;
+    }
+
+    // Restore original form values
+    this.configForm = { ...this.originalConfigForm };
+    this.configFormDirty = false;
+  }
+
+  // Holdings tab methods
+  loadHoldings(portfolioId: string): void {
+    // Check cache first
+    const cachedHoldings = this.holdingsCache.get(portfolioId);
+    const now = Date.now();
+    
+    if (cachedHoldings && (now - cachedHoldings.timestamp) < this.CACHE_DURATION_MS) {
+      // Use cached data
+      this.holdings = cachedHoldings.data;
+      this.holdingsError = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    
+    this.holdingsLoading = true;
+    this.holdingsError = null;
+    this.holdingsRetryCount = 0;
+    this.cdr.markForCheck();
+    
+    this.portfolioHoldingApiService.getHoldings(portfolioId)
+      .pipe(
+        retry({
+          count: this.maxRetries,
+          delay: (error, retryCount) => {
+            this.holdingsRetryCount = retryCount;
+            // Exponential backoff: 1s, 2s
+            return timer(Math.pow(2, retryCount - 1) * 1000);
+          }
+        }),
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.holdingsLoading = false;
+          this.holdingsRetryCount = 0;
+          this.cdr.markForCheck();
+        }),
+        catchError((error) => {
+          this.handleHoldingsLoadError(error);
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: (data) => {
+          this.holdings = Array.isArray(data) ? data : [];
+          
+          // Cache the data
+          this.holdingsCache.set(portfolioId, {
+            data: this.holdings,
+            timestamp: Date.now()
+          });
+          
+          this.holdingsError = null;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Error already handled in catchError
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private handleHoldingsLoadError(error: any): void {
+    console.error('Error loading holdings:', error);
+    
+    if (error.status === 0) {
+      this.holdingsError = 'Unable to connect to the server. Please check your internet connection.';
+    } else if (error.status === 401) {
+      this.holdingsError = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      this.holdingsError = 'You do not have permission to view holdings for this portfolio.';
+    } else if (error.status === 404) {
+      this.holdingsError = 'Portfolio not found. It may have been deleted.';
+    } else if (error.status >= 500) {
+      this.holdingsError = 'Server error occurred. Please try again later.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      this.holdingsError = 'Request timed out. Please try again.';
+    } else {
+      this.holdingsError = error.error?.message || 'Failed to load holdings. Please try again.';
     }
   }
 
-  onCancel(): void {
-    // TODO: Implement cancel logic
-    // Don't automatically navigate to Overview - let user decide where to go
-    // Just clear the selected portfolio to exit edit mode
-    this.selectedPortfolio = null;
+  // Calculate unrealized P&L for a holding
+  calculateUnrealizedPnl(holding: PortfolioHolding): number {
+    if (!holding.currentPrice) {
+      return 0;
+    }
+    return (holding.currentPrice - holding.avgCost) * holding.quantity;
   }
 
-  onApplyOptimization(portfolio: PortfolioWithMetrics): void {
-    // TODO: Implement optimization logic
-    // Don't automatically navigate to Overview - let user decide where to go
-    // Just clear the selected portfolio to exit optimization mode
-    this.selectedPortfolio = null;
+  // Calculate unrealized P&L percentage for a holding
+  calculateUnrealizedPnlPct(holding: PortfolioHolding): number {
+    if (!holding.currentPrice || holding.avgCost === 0) {
+      return 0;
+    }
+    return ((holding.currentPrice - holding.avgCost) / holding.avgCost) * 100;
   }
 
-  goToOverview(): void {
-    this.activeTab = "0";
-    this.selectedPortfolio = null;
+  // Format currency values
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
   }
+
+  // Format percentage values
+  formatPercentage(value: number): string {
+    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+  }
+
+  // Trades tab methods
+  loadTrades(portfolioId: string): void {
+    // Check cache first
+    const cachedTrades = this.tradesCache.get(portfolioId);
+    const now = Date.now();
+    
+    if (cachedTrades && (now - cachedTrades.timestamp) < this.CACHE_DURATION_MS) {
+      // Use cached data
+      this.trades = cachedTrades.data;
+      this.tradesError = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    
+    this.tradesLoading = true;
+    this.tradesError = null;
+    this.tradesRetryCount = 0;
+    this.cdr.markForCheck();
+    
+    this.portfolioTradeApiService.getTrades(portfolioId)
+      .pipe(
+        retry({
+          count: this.maxRetries,
+          delay: (error, retryCount) => {
+            this.tradesRetryCount = retryCount;
+            // Exponential backoff: 1s, 2s
+            return timer(Math.pow(2, retryCount - 1) * 1000);
+          }
+        }),
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.tradesLoading = false;
+          this.tradesRetryCount = 0;
+          this.cdr.markForCheck();
+        }),
+        catchError((error) => {
+          this.handleTradesLoadError(error);
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: (data) => {
+          this.trades = Array.isArray(data) ? data : [];
+          
+          // Cache the data
+          this.tradesCache.set(portfolioId, {
+            data: this.trades,
+            timestamp: Date.now()
+          });
+          
+          this.tradesError = null;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Error already handled in catchError
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private handleTradesLoadError(error: any): void {
+    console.error('Error loading trades:', error);
+    
+    if (error.status === 0) {
+      this.tradesError = 'Unable to connect to the server. Please check your internet connection.';
+    } else if (error.status === 401) {
+      this.tradesError = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      this.tradesError = 'You do not have permission to view trades for this portfolio.';
+    } else if (error.status === 404) {
+      this.tradesError = 'Portfolio not found. It may have been deleted.';
+    } else if (error.status >= 500) {
+      this.tradesError = 'Server error occurred. Please try again later.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      this.tradesError = 'Request timed out. Please try again.';
+    } else {
+      this.tradesError = error.error?.message || 'Failed to load trades. Please try again.';
+    }
+  }
+
+  // Format date for trades table
+  formatTradeDate(dateString: string): string {
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch {
+      return dateString;
+    }
+  }
+
 }

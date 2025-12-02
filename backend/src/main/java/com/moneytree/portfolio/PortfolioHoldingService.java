@@ -1,6 +1,7 @@
 package com.moneytree.portfolio;
 
 import com.moneytree.portfolio.entity.PortfolioHolding;
+import com.moneytree.portfolio.entity.PortfolioHoldingSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,17 +17,23 @@ public class PortfolioHoldingService {
 
     private static final Logger log = LoggerFactory.getLogger(PortfolioHoldingService.class);
     private final PortfolioHoldingRepository repository;
+    private final PortfolioHoldingSummaryRepository summaryRepository;
 
-    public PortfolioHoldingService(PortfolioHoldingRepository repository) {
+    public PortfolioHoldingService(PortfolioHoldingRepository repository, PortfolioHoldingSummaryRepository summaryRepository) {
         this.repository = repository;
+        this.summaryRepository = summaryRepository;
     }
 
     public List<PortfolioHolding> findByPortfolioId(UUID portfolioId) {
-        return repository.findByPortfolioId(portfolioId);
+        return repository.findByPortfolio_Id(portfolioId);
+    }
+
+    public List<PortfolioHoldingSummary> findSummaryByPortfolioId(UUID portfolioId) {
+        return summaryRepository.findByPortfolioId(portfolioId.toString());
     }
 
     public Optional<PortfolioHolding> findByPortfolioIdAndSymbol(UUID portfolioId, String symbol) {
-        return repository.findByPortfolioIdAndSymbol(portfolioId, symbol);
+        return repository.findByPortfolio_IdAndSymbol(portfolioId, symbol);
     }
 
     public PortfolioHolding save(PortfolioHolding holding) {

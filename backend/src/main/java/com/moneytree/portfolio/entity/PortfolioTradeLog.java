@@ -1,5 +1,6 @@
 package com.moneytree.portfolio.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -19,6 +20,7 @@ public class PortfolioTradeLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "portfolio_id", nullable = false, foreignKey = @ForeignKey(name = "fk_portfolio"))
+    @JsonIgnore
     private Portfolio portfolio;
 
     @Column(name = "cycle_timestamp", nullable = false)

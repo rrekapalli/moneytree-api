@@ -30,6 +30,19 @@ spring:
         order_updates: true
     open-in-view: false  # Better for performance, prevents lazy loading issues
 
+  data:
+    redis:
+      host: redis.tailce422e.ts.net
+      port: 6379
+      timeout: 2000ms
+      connect-timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+        shutdown-timeout: 100ms
+
 management:
   endpoints:
     web:
@@ -51,5 +64,4 @@ kite:
   api-secret: ${KITE_API_SECRET:}
   access-token: ${KITE_ACCESS_TOKEN:}
   base-url: ${KITE_BASE_URL:https://api.kite.trade}
-
 

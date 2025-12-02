@@ -1664,12 +1664,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.subscribeToAllIndicesAsFallback(indexName);
         }
           
-      } else {
-        // WebSocket still not connected - skipping real-time subscription
-        console.warn('WebSocket still not connected - skipping real-time subscription for', webSocketIndexName);
       }
     } catch (error) {
-      console.warn(`WebSocket subscription failed for ${webSocketIndexName} - continuing without real-time data:`, (error as Error).message || error);
       // Don't clear currentSelectedIndexData on WebSocket connection failures to prevent tile from reverting
       this.cdr.detectChanges();
     } finally {

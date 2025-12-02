@@ -558,11 +558,8 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
         // Set up event handling for time range filters
         chart.off('click');
         chart.on('click', (params: any) => {
-          console.log('🔥 Chart click event:', params);
-          
           // Check if the click is on a graphic element (time range filter)
           if (params.componentType === 'graphic') {
-            console.log('🔥 Graphic element clicked, componentIndex:', params.componentIndex);
             
             // Get the graphic element from the chart options
             const chartOptions = chart.getOption();
@@ -583,21 +580,15 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
               }
             }
             
-            console.log('🔥 Found graphic elements:', graphicElements.length);
-            
             let clickedElement = graphicElements[params.componentIndex];
             
             // Fallback: use stored graphic elements if chart options don't work
             if (!clickedElement || (!clickedElement.range && !clickedElement.filterValue)) {
-              console.log('🔥 Trying fallback to stored graphic elements');
               clickedElement = this.graphicElements[params.componentIndex];
             }
             
-            console.log('🔥 Clicked element:', clickedElement);
-            
             if (clickedElement && (clickedElement.range || clickedElement.filterValue)) {
               const range = clickedElement.range || clickedElement.filterValue;
-              console.log('🔥 Time range selected:', range);
               
               // Update selected time range
               this.selectedTimeRange = range;
@@ -615,7 +606,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
               }
               
               if (this.timeRangeChangeCallback) {
-                console.log('🔥 Calling timeRangeChangeCallback with range:', range);
                 this.timeRangeChangeCallback({
                   type: 'timeRangeChange',
                   range: range,
@@ -631,11 +621,7 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
               }
               
               return false; // Prevent default behavior
-            } else {
-              console.log('🔥 Graphic element clicked but no range/filterValue found. Element:', clickedElement);
             }
-          } else {
-            console.log('🔥 Click was not on graphic element, componentType:', params.componentType);
           }
           
           return true; // Allow default behavior for non-filter clicks
@@ -884,10 +870,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
    * Override build method to merge series options
    */
   override build(): IWidget {
-    console.log('🔥 build() method called');
-    console.log('🔥 timeRangeChangeCallback available:', !!this.timeRangeChangeCallback);
-    console.log('🔥 filterChangeCallback available:', !!this.filterChangeCallback);
-    
     const series: any[] = [{
       ...this.seriesOptions,
       type: 'candlestick',
@@ -1007,7 +989,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
       
       // Add graphics to chart options
       (this.chartOptions as any).graphic = this.graphicElements;
-      console.log('🔥 Stored graphic elements:', this.graphicElements.length, 'elements');
     }
 
     // Prepare final options with conditional legend and data zoom
@@ -1019,7 +1000,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
     // Ensure graphic elements are included in final options
     if (this.graphicElements && this.graphicElements.length > 0) {
       (finalOptions as any).graphic = this.graphicElements;
-      console.log('🔥 Added graphic elements to finalOptions:', this.graphicElements.length);
     }
     
     // CRITICAL FIX: Ensure dual-axis configuration is always present when volume is enabled
@@ -1080,8 +1060,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
           splitLine: { show: false }
         }
       ];
-    } else {
-      console.log('🔧 Building chart without volume - single-axis configuration');
     }
 
     // Conditionally include legend
@@ -1366,8 +1344,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
             
             // Extract x-axis labels
             xAxisLabels = data.map(item => item.date || '');
-          } else {
-            console.log('🔄 Data is already in array format or empty');
           }
 
           const currentOptions = widget.chartInstance.getOption();
@@ -1630,8 +1606,6 @@ export class CandlestickChartBuilder extends ApacheEchartBuilder<CandlestickChar
         // Only update data if we have valid data
         if (this.data && this.data.length > 0) {
           CandlestickChartBuilder.updateData(widget, this.data);
-        } else {
-          console.log('🔥 No data available for immediate update, skipping');
         }
       }
       
