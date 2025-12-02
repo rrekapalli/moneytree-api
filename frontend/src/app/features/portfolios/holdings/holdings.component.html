@@ -1,0 +1,169 @@
+<div class="holdings-tab">
+  <div class="holdings-header">
+    <h3 class="tab-title">Holdings - {{ selectedPortfolio?.name }}</h3>
+    <button pButton type="button" label="Add Symbol" icon="pi pi-plus" class="p-button-success p-button-sm"></button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="holdingsLoading" class="loading-state">
+    <i class="pi pi-spin pi-spinner"></i>
+    <p>Loading holdings...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="holdingsError && !holdingsLoading" class="error-state">
+    <i class="pi pi-exclamation-triangle"></i>
+    <p>{{ holdingsError }}</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!holdingsLoading && !holdingsError && holdings.length === 0" class="empty-state">
+    <i class="pi pi-inbox"></i>
+    <p>No holdings found for this portfolio.</p>
+  </div>
+
+  <!-- Holdings Accordion -->
+  <div *ngIf="!holdingsLoading && !holdingsError && holdings.length > 0" class="holdings-accordion-container">
+    <p-accordion [multiple]="false" [(value)]="activeAccordionValue" styleClass="holdings-accordion">
+      <p-accordionpanel *ngFor="let holding of holdings; let i = index" [value]="i">
+        <p-accordionheader>
+          <div class="holding-header">
+            <div class="holding-symbol">
+              <div class="symbol-name">{{ holding.symbol }}</div>
+              <div class="symbol-company">{{ holding.symbol }}</div>
+            </div>
+            <div class="holding-stats">
+              <div class="stat-group">
+                <span class="stat-label">Quantity</span>
+                <span class="stat-value">{{ holding.quantity | number:'1.2-2' }}</span>
+              </div>
+              <div class="stat-group">
+                <span class="stat-label">Avg. Cost</span>
+                <span class="stat-value">{{ holding.avgCost | number:'1.2-2' }}</span>
+              </div>
+              <div class="stat-group">
+                <span class="stat-label">Current Value</span>
+                <span class="stat-value" 
+                      [ngClass]="{
+                        'value-positive': (holding.lastPositionValue || 0) > 0,
+                        'value-neutral': (holding.lastPositionValue || 0) === 0
+                      }">
+                  {{ holding.lastPositionValue | number:'1.2-2' }}
+                </span>
+              </div>
+              <div class="stat-group">
+                <span class="stat-label">Unrealized P&L</span>
+                <span class="stat-value" 
+                      [ngClass]="{
+                        'value-positive': calculateUnrealizedPnL(holding) > 0,
+                        'value-negative': calculateUnrealizedPnL(holding) < 0
+                      }">
+                  {{ calculateUnrealizedPnL(holding) > 0 ? '+' : '' }}{{ calculateUnrealizedPnL(holding) | number:'1.2-2' }}
+                  <span class="pnl-pct">({{ calculateUnrealizedPnLPct(holding) > 0 ? '+' : '' }}{{ calculateUnrealizedPnLPct(holding) | number:'1.2-2' }}%)</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </p-accordionheader>
+        <p-accordioncontent>
+        <!-- Accordion Content - Edit Form -->
+        <div class="holding-edit-form">
+          <div class="form-row">
+            <div class="form-field">
+              <label>Quantity</label>
+              <p-inputNumber 
+                [(ngModel)]="getEditForm(holding.symbol).quantity"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="6"
+                [min]="0"
+                styleClass="compact-input">
+              </p-inputNumber>
+            </div>
+            <div class="form-field">
+              <label>Avg. Cost</label>
+              <p-inputNumber 
+                [(ngModel)]="getEditForm(holding.symbol).avgCost"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="6"
+                [min]="0"
+                styleClass="compact-input">
+              </p-inputNumber>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>Take Profit</label>
+              <p-inputNumber 
+                [(ngModel)]="getEditForm(holding.symbol).takeProfit"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="6"
+                [min]="0"
+                placeholder="Optional"
+                styleClass="compact-input">
+              </p-inputNumber>
+            </div>
+            <div class="form-field">
+              <label>Stop Loss</label>
+              <p-inputNumber 
+                [(ngModel)]="getEditForm(holding.symbol).stopLoss"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="6"
+                [min]="0"
+                placeholder="Optional"
+                styleClass="compact-input">
+              </p-inputNumber>
+            </div>
+          </div>
+
+          <div class="form-row readonly-info">
+            <div class="info-field">
+              <label>Entry Date</label>
+              <span>{{ formatDate(holding.entryDate) }}</span>
+            </div>
+            <div class="info-field">
+              <label>Open Principal</label>
+              <span>{{ holding.openPrincipal | number:'1.2-2' }}</span>
+            </div>
+            <div class="info-field">
+              <label>Realized P&L</label>
+              <span [class.positive]="(holding.realizedPnl || 0) > 0"
+                    [class.negative]="(holding.realizedPnl || 0) < 0">
+                {{ holding.realizedPnl | number:'1.2-2' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="form-row readonly-info">
+            <div class="info-field">
+              <label>Total Trades</label>
+              <span>{{ holding.totalTrades || 0 }}</span>
+            </div>
+            <div class="info-field">
+              <label>Winning Trades</label>
+              <span class="positive">{{ holding.winningTrades || 0 }}</span>
+            </div>
+            <div class="info-field">
+              <label>Losing Trades</label>
+              <span class="negative">{{ holding.losingTrades || 0 }}</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button pButton type="button" label="Reset" icon="pi pi-refresh" 
+                    class="p-button-secondary p-button-sm p-button-outlined"
+                    [disabled]="!isFormDirty(holding.symbol)"
+                    (click)="onResetForm(holding)">
+            </button>
+            <button pButton type="button" label="Save" icon="pi pi-check" 
+                    class="p-button-success p-button-sm"
+                    [disabled]="!isFormDirty(holding.symbol)"
+                    (click)="onSaveHolding(holding)">
+            </button>
+          </div>
+        </div>
+        </p-accordioncontent>
+      </p-accordionpanel>
+    </p-accordion>
+  </div>
+</div>

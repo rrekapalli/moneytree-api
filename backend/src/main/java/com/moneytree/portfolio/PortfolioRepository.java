@@ -20,7 +20,7 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, UUID> {
     @Query("SELECT p FROM Portfolio p WHERE p.user.id = ?1 AND p.name = ?2")
     Optional<Portfolio> findByUserIdAndName(UUID userId, String name);
 
-    @Query("SELECT p FROM Portfolio p WHERE p.isActive = true ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Portfolio p WHERE p.isActive = true ORDER BY p.updatedAt DESC")
     List<Portfolio> findAllActiveOrderByCreatedAtDesc();
 }
 

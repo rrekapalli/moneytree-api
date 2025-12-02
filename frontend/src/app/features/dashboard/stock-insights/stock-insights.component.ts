@@ -954,18 +954,18 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       options.grid = [
         {
           id: 'main',
-          top: '10%',
+          top: '15%',  // Increased top to reduce candlestick chart height
           left: '5%',
           right: '5%',
-          bottom: '40%',  // Leave space for volume bars and data zoom
+          bottom: '42%',  // Increased bottom to make room for volume and zoom
           containLabel: true
         },
         {
           id: 'volume',
-          top: '65%',  // Position volume bars between x-axis labels and data zoom
+          top: '60%',  // Reduced volume bar height
           left: '5%',
           right: '5%',
-          bottom: '12%',  // Leave space for data zoom control
+          bottom: '15%',  // Space for zoom control visibility
           containLabel: true
         }
       ];
@@ -1086,7 +1086,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       if (options.dataZoom && Array.isArray(options.dataZoom)) {
         options.dataZoom.forEach((zoom: any) => {
           if (zoom.type === 'slider') {
-            zoom.height = '8%';
+            zoom.height = '5%';
             zoom.bottom = '0%';  // Position at the very bottom with no gap
             zoom.xAxisIndex = [0, 1];  // Link to both x-axes (main and volume)
           }
@@ -1172,7 +1172,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     const stockListWidget = StockListChartBuilder.create()
       .setData(this.filteredDashboardData)
       .setStockPerformanceConfiguration()
-      .setHeader('Index List')
+      .setHeader('Stock List')
       .setCurrencyFormatter('INR', 'en-IN')
       .setPredefinedPalette('finance')
       .setAccessor('tradingsymbol')
@@ -1182,8 +1182,8 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
     const metricTiles = this.createMetricTiles([]);
 
-    // Position charts with proper spacing
-    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
+    // Position charts with proper spacing - Stock List extends to bottom of viewport
+    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 20 };
     candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
     
     // Use the Fluent API to build the dashboard config

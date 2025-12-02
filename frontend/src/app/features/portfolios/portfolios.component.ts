@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DataViewModule } from 'primeng/dataview';
 import { CardModule } from 'primeng/card';
@@ -26,6 +26,9 @@ import { PortfolioWithMetrics } from './portfolio.types';
 import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
+import { PortfolioConfigureComponent } from './configure/configure.component';
+import { PortfolioHoldingsComponent } from './holdings/holdings.component';
+import { PortfolioTradesComponent } from './trades/trades.component';
 
 @Component({
   selector: 'app-portfolios',
@@ -48,7 +51,10 @@ import { ToastService } from '../../services/toast.service';
     InputNumberModule,
     TableModule,
     ScrollPanelModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    PortfolioConfigureComponent,
+    PortfolioHoldingsComponent,
+    PortfolioTradesComponent
   ],
   templateUrl: './portfolios.component.html',
   styleUrls: ['./portfolios.component.scss'],
@@ -57,6 +63,8 @@ import { ToastService } from '../../services/toast.service';
 export class PortfoliosComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private searchSubject$ = new Subject<string>();
+  private portfoliosLoaded = false; // Flag to prevent duplicate loads
+  private loadingPromise: Promise<void> | null = null; // Track ongoing load
   
   portfolios: PortfolioWithMetrics[] = [];
   filteredPortfolios: PortfolioWithMetrics[] = [];
@@ -71,8 +79,15 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   layout: 'list' | 'grid' = 'grid';
   
   // Sorting properties
-  sortField: string = 'name';
-  sortOrder: number = 1;
+  sortField: string = 'updatedAt';
+  sortOrder: number = -1; // -1 for descending (most recent first)
+  
+  sortOptions = [
+    { label: 'Name (A-Z)', value: 'name' },
+    { label: 'Updated (Recent)', value: 'updatedAt' },
+    { label: 'Created (Recent)', value: 'createdAt' },
+    { label: 'Return (%)', value: 'totalReturn' }
+  ];
   
   // Selected portfolio for detail view
   selectedPortfolio: PortfolioWithMetrics | null = null;
@@ -135,7 +150,9 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     private portfolioHoldingApiService: PortfolioHoldingApiService,
     private portfolioTradeApiService: PortfolioTradeApiService,
     private toastService: ToastService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -157,7 +174,53 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         this.applyFilters();
       });
     
-    this.loadPortfolios();
+    // Subscribe to route parameters for deep linking
+    this.route.params
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        const portfolioId = params['id'];
+        const tab = params['tab'];
+        
+        // Load portfolios only once
+        const loadPromise = this.portfoliosLoaded 
+          ? Promise.resolve() 
+          : this.loadPortfolios();
+        
+        if (portfolioId && tab) {
+          // Deep link: select portfolio and tab from URL
+          loadPromise.then(() => {
+            const portfolio = this.portfolios.find(p => p.id === portfolioId);
+            if (portfolio) {
+              // Only update if we're switching to a different portfolio
+              if (!this.selectedPortfolio || this.selectedPortfolio.id !== portfolioId) {
+                this.selectedPortfolio = portfolio;
+                this.loadConfigForm(portfolio);
+                this.holdingsLoaded = false;
+                this.tradesLoaded = false;
+              }
+              // Always update the active tab from URL
+              this.activeTab = tab;
+              
+              // Lazy load data for the active tab
+              if (tab === 'holdings' && !this.holdingsLoaded) {
+                this.loadHoldings(portfolioId);
+                this.holdingsLoaded = true;
+              } else if (tab === 'trades' && !this.tradesLoaded) {
+                this.loadTrades(portfolioId);
+                this.tradesLoaded = true;
+              }
+            }
+          });
+        } else {
+          // No deep link: load portfolios and select first one
+          loadPromise.then(() => {
+            if (this.portfolios.length > 0 && !this.selectedPortfolio) {
+              this.selectPortfolio(this.portfolios[0]);
+              this.activeTab = 'overview';
+            }
+          });
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -186,19 +249,31 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadPortfolios(): void {
-    // Check cache first
-    const now = Date.now();
-    const cachedData = this.portfolioCache.get('portfolios');
-    
-    if (cachedData && (now - this.portfolioCacheTimestamp) < this.CACHE_DURATION_MS) {
-      // Use cached data
-      this.portfolios = cachedData;
-      this.applyFilters();
-      this.cdr.markForCheck();
-      return;
+  loadPortfolios(): Promise<void> {
+    // If already loading, return the existing promise
+    if (this.loadingPromise) {
+      return this.loadingPromise;
     }
     
+    // If already loaded, return resolved promise
+    if (this.portfoliosLoaded) {
+      return Promise.resolve();
+    }
+    
+    this.loadingPromise = new Promise((resolve, reject) => {
+      // Check cache first
+      const now = Date.now();
+      const cachedData = this.portfolioCache.get('portfolios');
+      
+      if (cachedData && (now - this.portfolioCacheTimestamp) < this.CACHE_DURATION_MS) {
+        // Use cached data
+        this.portfolios = cachedData;
+        this.applyFilters();
+        this.portfoliosLoaded = true; // Mark as loaded
+        this.cdr.markForCheck();
+        resolve();
+        return;
+      }
     this.loading = true;
     this.error = null;
     this.retryCount = 0;
@@ -238,19 +313,29 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
             
             this.applyFilters();
             this.error = null;
+            this.portfoliosLoaded = true; // Mark as loaded
+            this.loadingPromise = null; // Clear loading promise
             
             // Trigger change detection
             this.cdr.markForCheck();
+            resolve();
           } else {
             this.error = 'Invalid data format received from API. Please contact support.';
+            this.loadingPromise = null; // Clear loading promise
             this.cdr.markForCheck();
+            reject(new Error('Invalid data format'));
           }
         },
-        error: () => {
+        error: (err) => {
           // Error already handled in catchError
+          this.loadingPromise = null; // Clear loading promise
           this.cdr.markForCheck();
+          reject(err);
         }
       });
+    });
+    
+    return this.loadingPromise;
   }
 
   // Method to clear portfolio cache
@@ -445,8 +530,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     if (this.searchText.trim()) {
       const searchLower = this.searchText.toLowerCase();
       filtered = filtered.filter(portfolio =>
-        portfolio.name.toLowerCase().includes(searchLower) ||
-        portfolio.description.toLowerCase().includes(searchLower)
+        portfolio.name?.toLowerCase().includes(searchLower) ||
+        portfolio.description?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -486,6 +571,23 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       this.sortOrder = 1;
     }
     this.applyFilters();
+  }
+
+  onSortFieldChange(): void {
+    // Set appropriate sort order based on field
+    if (this.sortField === 'name') {
+      this.sortOrder = 1; // Ascending for names (A-Z)
+    } else if (this.sortField === 'updatedAt' || this.sortField === 'createdAt') {
+      this.sortOrder = -1; // Descending for dates (most recent first)
+    } else if (this.sortField === 'totalReturn') {
+      this.sortOrder = -1; // Descending for returns (highest first)
+    }
+    this.applyFilters();
+  }
+
+  getSortLabel(): string {
+    const option = this.sortOptions.find(opt => opt.value === this.sortField);
+    return option ? `Sort by: ${option.label}` : 'Sort by';
   }
 
 
@@ -528,6 +630,9 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // Reset lazy loading flags when selecting a new portfolio
     this.holdingsLoaded = false;
     this.tradesLoaded = false;
+    
+    // Update URL with deep link
+    this.router.navigate(['/portfolios', portfolio.id, this.activeTab]);
   }
 
   // Method to handle tab changes
@@ -537,6 +642,12 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       const tabValue = typeof tab === 'string' ? tab : tab.toString();
       if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
+        
+        // Update URL with deep link using Location API to avoid full navigation
+        if (this.selectedPortfolio) {
+          const url = `/portfolios/${this.selectedPortfolio.id}/${tabValue}`;
+          window.history.replaceState({}, '', url);
+        }
         
         // Lazy load data when switching to specific tabs (only load once)
         if (tabValue === 'holdings' && this.selectedPortfolio && !this.holdingsLoaded) {
@@ -851,6 +962,27 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     this.configFormDirty = false;
   }
 
+  // Configure component event handlers
+  onConfigureSave(updatedPortfolio: PortfolioWithMetrics): void {
+    // Update the portfolio in the list
+    const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
+    if (index !== -1) {
+      this.portfolios[index] = updatedPortfolio;
+      this.selectedPortfolio = updatedPortfolio;
+    } else {
+      // New portfolio created
+      this.portfolios.push(updatedPortfolio);
+      this.selectedPortfolio = updatedPortfolio;
+    }
+    this.applyFilters();
+    this.cdr.markForCheck();
+    this.toastService.show('success', 'Success', 'Portfolio saved successfully');
+  }
+
+  onConfigureCancel(): void {
+    // Handle cancel if needed
+  }
+
   // Holdings tab methods
   loadHoldings(portfolioId: string): void {
     // Check cache first
@@ -1053,6 +1185,41 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     } catch {
       return dateString;
     }
+  }
+
+  // Handle holding update event from holdings component
+  onHoldingUpdated(event: { symbol: string; data: any }): void {
+    if (!this.selectedPortfolio) {
+      return;
+    }
+
+    const portfolioId = this.selectedPortfolio.id;
+    const { symbol, data } = event;
+
+    this.portfolioHoldingApiService.patchHolding(portfolioId, symbol, data)
+      .pipe(
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.error('Error updating holding:', error);
+          this.toastService.showError({
+            summary: 'Update Failed',
+            detail: error.error?.message || 'Failed to update holding. Please try again.'
+          });
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.show('success', 'Success', `Updated ${symbol} successfully`);
+          
+          // Clear holdings cache and reload
+          this.clearHoldingsCache(portfolioId);
+          this.loadHoldings(portfolioId);
+        },
+        error: () => {
+          // Error already handled in catchError
+        }
+      });
   }
 
 }

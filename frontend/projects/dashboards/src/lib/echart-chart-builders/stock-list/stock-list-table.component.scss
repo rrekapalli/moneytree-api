@@ -26,8 +26,20 @@
   background-color: #bbdefb !important;
 }
 
-.p-card {
-  margin-bottom: 1rem;
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+:host ::ng-deep .p-datatable-scrollable-body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+:host ::ng-deep .p-datatable-thead > tr > th {
+  background: white;
+  z-index: 1;
 }
 
 .p-datatable .p-datatable-tbody > tr > td {
