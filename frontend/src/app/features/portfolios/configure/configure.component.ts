@@ -5,20 +5,13 @@ import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
-import { DialogModule } from 'primeng/dialog';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
 
 import { PortfolioWithMetrics } from '../portfolio.types';
 import { PortfolioApiService } from '../../../services/apis/portfolio.api';
-import { PortfolioCreateRequest, PortfolioUpdateRequest, PortfolioHoldingDto, HoldingsCreateRequest, HoldingUpdateRequest } from '../../../services/entities/portfolio.entities';
+import { PortfolioCreateRequest, PortfolioUpdateRequest } from '../../../services/entities/portfolio.entities';
 import { AuthService } from '../../../services/security/auth.service';
-import { MarketService } from '../../../services/apis/market.api';
-import { StockService } from '../../../services/apis/stock.api';
-import { IndicesService } from '../../../services/apis/indices.api';
-import { Stock } from '../../../services/entities/stock';
-import { IndexResponseDto } from '../../../services/entities/indices';
 
 @Component({
   selector: 'app-portfolio-configure',
@@ -30,8 +23,6 @@ import { IndexResponseDto } from '../../../services/entities/indices';
     InputTextModule,
     TextareaModule,
     SelectModule,
-    TableModule,
-    DialogModule,
     ToggleSwitchModule,
     FormsModule
   ],
@@ -74,14 +65,12 @@ export class PortfolioConfigureComponent implements OnInit {
   
   // Inject the auth service to get current user ID
   private authService = inject(AuthService);
-  
-  // Inject market, stock, and indices services for stock search and price data
-  private marketService = inject(MarketService);
-  private stockService = inject(StockService);
-  private indicesService = inject(IndicesService);
 
   // Local copy for editing
   editingPortfolio: PortfolioWithMetrics | null = null;
+  
+  // Original portfolio for dirty checking
+  originalPortfolio: PortfolioWithMetrics | null = null;
   
   // Flag to distinguish between creation and editing modes
   isCreationMode = false;
@@ -92,53 +81,52 @@ export class PortfolioConfigureComponent implements OnInit {
   // Loading state for save operation
   isSaving = false;
 
-  // Holdings data
-  portfolioHoldings: PortfolioHoldingDto[] = [];
-  isLoadingHoldings = false;
-  
-  // Market data for holdings
-  holdingsMarketData: { [symbol: string]: any } = {};
-  isLoadingMarketData = false;
-  
-  // Table filter
-  globalFilterValue = '';
-
-  // Add Stock Dialog properties
-  showAddStockDialog = false;
-  stockSearchQuery = '';
-  stockSearchResults: any[] = [];
-  selectedStock: any = null;
-  selectedStockDetails: any = null;
-  stockQuantity = 0;
-  isSearchingStocks = false;
-  isAddingStock = false;
-  isLoadingStockDetails = false;
-
-  // All stocks for search validation (like stock-insights component)
-  allStocks: Stock[] = [];
-  private stocksLoaded = false; // Track if stocks have been loaded
+  // Form dirty state
+  isFormDirty = false;
 
   ngOnInit(): void {
-    // Don't load stocks on init - only load when user opens Add Stock dialog
+    // Component initialization
   }
 
-  // Load all stocks for search functionality (like stock-insights component)
-  private loadAllStocksForSearch(): void {
-    // Only load if not already loaded
-    if (this.stocksLoaded && this.allStocks.length > 0) {
-      return;
+  // Format date for display - handles both ISO strings and epoch timestamps
+  formatDate(dateValue: any): string {
+    if (!dateValue) {
+      return '-';
     }
-    
-    this.stockService.getAllStocks().subscribe({
-      next: (stocks: Stock[]) => {
-        this.allStocks = stocks || [];
-        this.stocksLoaded = true;
-      },
-      error: (error) => {
-        this.allStocks = [];
-        this.stocksLoaded = false;
+
+    let date: Date;
+
+    // If it's a number (epoch timestamp)
+    if (typeof dateValue === 'number') {
+      // If the number is less than a reasonable year 2000 timestamp in milliseconds,
+      // it's likely in seconds, so convert to milliseconds
+      if (dateValue < 10000000000) {
+        date = new Date(dateValue * 1000);
+      } else {
+        date = new Date(dateValue);
       }
-    });
+    } else if (typeof dateValue === 'string') {
+      // Try parsing as ISO string
+      date = new Date(dateValue);
+    } else {
+      return '-';
+    }
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return '-';
+    }
+
+    // Format the date manually
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+
+    return `${day}/${month}/${year}, ${displayHours}:${minutes} ${ampm}`;
   }
 
   ngOnChanges(): void {
@@ -147,388 +135,43 @@ export class PortfolioConfigureComponent implements OnInit {
       this.isCreationMode = !this.selectedPortfolio.id || this.selectedPortfolio.id === '';
       // Create a deep copy for editing
       this.editingPortfolio = { ...this.selectedPortfolio };
+      this.originalPortfolio = { ...this.selectedPortfolio };
       
       // Automatically enter edit mode (always editable in Configure tab)
       this.isEditing = true;
-
-      // Load holdings for existing portfolios
-      if (!this.isCreationMode && this.selectedPortfolio.id && this.selectedPortfolio.id !== '') {
-        this.loadPortfolioHoldings(this.selectedPortfolio.id);
-      }
+      
+      // Reset dirty state
+      this.isFormDirty = false;
     } else {
       this.editingPortfolio = null;
+      this.originalPortfolio = null;
       this.isCreationMode = false;
       this.isEditing = false;
-      this.portfolioHoldings = [];
+      this.isFormDirty = false;
     }
   }
 
-  // Load portfolio holdings
-  loadPortfolioHoldings(portfolioId: string): void {
-    this.isLoadingHoldings = true;
-    this.portfolioApiService.getHoldings(portfolioId).subscribe({
-      next: (holdings) => {
-        this.portfolioHoldings = holdings;
-        this.isLoadingHoldings = false;
-        // Load market data for each holding
-        this.loadMarketDataForHoldings(holdings);
-      },
-      error: (error) => {
-        this.isLoadingHoldings = false;
-        this.portfolioHoldings = [];
-      }
-    });
+  // Track form changes
+  onFormChange(): void {
+    this.isFormDirty = this.hasFormChanged();
   }
 
-  // Load market data for holdings
-  loadMarketDataForHoldings(holdings: PortfolioHoldingDto[]): void {
-    this.isLoadingMarketData = true;
-    this.holdingsMarketData = {};
-    
-    // Load market data for each holding
-    holdings.forEach(holding => {
-      this.loadMarketDataForHolding(holding.symbol);
-    });
-  }
-
-  // Load market data for a single holding
-  loadMarketDataForHolding(symbol: string): void {
-    this.stockService.getStockBySymbol(symbol).subscribe({
-      next: (stockData: Stock) => {
-        this.holdingsMarketData[symbol] = {
-          name: stockData.companyName || stockData.name || symbol + ' Limited',
-          currentPrice: stockData.tickDetails?.close || 0,
-          change: stockData.tickDetails?.close && stockData.tickDetails?.previousClose ? 
-                  stockData.tickDetails.close - stockData.tickDetails.previousClose : 0,
-          changePercent: stockData.tickDetails?.close && stockData.tickDetails?.previousClose ? 
-                        ((stockData.tickDetails.close - stockData.tickDetails.previousClose) / stockData.tickDetails.previousClose) * 100 : 0,
-          sector: stockData.stockDetails?.pdSectorInd || stockData.pdSectorInd || 'Unknown',
-          industry: stockData.stockDetails?.industry || stockData.industry || 'Unknown',
-          volume: stockData.tickDetails?.volume || 0,
-          dayHigh: stockData.tickDetails?.high || 0,
-          dayLow: stockData.tickDetails?.low || 0,
-          open: stockData.tickDetails?.open || 0,
-          previousClose: stockData.tickDetails?.previousClose || 0,
-          vwap: stockData.tickDetails?.vwap || 0,
-          lastUpdated: stockData.tickDetails?.date || ''
-        };
-        this.isLoadingMarketData = false;
-      },
-      error: (error) => {
-        // Set default values for failed requests
-        this.holdingsMarketData[symbol] = {
-          name: symbol + ' Limited',
-          currentPrice: 0,
-          change: 0,
-          changePercent: 0,
-          sector: 'Unknown',
-          industry: 'Unknown',
-          volume: 0,
-          dayHigh: 0,
-          dayLow: 0,
-          open: 0,
-          previousClose: 0,
-          vwap: 0,
-          lastUpdated: ''
-        };
-        this.isLoadingMarketData = false;
-      }
-    });
-  }
-
-  // Get market data for a holding
-  getMarketData(symbol: string): any {
-    return this.holdingsMarketData[symbol] || {
-      name: symbol + ' Limited',
-      currentPrice: 0,
-      change: 0,
-      changePercent: 0,
-      sector: 'Unknown',
-      industry: 'Unknown',
-      volume: 0,
-      dayHigh: 0,
-      dayLow: 0,
-      open: 0,
-      previousClose: 0,
-      vwap: 0,
-      lastUpdated: ''
-    };
-  }
-
-  // Calculate current value for a holding
-  getCurrentValue(holding: PortfolioHoldingDto): number {
-    const marketData = this.getMarketData(holding.symbol);
-    return marketData.currentPrice ? holding.quantity * marketData.currentPrice : 0;
-  }
-
-  // Calculate unrealized P&L
-  getUnrealizedPnl(holding: PortfolioHoldingDto): number {
-    const currentValue = this.getCurrentValue(holding);
-    const costBasis = holding.quantity * holding.avgCost;
-    return currentValue - costBasis;
-  }
-
-  // Calculate unrealized P&L percentage
-  getUnrealizedPnlPercent(holding: PortfolioHoldingDto): number {
-    const costBasis = holding.quantity * holding.avgCost;
-    if (costBasis === 0) return 0;
-    return (this.getUnrealizedPnl(holding) / costBasis) * 100;
-  }
-
-  // Open Add Stock Dialog
-  openAddStockDialog(): void {
-    this.showAddStockDialog = true;
-    this.stockSearchQuery = '';
-    this.stockSearchResults = [];
-    this.selectedStock = null;
-    this.stockQuantity = 0;
-    this.isSearchingStocks = false;
-    
-    // Load stocks only when dialog is opened (lazy loading)
-    this.loadAllStocksForSearch();
-  }
-
-  // Close Add Stock Dialog
-  closeAddStockDialog(): void {
-    this.showAddStockDialog = false;
-    this.stockSearchQuery = '';
-    this.stockSearchResults = [];
-    this.selectedStock = null;
-    this.selectedStockDetails = null;
-    this.stockQuantity = 0;
-    this.isSearchingStocks = false;
-    this.isLoadingStockDetails = false;
-  }
-
-  // Handle stock search input (like stock-insights component)
-  onStockSearchInput(event: any): void {
-    const query = event.target.value;
-    this.stockSearchQuery = query;
-    
-    if (!query || query.length < 2) {
-      this.stockSearchResults = [];
-      return;
+  // Check if form has changed
+  private hasFormChanged(): boolean {
+    if (!this.editingPortfolio || !this.originalPortfolio) {
+      return false;
     }
 
-    this.isSearchingStocks = true;
-    
-    // Filter against allStocks list (like stock-insights component)
-    const normalizedQuery = query.toLowerCase().trim();
-    const filtered = this.allStocks.filter(stock => 
-      stock.symbol?.toLowerCase().includes(normalizedQuery) ||
-      stock.name?.toLowerCase().includes(normalizedQuery)
+    return (
+      this.editingPortfolio.name !== this.originalPortfolio.name ||
+      this.editingPortfolio.description !== this.originalPortfolio.description ||
+      this.editingPortfolio.baseCurrency !== this.originalPortfolio.baseCurrency ||
+      this.editingPortfolio.riskProfile !== this.originalPortfolio.riskProfile ||
+      this.editingPortfolio.initialCapital !== this.originalPortfolio.initialCapital ||
+      this.editingPortfolio.currentCash !== this.originalPortfolio.currentCash ||
+      this.editingPortfolio.tradingMode !== this.originalPortfolio.tradingMode ||
+      this.editingPortfolio.isActive !== this.originalPortfolio.isActive
     );
-    
-    // Convert Stock[] to the format expected by our UI
-    this.stockSearchResults = filtered.map(stock => ({
-      symbol: stock.symbol,
-      name: stock.name,
-      companyName: stock.name, // Stock interface doesn't have companyName, use name
-      price: 0 // We'll get price separately if needed
-    }));
-    
-    this.isSearchingStocks = false;
-  }
-
-
-  // Select stock from search results
-  selectStock(stock: any): void {
-    this.selectedStock = stock;
-    this.selectedStockDetails = null;
-    this.isLoadingStockDetails = true;
-    
-    // Clear search results and query after selection
-    this.stockSearchResults = [];
-    this.stockSearchQuery = '';
-    
-    // Try multiple API endpoints to get stock details
-    this.tryMultipleStockApis(stock);
-  }
-
-  // Try multiple API endpoints to get stock details
-  private tryMultipleStockApis(stock: any): void {
-    // Try StockService.getStockBySymbol first (now has comprehensive data)
-    this.stockService.getStockBySymbol(stock.symbol).subscribe({
-      next: (stockData: Stock) => {
-        // Map updated Stock interface with nested tickDetails and stockDetails structure
-        this.selectedStockDetails = {
-          // Basic info from stockDetails
-          symbol: stockData.symbol || stock.symbol,
-          name: stockData.companyName || stockData.name || stock.name || stock.companyName,
-          industry: stockData.industry || '',
-          
-          // Market data from tickDetails (nested object)
-          price: stockData.tickDetails?.close || 0,
-          change: stockData.tickDetails?.close && stockData.tickDetails?.previousClose ? 
-                  stockData.tickDetails.close - stockData.tickDetails.previousClose : 0,
-          changePercent: stockData.tickDetails?.close && stockData.tickDetails?.previousClose ? 
-                        ((stockData.tickDetails.close - stockData.tickDetails.previousClose) / stockData.tickDetails.previousClose) * 100 : 0,
-          dayHigh: stockData.tickDetails?.high || 0,
-          dayLow: stockData.tickDetails?.low || 0,
-          previousClose: stockData.tickDetails?.previousClose || 0,
-          volume: stockData.tickDetails?.volume || 0,
-          open: stockData.tickDetails?.open || 0,
-          marketCap: 0, // Not available in current response
-          yearHigh: 0, // Not available in current response
-          yearLow: 0, // Not available in current response
-          totalTradedValue: stockData.tickDetails?.totalTradedValue || 0,
-          vwap: stockData.tickDetails?.vwap || 0,
-          identifier: '',
-          series: stockData.tickDetails?.series || stockData.stockDetails?.series || '',
-          isin: stockData.stockDetails?.isin || '',
-          nearWeekHigh: 0,
-          nearWeekLow: 0,
-          percentChange365d: 0,
-          percentChange30d: 0,
-          lastUpdated: stockData.tickDetails?.date || '',
-          exchange: 'NSE', // Default to NSE
-          currency: 'INR' // Default to INR
-        };
-        
-        this.isLoadingStockDetails = false;
-      },
-      error: (error) => {
-        // Try IndicesService.getIndexBySymbol as fallback
-        this.indicesService.getIndexBySymbol(stock.symbol).subscribe({
-          next: (indexData: IndexResponseDto) => {
-            // Map IndexResponseDto to our expected format
-            this.selectedStockDetails = {
-              symbol: indexData.indexSymbol || stock.symbol,
-              name: indexData.indexName || stock.name || stock.companyName,
-              price: indexData.lastPrice || 0,
-              change: indexData.variation || 0,
-              changePercent: indexData.percentChange || 0,
-              dayHigh: indexData.highPrice || 0,
-              dayLow: indexData.lowPrice || 0,
-              previousClose: indexData.previousClose || 0,
-              volume: 0, // Not available in IndexResponseDto
-              open: indexData.openPrice || 0,
-              marketCap: 0, // Not available in IndexResponseDto
-              yearHigh: indexData.yearHigh || 0,
-              yearLow: indexData.yearLow || 0,
-              peRatio: indexData.peRatio || 0,
-              pbRatio: indexData.pbRatio || 0,
-              dividendYield: indexData.dividendYield || 0,
-              sector: indexData.keyCategory || '',
-              industry: '',
-              exchange: '',
-              currency: 'INR',
-              lastUpdated: ''
-            };
-            
-            this.isLoadingStockDetails = false;
-          },
-          error: (error2) => {
-            // Try MarketService.getStockDetails as last resort
-            this.marketService.getStockDetails(stock.symbol).subscribe({
-              next: (marketData: any) => {
-                // Map MarketData to our expected format
-                this.selectedStockDetails = {
-                  symbol: marketData.symbol || stock.symbol,
-                  name: marketData.name || stock.name || stock.companyName,
-                  price: marketData.price || 0,
-                  change: marketData.change || 0,
-                  changePercent: marketData.changePercent || 0,
-                  dayHigh: marketData.dayHigh || 0,
-                  dayLow: marketData.dayLow || 0,
-                  previousClose: marketData.previousClose || 0,
-                  volume: marketData.volume || 0,
-                  open: marketData.open || 0,
-                  marketCap: marketData.marketCap || 0,
-                  yearHigh: 0,
-                  yearLow: 0,
-                  peRatio: 0,
-                  pbRatio: 0,
-                  dividendYield: 0,
-                  sector: '',
-                  industry: '',
-                  exchange: '',
-                  currency: 'INR',
-                  lastUpdated: ''
-                };
-                
-                this.isLoadingStockDetails = false;
-              },
-              error: (error3) => {
-                this.isLoadingStockDetails = false;
-                
-                // Show error message to user
-                alert(`Failed to load details for ${stock.symbol}. All API endpoints failed.`);
-                
-                // Clear the selected stock details
-                this.selectedStockDetails = null;
-              }
-            });
-          }
-        });
-      }
-    });
-  }
-
-  // Add selected stock to portfolio using PUT endpoint
-  addSelectedStock(): void {
-    if (!this.selectedStock || !this.editingPortfolio || !this.editingPortfolio.id || this.editingPortfolio.id === '') {
-      return;
-    }
-
-    this.isAddingStock = true;
-
-    // Validate symbol against allStocks (like stock-insights component)
-    const matched = this.allStocks.find(s => s.symbol?.toUpperCase() === this.selectedStock.symbol.toUpperCase());
-    const targetSymbol = matched ? matched.symbol : this.selectedStock.symbol.toUpperCase();
-
-    // Use PUT endpoint for individual holding (as per Swagger documentation)
-    const holdingRequest: HoldingUpdateRequest = {
-      quantity: this.stockQuantity || 0,
-      avgCost: 0, // Will be set by backend or can be updated later
-      realizedPnl: 0
-    };
-
-    this.portfolioApiService.putHolding(this.editingPortfolio.id, targetSymbol, holdingRequest).subscribe({
-      next: (newHolding) => {
-        // Refresh holdings list
-        this.loadPortfolioHoldings(this.editingPortfolio!.id);
-        this.closeAddStockDialog();
-        this.isAddingStock = false;
-      },
-      error: (error) => {
-
-        alert('Failed to add stock to portfolio. Please try again.');
-        this.isAddingStock = false;
-      }
-    });
-  }
-
-
-  // Add holdings method (legacy - keeping for compatibility)
-  addHoldings(): void {
-    this.openAddStockDialog();
-  }
-
-  // Remove holding method
-  removeHolding(holding: PortfolioHoldingDto): void {
-    if (confirm(`Are you sure you want to remove ${holding.symbol} from this portfolio?`)) {
-      // TODO: Implement remove holding functionality
-      // For now, just remove from local array
-      this.portfolioHoldings = this.portfolioHoldings.filter(h => h.id !== holding.id);
-    }
-  }
-
-  // Refresh holdings data
-  refreshHoldings(): void {
-    if (this.editingPortfolio && this.editingPortfolio.id && this.editingPortfolio.id !== '') {
-      this.loadPortfolioHoldings(this.editingPortfolio.id);
-    }
-  }
-
-  // Global filter change handler
-  onGlobalFilterChange(event: any): void {
-    this.globalFilterValue = event.target.value;
-  }
-
-  // Start editing all fields
-  startEditAll(): void {
-    this.isEditing = true;
   }
 
   // Save all changes using the appropriate API endpoint
@@ -572,8 +215,10 @@ export class PortfolioConfigureComponent implements OnInit {
           next: (createdPortfolio) => {
             // Update the local portfolio with the created one
             this.editingPortfolio = { ...this.editingPortfolio, ...createdPortfolio };
+            this.originalPortfolio = { ...this.editingPortfolio };
             this.isEditing = false;
             this.isSaving = false;
+            this.isFormDirty = false;
             // Emit the updated portfolio
             this.saveChanges.emit(this.editingPortfolio);
           },
@@ -615,8 +260,10 @@ export class PortfolioConfigureComponent implements OnInit {
           next: (updatedPortfolio) => {
             // Update the local portfolio with the updated one
             this.editingPortfolio = { ...this.editingPortfolio, ...updatedPortfolio };
+            this.originalPortfolio = { ...this.editingPortfolio };
             this.isEditing = false;
             this.isSaving = false;
+            this.isFormDirty = false;
             // Emit the updated portfolio
             this.saveChanges.emit(this.editingPortfolio);
           },
@@ -650,10 +297,10 @@ export class PortfolioConfigureComponent implements OnInit {
 
   cancelEdit(): void {
     // Reset to original values and exit editing mode
-    if (this.selectedPortfolio) {
-      this.editingPortfolio = { ...this.selectedPortfolio };
+    if (this.originalPortfolio) {
+      this.editingPortfolio = { ...this.originalPortfolio };
     }
-    this.isEditing = false;
+    this.isFormDirty = false;
     this.isSaving = false;
     // Stay on the same page - don't navigate to overview
   }

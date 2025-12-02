@@ -26,6 +26,7 @@ import { PortfolioWithMetrics } from './portfolio.types';
 import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
+import { PortfolioConfigureComponent } from './configure/configure.component';
 
 @Component({
   selector: 'app-portfolios',
@@ -48,7 +49,8 @@ import { ToastService } from '../../services/toast.service';
     InputNumberModule,
     TableModule,
     ScrollPanelModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    PortfolioConfigureComponent
   ],
   templateUrl: './portfolios.component.html',
   styleUrls: ['./portfolios.component.scss'],
@@ -849,6 +851,27 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // Restore original form values
     this.configForm = { ...this.originalConfigForm };
     this.configFormDirty = false;
+  }
+
+  // Configure component event handlers
+  onConfigureSave(updatedPortfolio: PortfolioWithMetrics): void {
+    // Update the portfolio in the list
+    const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
+    if (index !== -1) {
+      this.portfolios[index] = updatedPortfolio;
+      this.selectedPortfolio = updatedPortfolio;
+    } else {
+      // New portfolio created
+      this.portfolios.push(updatedPortfolio);
+      this.selectedPortfolio = updatedPortfolio;
+    }
+    this.applyFilters();
+    this.cdr.markForCheck();
+    this.toastService.show('success', 'Success', 'Portfolio saved successfully');
+  }
+
+  onConfigureCancel(): void {
+    // Handle cancel if needed
   }
 
   // Holdings tab methods
