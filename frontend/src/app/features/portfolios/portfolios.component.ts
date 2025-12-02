@@ -27,7 +27,6 @@ import { PortfolioConfigForm } from '../../services/entities/portfolio.entities'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
 import { PortfolioConfigureComponent } from './configure/configure.component';
-import { PortfolioOverviewComponent } from './overview/overview.component';
 import { PortfolioHoldingsComponent } from './holdings/holdings.component';
 import { PortfolioTradesComponent } from './trades/trades.component';
 
@@ -54,7 +53,6 @@ import { PortfolioTradesComponent } from './trades/trades.component';
     ScrollPanelModule,
     PageHeaderComponent,
     PortfolioConfigureComponent,
-    PortfolioOverviewComponent,
     PortfolioHoldingsComponent,
     PortfolioTradesComponent
   ],
@@ -81,8 +79,15 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   layout: 'list' | 'grid' = 'grid';
   
   // Sorting properties
-  sortField: string = 'name';
-  sortOrder: number = 1;
+  sortField: string = 'updatedAt';
+  sortOrder: number = -1; // -1 for descending (most recent first)
+  
+  sortOptions = [
+    { label: 'Name (A-Z)', value: 'name' },
+    { label: 'Updated (Recent)', value: 'updatedAt' },
+    { label: 'Created (Recent)', value: 'createdAt' },
+    { label: 'Return (%)', value: 'totalReturn' }
+  ];
   
   // Selected portfolio for detail view
   selectedPortfolio: PortfolioWithMetrics | null = null;
@@ -525,8 +530,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     if (this.searchText.trim()) {
       const searchLower = this.searchText.toLowerCase();
       filtered = filtered.filter(portfolio =>
-        portfolio.name.toLowerCase().includes(searchLower) ||
-        portfolio.description.toLowerCase().includes(searchLower)
+        portfolio.name?.toLowerCase().includes(searchLower) ||
+        portfolio.description?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -566,6 +571,23 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
       this.sortOrder = 1;
     }
     this.applyFilters();
+  }
+
+  onSortFieldChange(): void {
+    // Set appropriate sort order based on field
+    if (this.sortField === 'name') {
+      this.sortOrder = 1; // Ascending for names (A-Z)
+    } else if (this.sortField === 'updatedAt' || this.sortField === 'createdAt') {
+      this.sortOrder = -1; // Descending for dates (most recent first)
+    } else if (this.sortField === 'totalReturn') {
+      this.sortOrder = -1; // Descending for returns (highest first)
+    }
+    this.applyFilters();
+  }
+
+  getSortLabel(): string {
+    const option = this.sortOptions.find(opt => opt.value === this.sortField);
+    return option ? `Sort by: ${option.label}` : 'Sort by';
   }
 
 

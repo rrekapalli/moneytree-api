@@ -69,18 +69,35 @@
       <!-- Search Input -->
       <div class="search-section">
         <label for="portfolio-search" class="sr-only">Search portfolios</label>
-        <span class="p-input-icon-left">
-          <i class="pi pi-search" aria-hidden="true"></i>
-          <input 
-            id="portfolio-search"
-            type="text" 
-            pInputText 
-            [(ngModel)]="searchText" 
-            (ngModelChange)="onSearchChange()"
-            placeholder="Search portfolios..." 
-            class="search-input"
-            aria-label="Search portfolios by name or description" />
-        </span>
+        <div class="search-controls">
+          <span class="p-input-icon-left search-input-wrapper">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input 
+              id="portfolio-search"
+              type="text" 
+              pInputText 
+              [(ngModel)]="searchText" 
+              (ngModelChange)="onSearchChange()"
+              placeholder="Search..." 
+              class="search-input"
+              aria-label="Search portfolios by name or description" />
+          </span>
+          <p-select 
+            [(ngModel)]="sortField"
+            [options]="sortOptions"
+            (ngModelChange)="onSortFieldChange()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            class="sort-dropdown"
+            [pTooltip]="getSortLabel()"
+            tooltipPosition="top"
+            aria-label="Sort portfolios">
+            <ng-template pTemplate="selectedItem">
+              <i class="pi pi-sort-alt"></i>
+            </ng-template>
+          </p-select>
+        </div>
       </div>
 
       <!-- Portfolio List -->
