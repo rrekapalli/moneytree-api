@@ -954,18 +954,18 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       options.grid = [
         {
           id: 'main',
-          top: '10%',
+          top: '15%',  // Increased top to reduce candlestick chart height
           left: '5%',
           right: '5%',
-          bottom: '40%',  // Leave space for volume bars and data zoom
+          bottom: '42%',  // Increased bottom to make room for volume and zoom
           containLabel: true
         },
         {
           id: 'volume',
-          top: '65%',  // Position volume bars between x-axis labels and data zoom
+          top: '60%',  // Reduced volume bar height
           left: '5%',
           right: '5%',
-          bottom: '12%',  // Leave space for data zoom control
+          bottom: '15%',  // Space for zoom control visibility
           containLabel: true
         }
       ];
@@ -1086,7 +1086,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       if (options.dataZoom && Array.isArray(options.dataZoom)) {
         options.dataZoom.forEach((zoom: any) => {
           if (zoom.type === 'slider') {
-            zoom.height = '8%';
+            zoom.height = '5%';
             zoom.bottom = '0%';  // Position at the very bottom with no gap
             zoom.xAxisIndex = [0, 1];  // Link to both x-axes (main and volume)
           }
