@@ -214,6 +214,10 @@
               <i class="pi pi-chart-line" aria-hidden="true"></i>
               Overview
             </p-tab>
+            <p-tab value="details" role="tab" [attr.aria-selected]="activeTab === 'details'" [attr.aria-controls]="'details-panel'">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              Details
+            </p-tab>
             <p-tab value="configure" role="tab" [attr.aria-selected]="activeTab === 'configure'" [attr.aria-controls]="'configure-panel'">
               <i class="pi pi-cog" aria-hidden="true"></i>
               Configure
@@ -234,6 +238,16 @@
                 <h3>Overview - {{ selectedPortfolio.name }}</h3>
                 <p>Overview content will be implemented in future tasks</p>
               </div>
+            </p-tabpanel>
+
+            <!-- Details Tab -->
+            <p-tabpanel value="details" role="tabpanel" id="details-panel" [attr.aria-labelledby]="'Details tab for ' + selectedPortfolio.name">
+              <app-portfolio-details
+                [selectedPortfolio]="selectedPortfolio"
+                [riskProfileOptions]="riskProfileOptions"
+                (saveChanges)="onDetailsSave($event)"
+                (cancel)="onDetailsCancel()">
+              </app-portfolio-details>
             </p-tabpanel>
 
             <!-- Configure Tab -->

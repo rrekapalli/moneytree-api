@@ -27,6 +27,7 @@ import { PortfolioConfigForm } from '../../services/entities/portfolio.entities'
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
 import { PortfolioConfigureComponent } from './configure/configure.component';
+import { PortfolioDetailsComponent } from './details/details.component';
 import { PortfolioHoldingsComponent } from './holdings/holdings.component';
 import { PortfolioTradesComponent } from './trades/trades.component';
 
@@ -53,6 +54,7 @@ import { PortfolioTradesComponent } from './trades/trades.component';
     ScrollPanelModule,
     PageHeaderComponent,
     PortfolioConfigureComponent,
+    PortfolioDetailsComponent,
     PortfolioHoldingsComponent,
     PortfolioTradesComponent
   ],
@@ -92,8 +94,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   // Selected portfolio for detail view
   selectedPortfolio: PortfolioWithMetrics | null = null;
   
-  // Active tab for the detail panel (overview, configure, holdings, trades)
-  activeTab: 'overview' | 'configure' | 'holdings' | 'trades' = 'overview';
+  // Active tab for the detail panel (overview, details, configure, holdings, trades)
+  activeTab: 'overview' | 'details' | 'configure' | 'holdings' | 'trades' = 'overview';
   
   // Cache for portfolio data
   private portfolioCache: Map<string, PortfolioWithMetrics[]> = new Map();
@@ -616,8 +618,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         labels: ['Now']
       }
     };
-    // Switch to Configure tab for new portfolio creation
-    this.activeTab = 'configure';
+    // Switch to Details tab for new portfolio creation
+    this.activeTab = 'details';
   }
 
   selectPortfolio(portfolio: PortfolioWithMetrics): void {
@@ -636,11 +638,11 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   }
 
   // Method to handle tab changes
-  onTabChange(tab: 'overview' | 'configure' | 'holdings' | 'trades' | string | number | undefined): void {
+  onTabChange(tab: 'overview' | 'details' | 'configure' | 'holdings' | 'trades' | string | number | undefined): void {
     if (tab !== undefined) {
       // Handle both string and number types from PrimeNG tabs
       const tabValue = typeof tab === 'string' ? tab : tab.toString();
-      if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
+      if (tabValue === 'overview' || tabValue === 'details' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
         
         // Update URL with deep link using Location API to avoid full navigation
@@ -960,6 +962,27 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // Restore original form values
     this.configForm = { ...this.originalConfigForm };
     this.configFormDirty = false;
+  }
+
+  // Details component event handlers
+  onDetailsSave(updatedPortfolio: PortfolioWithMetrics): void {
+    // Update the portfolio in the list
+    const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
+    if (index !== -1) {
+      this.portfolios[index] = updatedPortfolio;
+      this.selectedPortfolio = updatedPortfolio;
+    } else {
+      // New portfolio created
+      this.portfolios.push(updatedPortfolio);
+      this.selectedPortfolio = updatedPortfolio;
+    }
+    this.applyFilters();
+    this.cdr.markForCheck();
+    this.toastService.show('success', 'Success', 'Portfolio details saved successfully');
+  }
+
+  onDetailsCancel(): void {
+    // Handle cancel if needed
   }
 
   // Configure component event handlers

@@ -34,25 +34,25 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "feat(task-1): add PortfolioConfig interface and API service with tests"
   - _Requirements: 4.4_
 
-- [ ] 2. Create PortfolioDetailsComponent
+- [x] 2. Create PortfolioDetailsComponent
   - Copy existing configure.component files to new details.component files
   - Rename component class and selector to portfolio-details
   - Update component to be standalone with proper imports
   - Keep existing form structure and functionality intact
   - _Requirements: 1.1, 1.2, 4.1_
 
-- [ ] 2.1 Write unit tests for PortfolioDetailsComponent
+- [x] 2.1 Write unit tests for PortfolioDetailsComponent
   - Test component initialization with portfolio data
   - Test form dirty state tracking
   - Test save button enable/disable logic
   - Test form validation
   - _Requirements: 1.3, 5.1_
 
-- [ ] 2.2 Write property test for form dirty tracking
+- [x] 2.2 Write property test for form dirty tracking
   - **Property 1: Form dirty state reflects changes**
   - **Validates: Requirements 1.3, 2.3**
 
-- [ ] 2.3 Verify and commit task 2
+- [x] 2.3 Verify and commit task 2
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify component renders without errors
   - Commit to git with message: "feat(task-2): create PortfolioDetailsComponent with tests"
