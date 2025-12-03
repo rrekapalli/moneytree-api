@@ -252,4 +252,245 @@ describe('PortfolioConfigureComponent', () => {
       }, 100);
     });
   });
+
+  describe('Form Sections Rendering', () => {
+    beforeEach((done) => {
+      const mockPortfolio = createMockPortfolio({ id: '1' });
+      const mockConfig = createMockConfig('1');
+      
+      mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+      
+      component.selectedPortfolio = mockPortfolio;
+      component.ngOnChanges({ selectedPortfolio: { currentValue: mockPortfolio, previousValue: null, firstChange: true, isFirstChange: () => true } });
+      
+      setTimeout(() => {
+        fixture.detectChanges();
+        done();
+      }, 100);
+    });
+
+    it('should render Trading Configuration section', () => {
+      const compiled = fixture.nativeElement;
+      const sections = compiled.querySelectorAll('.config-section');
+      expect(sections.length).toBeGreaterThanOrEqual(5);
+      
+      const sectionTitles = Array.from(sections).map((section: any) => 
+        section.querySelector('.section-title')?.textContent?.trim()
+      );
+      expect(sectionTitles).toContain('Trading Configuration');
+    });
+
+    it('should render all Trading Configuration fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      expect(compiled.querySelector('#tradingMode')).toBeTruthy();
+      expect(compiled.querySelector('#signalCheckInterval')).toBeTruthy();
+      expect(compiled.querySelector('#lookbackDays')).toBeTruthy();
+      expect(compiled.querySelector('#enableConditionalLogging')).toBeTruthy();
+      expect(compiled.querySelector('#cacheDurationSeconds')).toBeTruthy();
+      expect(compiled.querySelector('#exchange')).toBeTruthy();
+      expect(compiled.querySelector('#candleInterval')).toBeTruthy();
+    });
+
+    it('should render Historical Cache Configuration section', () => {
+      const compiled = fixture.nativeElement;
+      const sections = compiled.querySelectorAll('.config-section');
+      
+      const sectionTitles = Array.from(sections).map((section: any) => 
+        section.querySelector('.section-title')?.textContent?.trim()
+      );
+      expect(sectionTitles).toContain('Historical Cache Configuration');
+    });
+
+    it('should render all Historical Cache Configuration fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      expect(compiled.querySelector('#historicalCacheEnabled')).toBeTruthy();
+      expect(compiled.querySelector('#historicalCacheLookbackDays')).toBeTruthy();
+      expect(compiled.querySelector('#historicalCacheExchange')).toBeTruthy();
+      expect(compiled.querySelector('#historicalCacheInstrumentType')).toBeTruthy();
+      expect(compiled.querySelector('#historicalCacheCandleInterval')).toBeTruthy();
+      expect(compiled.querySelector('#historicalCacheTtlSeconds')).toBeTruthy();
+    });
+
+    it('should render Redis Configuration section', () => {
+      const compiled = fixture.nativeElement;
+      const sections = compiled.querySelectorAll('.config-section');
+      
+      const sectionTitles = Array.from(sections).map((section: any) => 
+        section.querySelector('.section-title')?.textContent?.trim()
+      );
+      expect(sectionTitles).toContain('Redis Configuration');
+    });
+
+    it('should render all Redis Configuration fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      expect(compiled.querySelector('#redisEnabled')).toBeTruthy();
+      expect(compiled.querySelector('#redisHost')).toBeTruthy();
+      expect(compiled.querySelector('#redisPort')).toBeTruthy();
+      expect(compiled.querySelector('#redisPassword')).toBeTruthy();
+      expect(compiled.querySelector('#redisDb')).toBeTruthy();
+      expect(compiled.querySelector('#redisKeyPrefix')).toBeTruthy();
+    });
+
+    it('should render Entry Conditions section', () => {
+      const compiled = fixture.nativeElement;
+      const sections = compiled.querySelectorAll('.config-section');
+      
+      const sectionTitles = Array.from(sections).map((section: any) => 
+        section.querySelector('.section-title')?.textContent?.trim()
+      );
+      expect(sectionTitles).toContain('Entry Conditions');
+    });
+
+    it('should render all Entry Conditions fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      expect(compiled.querySelector('#entryBbLower')).toBeTruthy();
+      expect(compiled.querySelector('#entryRsiThreshold')).toBeTruthy();
+      expect(compiled.querySelector('#entryMacdTurnPositive')).toBeTruthy();
+      expect(compiled.querySelector('#entryVolumeAboveAvg')).toBeTruthy();
+      expect(compiled.querySelector('#entryFallbackSmaPeriod')).toBeTruthy();
+      expect(compiled.querySelector('#entryFallbackAtrMultiplier')).toBeTruthy();
+    });
+
+    it('should render Exit Conditions section', () => {
+      const compiled = fixture.nativeElement;
+      const sections = compiled.querySelectorAll('.config-section');
+      
+      const sectionTitles = Array.from(sections).map((section: any) => 
+        section.querySelector('.section-title')?.textContent?.trim()
+      );
+      expect(sectionTitles).toContain('Exit Conditions');
+    });
+
+    it('should render all Exit Conditions fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      expect(compiled.querySelector('#exitTakeProfitPct')).toBeTruthy();
+      expect(compiled.querySelector('#exitStopLossAtrMult')).toBeTruthy();
+      expect(compiled.querySelector('#exitAllowTpExitsOnly')).toBeTruthy();
+    });
+
+    it('should render all five config sections in correct order', () => {
+      const compiled = fixture.nativeElement;
+      const sections = compiled.querySelectorAll('.config-section');
+      
+      expect(sections.length).toBe(5);
+      
+      const sectionTitles = Array.from(sections).map((section: any) => 
+        section.querySelector('.section-title')?.textContent?.trim()
+      );
+      
+      expect(sectionTitles[0]).toBe('Trading Configuration');
+      expect(sectionTitles[1]).toBe('Historical Cache Configuration');
+      expect(sectionTitles[2]).toBe('Redis Configuration');
+      expect(sectionTitles[3]).toBe('Entry Conditions');
+      expect(sectionTitles[4]).toBe('Exit Conditions');
+    });
+  });
+
+  describe('Field Types and Validation', () => {
+    beforeEach((done) => {
+      const mockPortfolio = createMockPortfolio({ id: '1' });
+      const mockConfig = createMockConfig('1');
+      
+      mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+      
+      component.selectedPortfolio = mockPortfolio;
+      component.ngOnChanges({ selectedPortfolio: { currentValue: mockPortfolio, previousValue: null, firstChange: true, isFirstChange: () => true } });
+      
+      setTimeout(() => {
+        fixture.detectChanges();
+        done();
+      }, 100);
+    });
+
+    it('should have number type for numeric fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      const numericFields = [
+        '#signalCheckInterval',
+        '#lookbackDays',
+        '#cacheDurationSeconds',
+        '#historicalCacheLookbackDays',
+        '#historicalCacheTtlSeconds',
+        '#redisPort',
+        '#redisDb',
+        '#entryRsiThreshold',
+        '#entryFallbackSmaPeriod',
+        '#entryFallbackAtrMultiplier',
+        '#exitTakeProfitPct',
+        '#exitStopLossAtrMult'
+      ];
+      
+      numericFields.forEach(selector => {
+        const field = compiled.querySelector(selector);
+        expect(field).toBeTruthy();
+        expect(field.type).toBe('number');
+      });
+    });
+
+    it('should have text type for text fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      const textFields = [
+        '#tradingMode',
+        '#exchange',
+        '#candleInterval',
+        '#historicalCacheExchange',
+        '#historicalCacheInstrumentType',
+        '#historicalCacheCandleInterval',
+        '#redisHost',
+        '#redisKeyPrefix'
+      ];
+      
+      textFields.forEach(selector => {
+        const field = compiled.querySelector(selector);
+        expect(field).toBeTruthy();
+        expect(field.type).toBe('text');
+      });
+    });
+
+    it('should have password type for password field', () => {
+      const compiled = fixture.nativeElement;
+      const passwordField = compiled.querySelector('#redisPassword');
+      
+      expect(passwordField).toBeTruthy();
+      expect(passwordField.type).toBe('password');
+    });
+
+    it('should have toggle switches for boolean fields', () => {
+      const compiled = fixture.nativeElement;
+      
+      const toggleFields = [
+        '#enableConditionalLogging',
+        '#historicalCacheEnabled',
+        '#redisEnabled',
+        '#entryBbLower',
+        '#entryMacdTurnPositive',
+        '#entryVolumeAboveAvg',
+        '#exitAllowTpExitsOnly'
+      ];
+      
+      toggleFields.forEach(selector => {
+        const field = compiled.querySelector(selector);
+        expect(field).toBeTruthy();
+        expect(field.tagName.toLowerCase()).toBe('p-toggleswitch');
+      });
+    });
+
+    it('should mark required fields with asterisk', () => {
+      const compiled = fixture.nativeElement;
+      
+      const tradingModeLabel = compiled.querySelector('label[for="tradingMode"]');
+      const signalCheckIntervalLabel = compiled.querySelector('label[for="signalCheckInterval"]');
+      const lookbackDaysLabel = compiled.querySelector('label[for="lookbackDays"]');
+      
+      expect(tradingModeLabel?.textContent).toContain('*');
+      expect(signalCheckIntervalLabel?.textContent).toContain('*');
+      expect(lookbackDaysLabel?.textContent).toContain('*');
+    });
+  });
 });

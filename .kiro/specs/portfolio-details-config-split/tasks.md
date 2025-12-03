@@ -87,7 +87,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "feat(task-3): add Details tab to PortfoliosComponent with navigation tests"
   - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 4. Refactor PortfolioConfigureComponent for config management
+- [x] 4. Refactor PortfolioConfigureComponent for config management
   - Update component to use PortfolioConfigApiService
   - Add config loading logic in ngOnChanges
   - Implement getDefaultConfig() method with default values from backend entity
@@ -95,13 +95,13 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Add logic to determine POST vs PUT based on config existence
   - _Requirements: 2.1, 2.2, 2.4_
 
-- [ ] 4.1 Write unit tests for config loading
+- [x] 4.1 Write unit tests for config loading
   - Test loading existing config
   - Test handling missing config (defaults)
   - Test error handling for failed config load
   - _Requirements: 2.2, 5.2_
 
-- [ ] 4.2 Verify and commit task 4
+- [x] 4.2 Verify and commit task 4
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify config loading works correctly
   - Commit to git with message: "refactor(task-4): update PortfolioConfigureComponent to use config API"
