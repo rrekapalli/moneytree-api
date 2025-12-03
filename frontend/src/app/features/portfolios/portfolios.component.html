@@ -254,6 +254,9 @@
             <p-tabpanel value="configure" role="tabpanel" id="configure-panel" [attr.aria-labelledby]="'Configure tab for ' + selectedPortfolio.name">
               <app-portfolio-configure
                 [selectedPortfolio]="selectedPortfolio"
+                [portfolioConfig]="portfolioConfig"
+                [configLoading]="configLoading"
+                [configError]="configError"
                 [riskProfileOptions]="riskProfileOptions"
                 (saveChanges)="onConfigureSave($event)"
                 (cancel)="onConfigureCancel()"

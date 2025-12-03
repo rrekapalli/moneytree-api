@@ -3,6 +3,7 @@ import { PortfoliosComponent } from './portfolios.component';
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
 import { PortfolioTradeApiService } from '../../services/apis/portfolio-trade.api';
+import { PortfolioConfigApiService } from '../../services/apis/portfolio-config.api';
 import { ToastService } from '../../services/toast.service';
 import { of, throwError, Observable } from 'rxjs';
 import { PortfolioWithMetrics } from './portfolio.types';
@@ -52,12 +53,17 @@ describe('PortfoliosComponent', () => {
     const mockPortfolioTradeApiService = jasmine.createSpyObj('PortfolioTradeApiService', ['getTrades']);
     mockPortfolioTradeApiService.getTrades.and.returnValue(of([]));
 
+    // Create a spy object for PortfolioConfigApiService
+    const mockPortfolioConfigApiService = jasmine.createSpyObj('PortfolioConfigApiService', ['getConfig']);
+    mockPortfolioConfigApiService.getConfig.and.returnValue(of(null));
+
     await TestBed.configureTestingModule({
       imports: [PortfoliosComponent],
       providers: [
         { provide: PortfolioApiService, useValue: mockPortfolioApiService },
         { provide: PortfolioHoldingApiService, useValue: mockPortfolioHoldingApiService },
         { provide: PortfolioTradeApiService, useValue: mockPortfolioTradeApiService },
+        { provide: PortfolioConfigApiService, useValue: mockPortfolioConfigApiService },
         ToastService
       ]
     })
@@ -2206,6 +2212,265 @@ describe('PortfoliosComponent', () => {
     it('should use OnPush change detection strategy', () => {
       const metadata = (component.constructor as any).__annotations__[0];
       expect(metadata.changeDetection).toBe(ChangeDetectionStrategy.OnPush);
+    });
+  });
+
+  describe('Portfolio Config Loading', () => {
+    let mockPortfolioConfigApiService: jasmine.SpyObj<PortfolioConfigApiService>;
+
+    beforeEach(() => {
+      // Get the mock service from TestBed
+      mockPortfolioConfigApiService = TestBed.inject(PortfolioConfigApiService) as jasmine.SpyObj<PortfolioConfigApiService>;
+    });
+
+    describe('Config loading on tab activation', () => {
+      it('should load config when Configure tab is activated', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const mockConfig = {
+          portfolioId: '1',
+          tradingMode: 'paper',
+          signalCheckInterval: 300,
+          lookbackDays: 30,
+          historicalCacheEnabled: true,
+          historicalCacheLookbackDays: 90,
+          historicalCacheExchange: 'NSE',
+          historicalCacheInstrumentType: 'EQ',
+          historicalCacheCandleInterval: 'day',
+          historicalCacheTtlSeconds: 3600,
+          redisEnabled: false,
+          redisHost: 'localhost',
+          redisPort: 6379,
+          redisDb: 0,
+          redisKeyPrefix: 'portfolio:',
+          enableConditionalLogging: false,
+          cacheDurationSeconds: 300,
+          exchange: 'NSE',
+          candleInterval: 'day',
+          entryBbLower: true,
+          entryRsiThreshold: 30,
+          entryMacdTurnPositive: true,
+          entryVolumeAboveAvg: true,
+          entryFallbackSmaPeriod: 20,
+          entryFallbackAtrMultiplier: 2.0,
+          exitTakeProfitPct: 5.0,
+          exitStopLossAtrMult: 2.0,
+          exitAllowTpExitsOnly: false,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+
+        component.selectPortfolio(portfolio);
+        
+        // Initially, config should not be loaded
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configLoading).toBe(false);
+
+        // Switch to configure tab
+        component.onTabChange('configure');
+
+        // Config should be loaded
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledWith(portfolio.id);
+        expect(component.portfolioConfig).toEqual(mockConfig);
+        expect(component.configLoading).toBe(false);
+        expect(component.configError).toBeNull();
+      });
+
+      it('should handle 404 error gracefully when config does not exist', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const error404 = { status: 404, error: { message: 'Config not found' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => error404));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        // Config should be null (not found is expected)
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configError).toBeNull();
+        expect(component.configLoading).toBe(false);
+      });
+
+      it('should handle network errors when loading config', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const networkError = { status: 0, error: { message: 'Network error' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => networkError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        // Error should be set
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configError).toContain('Unable to connect');
+        expect(component.configLoading).toBe(false);
+      });
+
+      it('should handle server errors when loading config', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const serverError = { status: 500, error: { message: 'Internal server error' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => serverError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        // Error should be set
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configError).toContain('Server error');
+        expect(component.configLoading).toBe(false);
+      });
+    });
+
+    describe('Lazy loading behavior', () => {
+      it('should only load config once per portfolio selection', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const mockConfig = {
+          portfolioId: '1',
+          tradingMode: 'paper',
+          signalCheckInterval: 300,
+          lookbackDays: 30,
+          historicalCacheEnabled: true,
+          historicalCacheLookbackDays: 90,
+          historicalCacheExchange: 'NSE',
+          historicalCacheInstrumentType: 'EQ',
+          historicalCacheCandleInterval: 'day',
+          historicalCacheTtlSeconds: 3600,
+          redisEnabled: false,
+          redisHost: 'localhost',
+          redisPort: 6379,
+          redisDb: 0,
+          redisKeyPrefix: 'portfolio:',
+          enableConditionalLogging: false,
+          cacheDurationSeconds: 300,
+          exchange: 'NSE',
+          candleInterval: 'day',
+          entryBbLower: true,
+          entryRsiThreshold: 30,
+          entryMacdTurnPositive: true,
+          entryVolumeAboveAvg: true,
+          entryFallbackSmaPeriod: 20,
+          entryFallbackAtrMultiplier: 2.0,
+          exitTakeProfitPct: 5.0,
+          exitStopLossAtrMult: 2.0,
+          exitAllowTpExitsOnly: false,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+
+        component.selectPortfolio(portfolio);
+        
+        // Switch to configure tab
+        component.onTabChange('configure');
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledTimes(1);
+        
+        // Switch to another tab
+        component.onTabChange('overview');
+        
+        // Switch back to configure tab
+        component.onTabChange('configure');
+        
+        // Config should not be loaded again (lazy loading flag prevents it)
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledTimes(1);
+      });
+
+      it('should reset config loading flag when selecting a new portfolio', () => {
+        const portfolio1 = createMockPortfolio({ id: '1', name: 'Portfolio 1' });
+        const portfolio2 = createMockPortfolio({ id: '2', name: 'Portfolio 2' });
+        const mockConfig1 = {
+          portfolioId: '1',
+          tradingMode: 'paper',
+          signalCheckInterval: 300,
+          lookbackDays: 30,
+          historicalCacheEnabled: true,
+          historicalCacheLookbackDays: 90,
+          historicalCacheExchange: 'NSE',
+          historicalCacheInstrumentType: 'EQ',
+          historicalCacheCandleInterval: 'day',
+          historicalCacheTtlSeconds: 3600,
+          redisEnabled: false,
+          redisHost: 'localhost',
+          redisPort: 6379,
+          redisDb: 0,
+          redisKeyPrefix: 'portfolio:',
+          enableConditionalLogging: false,
+          cacheDurationSeconds: 300,
+          exchange: 'NSE',
+          candleInterval: 'day',
+          entryBbLower: true,
+          entryRsiThreshold: 30,
+          entryMacdTurnPositive: true,
+          entryVolumeAboveAvg: true,
+          entryFallbackSmaPeriod: 20,
+          entryFallbackAtrMultiplier: 2.0,
+          exitTakeProfitPct: 5.0,
+          exitStopLossAtrMult: 2.0,
+          exitAllowTpExitsOnly: false,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+        const mockConfig2 = { ...mockConfig1, portfolioId: '2' };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValues(of(mockConfig1), of(mockConfig2));
+
+        // Select first portfolio and load config
+        component.selectPortfolio(portfolio1);
+        component.onTabChange('configure');
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledWith(portfolio1.id);
+        
+        // Reset spy
+        mockPortfolioConfigApiService.getConfig.calls.reset();
+        
+        // Select second portfolio
+        component.selectPortfolio(portfolio2);
+        
+        // Switch to configure tab for second portfolio
+        component.onTabChange('configure');
+        
+        // Config should be loaded for the new portfolio
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledWith(portfolio2.id);
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should handle authentication errors (401)', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const authError = { status: 401, error: { message: 'Unauthorized' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => authError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        expect(component.configError).toContain('session has expired');
+      });
+
+      it('should handle authorization errors (403)', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const forbiddenError = { status: 403, error: { message: 'Forbidden' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => forbiddenError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        expect(component.configError).toContain('permission');
+      });
+
+      it('should handle timeout errors', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const timeoutError = { status: 408, name: 'TimeoutError', error: { message: 'Timeout' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => timeoutError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        expect(component.configError).toContain('timed out');
+      });
     });
   });
 });

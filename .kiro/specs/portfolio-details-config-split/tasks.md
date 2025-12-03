@@ -145,31 +145,31 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "feat(task-6): implement form validation for Configure tab"
   - _Requirements: 5.1_
 
-- [ ] 7. Implement save functionality for Configure tab
+- [x] 7. Implement save functionality for Configure tab
   - Add saveConfiguration() method that calls POST or PUT based on configExists flag
   - Add success message display on successful save
   - Add error handling for save failures
   - Update form dirty state after successful save
   - _Requirements: 2.4, 2.5, 5.2_
 
-- [ ] 7.1 Write integration tests for config save
+- [x] 7.1 Write integration tests for config save
   - Test creating new config (POST)
   - Test updating existing config (PUT)
   - Test error handling for failed saves
   - Test success message display
   - _Requirements: 2.4, 2.5, 5.2_
 
-- [ ] 7.2 Write property test for API error handling
+- [x] 7.2 Write property test for API error handling
   - **Property 2: API error handling displays messages**
   - **Validates: Requirements 5.2**
 
-- [ ] 7.3 Verify and commit task 7
+- [x] 7.3 Verify and commit task 7
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify save functionality works for both create and update
   - Commit to git with message: "feat(task-7): implement save functionality for Configure tab with tests"
   - _Requirements: 2.4, 2.5, 5.2_
 
-- [ ] 8. Update parent component config loading
+- [-] 8. Update parent component config loading
   - Add portfolioConfig state variable
   - Add configLoading and configError state variables
   - Add loadPortfolioConfig() method
@@ -177,13 +177,13 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Pass config data to PortfolioConfigureComponent
   - _Requirements: 2.1, 4.5_
 
-- [ ] 8.1 Write unit tests for config loading in parent
+- [x] 8.1 Write unit tests for config loading in parent
   - Test config loading on tab activation
   - Test lazy loading behavior
   - Test error handling
   - _Requirements: 2.1, 4.5_
 
-- [ ] 8.2 Verify and commit task 8
+- [-] 8.2 Verify and commit task 8
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify config loading works on tab activation
   - Commit to git with message: "feat(task-8): add config loading to parent component with tests"
