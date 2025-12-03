@@ -278,3 +278,90 @@ export interface PortfolioConfigForm {
   notificationSettings: boolean;
   taxHarvesting: boolean;
 }
+
+// PortfolioConfig interface matching backend entity structure
+export interface PortfolioConfig {
+  portfolioId: string;
+  
+  // Trading Configuration
+  tradingMode: string;
+  signalCheckInterval: number;
+  lookbackDays: number;
+  
+  // Historical Cache Configuration
+  historicalCacheEnabled: boolean;
+  historicalCacheLookbackDays: number;
+  historicalCacheExchange: string;
+  historicalCacheInstrumentType: string;
+  historicalCacheCandleInterval: string;
+  historicalCacheTtlSeconds: number;
+  
+  // Redis Configuration
+  redisEnabled: boolean;
+  redisHost: string;
+  redisPort: number;
+  redisPassword?: string;
+  redisDb: number;
+  redisKeyPrefix: string;
+  
+  // Additional Trading Settings
+  enableConditionalLogging: boolean;
+  cacheDurationSeconds: number;
+  exchange: string;
+  candleInterval: string;
+  
+  // Entry Conditions
+  entryBbLower: boolean;
+  entryRsiThreshold: number;
+  entryMacdTurnPositive: boolean;
+  entryVolumeAboveAvg: boolean;
+  entryFallbackSmaPeriod: number;
+  entryFallbackAtrMultiplier: number;
+  
+  // Exit Conditions
+  exitTakeProfitPct: number;
+  exitStopLossAtrMult: number;
+  exitAllowTpExitsOnly: boolean;
+  
+  // Custom JSON
+  customJson?: Record<string, any>;
+  
+  // Timestamps
+  createdAt: string;
+  updatedAt: string;
+}
+
+// PortfolioConfig request types
+export interface PortfolioConfigCreateRequest {
+  tradingMode: string;
+  signalCheckInterval: number;
+  lookbackDays: number;
+  historicalCacheEnabled?: boolean;
+  historicalCacheLookbackDays?: number;
+  historicalCacheExchange?: string;
+  historicalCacheInstrumentType?: string;
+  historicalCacheCandleInterval?: string;
+  historicalCacheTtlSeconds?: number;
+  redisEnabled?: boolean;
+  redisHost?: string;
+  redisPort?: number;
+  redisPassword?: string;
+  redisDb?: number;
+  redisKeyPrefix?: string;
+  enableConditionalLogging?: boolean;
+  cacheDurationSeconds?: number;
+  exchange?: string;
+  candleInterval?: string;
+  entryBbLower?: boolean;
+  entryRsiThreshold?: number;
+  entryMacdTurnPositive?: boolean;
+  entryVolumeAboveAvg?: boolean;
+  entryFallbackSmaPeriod?: number;
+  entryFallbackAtrMultiplier?: number;
+  exitTakeProfitPct?: number;
+  exitStopLossAtrMult?: number;
+  exitAllowTpExitsOnly?: boolean;
+  customJson?: Record<string, any>;
+}
+
+export interface PortfolioConfigUpdateRequest extends PortfolioConfigCreateRequest {}
