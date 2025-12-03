@@ -35,7 +35,11 @@
                      [(ngModel)]="portfolioConfig.tradingMode"
                      (ngModelChange)="onFormChange()"
                      placeholder="paper"
-                     [disabled]="isSaving" />
+                     [disabled]="isSaving"
+                     [class.invalid]="hasValidationError('tradingMode')" />
+              @if (hasValidationError('tradingMode')) {
+                <small class="validation-error">{{ getValidationError('tradingMode') }}</small>
+              }
             </div>
             <div class="form-field">
               <label for="signalCheckInterval">Signal Check Interval (seconds) <span class="required">*</span></label>
@@ -45,7 +49,11 @@
                      [(ngModel)]="portfolioConfig.signalCheckInterval"
                      (ngModelChange)="onFormChange()"
                      placeholder="300"
-                     [disabled]="isSaving" />
+                     [disabled]="isSaving"
+                     [class.invalid]="hasValidationError('signalCheckInterval')" />
+              @if (hasValidationError('signalCheckInterval')) {
+                <small class="validation-error">{{ getValidationError('signalCheckInterval') }}</small>
+              }
             </div>
           </div>
           <div class="form-row">
@@ -57,7 +65,11 @@
                      [(ngModel)]="portfolioConfig.lookbackDays"
                      (ngModelChange)="onFormChange()"
                      placeholder="30"
-                     [disabled]="isSaving" />
+                     [disabled]="isSaving"
+                     [class.invalid]="hasValidationError('lookbackDays')" />
+              @if (hasValidationError('lookbackDays')) {
+                <small class="validation-error">{{ getValidationError('lookbackDays') }}</small>
+              }
             </div>
             <div class="form-field toggle-field">
               <label for="enableConditionalLogging">Enable Conditional Logging</label>
@@ -184,25 +196,33 @@
               </p-toggleswitch>
             </div>
             <div class="form-field">
-              <label for="redisHost">Host</label>
+              <label for="redisHost">Host @if (portfolioConfig.redisEnabled) {<span class="required">*</span>}</label>
               <input pInputText 
                      id="redisHost"
                      [(ngModel)]="portfolioConfig.redisHost"
                      (ngModelChange)="onFormChange()"
                      placeholder="localhost"
-                     [disabled]="isSaving" />
+                     [disabled]="isSaving"
+                     [class.invalid]="hasValidationError('redisHost')" />
+              @if (hasValidationError('redisHost')) {
+                <small class="validation-error">{{ getValidationError('redisHost') }}</small>
+              }
             </div>
           </div>
           <div class="form-row">
             <div class="form-field">
-              <label for="redisPort">Port</label>
+              <label for="redisPort">Port @if (portfolioConfig.redisEnabled) {<span class="required">*</span>}</label>
               <input pInputText 
                      id="redisPort"
                      type="number"
                      [(ngModel)]="portfolioConfig.redisPort"
                      (ngModelChange)="onFormChange()"
                      placeholder="6379"
-                     [disabled]="isSaving" />
+                     [disabled]="isSaving"
+                     [class.invalid]="hasValidationError('redisPort')" />
+              @if (hasValidationError('redisPort')) {
+                <small class="validation-error">{{ getValidationError('redisPort') }}</small>
+              }
             </div>
             <div class="form-field">
               <label for="redisPassword">Password</label>
@@ -252,14 +272,18 @@
               </p-toggleswitch>
             </div>
             <div class="form-field">
-              <label for="entryRsiThreshold">RSI Threshold</label>
+              <label for="entryRsiThreshold">RSI Threshold (0-100)</label>
               <input pInputText 
                      id="entryRsiThreshold"
                      type="number"
                      [(ngModel)]="portfolioConfig.entryRsiThreshold"
                      (ngModelChange)="onFormChange()"
                      placeholder="30"
-                     [disabled]="isSaving" />
+                     [disabled]="isSaving"
+                     [class.invalid]="hasValidationError('entryRsiThreshold')" />
+              @if (hasValidationError('entryRsiThreshold')) {
+                <small class="validation-error">{{ getValidationError('entryRsiThreshold') }}</small>
+              }
             </div>
           </div>
           <div class="form-row">
@@ -359,7 +383,7 @@
                   label="Save Configuration" 
                   class="p-button-success"
                   (click)="saveConfiguration()"
-                  [disabled]="!isFormDirty || isSaving">
+                  [disabled]="!isFormDirty || isSaving || !isFormValid()">
             @if (isSaving) {
               <i class="pi pi-spin pi-spinner"></i>
             }

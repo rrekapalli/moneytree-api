@@ -60,6 +60,9 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   // Form dirty state
   isFormDirty = false;
 
+  // Form validation state
+  validationErrors: Map<string, string> = new Map();
+
   // Error state
   errorMessage: string | null = null;
 
@@ -174,10 +177,11 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Track form changes
+   * Track form changes and validate
    */
   onFormChange(): void {
     this.isFormDirty = this.hasFormChanged();
+    this.validateForm();
   }
 
   /**
@@ -193,6 +197,100 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
+   * Validate the entire form
+   */
+  validateForm(): void {
+    this.validationErrors.clear();
+
+    if (!this.portfolioConfig) {
+      return;
+    }
+
+    // Required field validation
+    if (!this.portfolioConfig.tradingMode || this.portfolioConfig.tradingMode.trim() === '') {
+      this.validationErrors.set('tradingMode', 'Trading mode is required');
+    }
+
+    if (!this.portfolioConfig.signalCheckInterval || this.portfolioConfig.signalCheckInterval <= 0) {
+      this.validationErrors.set('signalCheckInterval', 'Signal check interval must be a positive number');
+    }
+
+    if (!this.portfolioConfig.lookbackDays || this.portfolioConfig.lookbackDays <= 0) {
+      this.validationErrors.set('lookbackDays', 'Lookback days must be a positive number');
+    }
+
+    // Conditional validation for Redis fields when redisEnabled is true
+    if (this.portfolioConfig.redisEnabled) {
+      if (!this.portfolioConfig.redisHost || this.portfolioConfig.redisHost.trim() === '') {
+        this.validationErrors.set('redisHost', 'Redis host is required when Redis is enabled');
+      }
+
+      if (!this.portfolioConfig.redisPort || this.portfolioConfig.redisPort < 1 || this.portfolioConfig.redisPort > 65535) {
+        this.validationErrors.set('redisPort', 'Redis port must be between 1 and 65535');
+      }
+    }
+
+    // Range validation for entryRsiThreshold (0-100)
+    if (this.portfolioConfig.entryRsiThreshold < 0 || this.portfolioConfig.entryRsiThreshold > 100) {
+      this.validationErrors.set('entryRsiThreshold', 'RSI threshold must be between 0 and 100');
+    }
+
+    // Positive number validation for numeric fields
+    if (this.portfolioConfig.cacheDurationSeconds !== undefined && this.portfolioConfig.cacheDurationSeconds < 0) {
+      this.validationErrors.set('cacheDurationSeconds', 'Cache duration must be a positive number');
+    }
+
+    if (this.portfolioConfig.historicalCacheLookbackDays < 0) {
+      this.validationErrors.set('historicalCacheLookbackDays', 'Historical cache lookback days must be a positive number');
+    }
+
+    if (this.portfolioConfig.historicalCacheTtlSeconds < 0) {
+      this.validationErrors.set('historicalCacheTtlSeconds', 'Historical cache TTL must be a positive number');
+    }
+
+    if (this.portfolioConfig.redisDb < 0) {
+      this.validationErrors.set('redisDb', 'Redis database must be a positive number');
+    }
+
+    if (this.portfolioConfig.entryFallbackSmaPeriod < 0) {
+      this.validationErrors.set('entryFallbackSmaPeriod', 'Fallback SMA period must be a positive number');
+    }
+
+    if (this.portfolioConfig.entryFallbackAtrMultiplier < 0) {
+      this.validationErrors.set('entryFallbackAtrMultiplier', 'Fallback ATR multiplier must be a positive number');
+    }
+
+    if (this.portfolioConfig.exitTakeProfitPct < 0) {
+      this.validationErrors.set('exitTakeProfitPct', 'Take profit percentage must be a positive number');
+    }
+
+    if (this.portfolioConfig.exitStopLossAtrMult < 0) {
+      this.validationErrors.set('exitStopLossAtrMult', 'Stop loss ATR multiplier must be a positive number');
+    }
+  }
+
+  /**
+   * Check if form is valid
+   */
+  isFormValid(): boolean {
+    return this.validationErrors.size === 0;
+  }
+
+  /**
+   * Get validation error for a field
+   */
+  getValidationError(fieldName: string): string | undefined {
+    return this.validationErrors.get(fieldName);
+  }
+
+  /**
+   * Check if a field has a validation error
+   */
+  hasValidationError(fieldName: string): boolean {
+    return this.validationErrors.has(fieldName);
+  }
+
+  /**
    * Save configuration using POST (create) or PUT (update) based on configExists flag
    */
   saveConfiguration(): void {
@@ -200,19 +298,10 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
       return;
     }
 
-    // Validate required fields
-    if (!this.portfolioConfig.tradingMode) {
-      alert('Trading mode is required');
-      return;
-    }
-    
-    if (!this.portfolioConfig.signalCheckInterval || this.portfolioConfig.signalCheckInterval <= 0) {
-      alert('Signal check interval must be a positive number');
-      return;
-    }
-    
-    if (!this.portfolioConfig.lookbackDays || this.portfolioConfig.lookbackDays <= 0) {
-      alert('Lookback days must be a positive number');
+    // Validate form before saving
+    this.validateForm();
+    if (!this.isFormValid()) {
+      alert('Please fix validation errors before saving');
       return;
     }
 
@@ -289,6 +378,7 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
       this.portfolioConfig = { ...this.originalConfig };
     }
     this.isFormDirty = false;
+    this.validationErrors.clear();
     this.errorMessage = null;
   }
 

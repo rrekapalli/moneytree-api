@@ -337,6 +337,24 @@
           }
         }
 
+        input.invalid,
+        ::ng-deep .p-select.invalid {
+          border-color: var(--danger-color, #dc3545);
+          
+          &:focus {
+            border-color: var(--danger-color, #dc3545);
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.2);
+          }
+        }
+
+        .validation-error {
+          display: block;
+          color: var(--danger-color, #dc3545);
+          font-size: 0.75rem;
+          margin-top: 0.25rem;
+          font-weight: 500;
+        }
+
         &.toggle-field {
           flex-direction: row;
           align-items: center;

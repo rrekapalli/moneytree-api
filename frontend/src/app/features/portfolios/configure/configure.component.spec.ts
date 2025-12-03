@@ -4,6 +4,7 @@ import { PortfolioConfigApiService } from '../../../services/apis/portfolio-conf
 import { of, throwError } from 'rxjs';
 import { PortfolioWithMetrics } from '../portfolio.types';
 import { PortfolioConfig } from '../../../services/entities/portfolio.entities';
+import * as fc from 'fast-check';
 
 describe('PortfolioConfigureComponent', () => {
   let component: PortfolioConfigureComponent;
@@ -491,6 +492,305 @@ describe('PortfolioConfigureComponent', () => {
       expect(tradingModeLabel?.textContent).toContain('*');
       expect(signalCheckIntervalLabel?.textContent).toContain('*');
       expect(lookbackDaysLabel?.textContent).toContain('*');
+    });
+  });
+
+  /**
+   * Property-Based Tests for Form Validation
+   * Feature: portfolio-details-config-split, Property 3: Required field validation disables save
+   * Validates: Requirements 5.1
+   */
+  describe('Property-Based Tests: Required Field Validation', () => {
+    beforeEach((done) => {
+      const mockPortfolio = createMockPortfolio({ id: '1' });
+      const mockConfig = createMockConfig('1');
+      
+      mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+      
+      component.selectedPortfolio = mockPortfolio;
+      component.ngOnChanges({ selectedPortfolio: { currentValue: mockPortfolio, previousValue: null, firstChange: true, isFirstChange: () => true } });
+      
+      setTimeout(() => {
+        fixture.detectChanges();
+        done();
+      }, 100);
+    });
+
+    it('Property 3: Required field validation disables save - tradingMode', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(''),
+            fc.constant('   '),
+            fc.constant(null as any),
+            fc.constant(undefined as any)
+          ),
+          (invalidValue) => {
+            // Set tradingMode to invalid value
+            component.portfolioConfig!.tradingMode = invalidValue;
+            component.onFormChange();
+            
+            // Verify validation error exists
+            expect(component.hasValidationError('tradingMode')).toBe(true);
+            expect(component.getValidationError('tradingMode')).toBe('Trading mode is required');
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Required field validation disables save - signalCheckInterval', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(0),
+            fc.constant(-1),
+            fc.integer({ max: -1 }),
+            fc.constant(null as any),
+            fc.constant(undefined as any)
+          ),
+          (invalidValue) => {
+            // Set signalCheckInterval to invalid value
+            component.portfolioConfig!.signalCheckInterval = invalidValue;
+            component.onFormChange();
+            
+            // Verify validation error exists
+            expect(component.hasValidationError('signalCheckInterval')).toBe(true);
+            expect(component.getValidationError('signalCheckInterval')).toBe('Signal check interval must be a positive number');
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Required field validation disables save - lookbackDays', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(0),
+            fc.constant(-1),
+            fc.integer({ max: -1 }),
+            fc.constant(null as any),
+            fc.constant(undefined as any)
+          ),
+          (invalidValue) => {
+            // Set lookbackDays to invalid value
+            component.portfolioConfig!.lookbackDays = invalidValue;
+            component.onFormChange();
+            
+            // Verify validation error exists
+            expect(component.hasValidationError('lookbackDays')).toBe(true);
+            expect(component.getValidationError('lookbackDays')).toBe('Lookback days must be a positive number');
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Conditional validation - Redis host required when Redis enabled', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(''),
+            fc.constant('   '),
+            fc.constant(null as any),
+            fc.constant(undefined as any)
+          ),
+          (invalidValue) => {
+            // Enable Redis
+            component.portfolioConfig!.redisEnabled = true;
+            // Set redisHost to invalid value
+            component.portfolioConfig!.redisHost = invalidValue;
+            component.onFormChange();
+            
+            // Verify validation error exists
+            expect(component.hasValidationError('redisHost')).toBe(true);
+            expect(component.getValidationError('redisHost')).toBe('Redis host is required when Redis is enabled');
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Conditional validation - Redis port required when Redis enabled', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(0),
+            fc.constant(-1),
+            fc.constant(65536),
+            fc.integer({ min: 65536 }),
+            fc.integer({ max: 0 }),
+            fc.constant(null as any),
+            fc.constant(undefined as any)
+          ),
+          (invalidValue) => {
+            // Enable Redis
+            component.portfolioConfig!.redisEnabled = true;
+            // Set redisPort to invalid value
+            component.portfolioConfig!.redisPort = invalidValue;
+            component.onFormChange();
+            
+            // Verify validation error exists
+            expect(component.hasValidationError('redisPort')).toBe(true);
+            expect(component.getValidationError('redisPort')).toBe('Redis port must be between 1 and 65535');
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Range validation - RSI threshold must be 0-100', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.integer({ max: -1 }),
+            fc.integer({ min: 101 })
+          ),
+          (invalidValue) => {
+            // Set entryRsiThreshold to invalid value
+            component.portfolioConfig!.entryRsiThreshold = invalidValue;
+            component.onFormChange();
+            
+            // Verify validation error exists
+            expect(component.hasValidationError('entryRsiThreshold')).toBe(true);
+            expect(component.getValidationError('entryRsiThreshold')).toBe('RSI threshold must be between 0 and 100');
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Positive number validation for numeric fields', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ max: -1 }),
+          (negativeValue) => {
+            // Test multiple numeric fields
+            const fieldsToTest = [
+              { field: 'cacheDurationSeconds', error: 'Cache duration must be a positive number' },
+              { field: 'historicalCacheLookbackDays', error: 'Historical cache lookback days must be a positive number' },
+              { field: 'historicalCacheTtlSeconds', error: 'Historical cache TTL must be a positive number' },
+              { field: 'redisDb', error: 'Redis database must be a positive number' },
+              { field: 'entryFallbackSmaPeriod', error: 'Fallback SMA period must be a positive number' },
+              { field: 'entryFallbackAtrMultiplier', error: 'Fallback ATR multiplier must be a positive number' },
+              { field: 'exitTakeProfitPct', error: 'Take profit percentage must be a positive number' },
+              { field: 'exitStopLossAtrMult', error: 'Stop loss ATR multiplier must be a positive number' }
+            ];
+
+            fieldsToTest.forEach(({ field, error }) => {
+              // Reset validation errors
+              component.validationErrors.clear();
+              
+              // Set field to negative value
+              (component.portfolioConfig as any)[field] = negativeValue;
+              component.onFormChange();
+              
+              // Verify validation error exists
+              expect(component.hasValidationError(field)).toBe(true);
+              expect(component.getValidationError(field)).toBe(error);
+              
+              // Verify form is invalid
+              expect(component.isFormValid()).toBe(false);
+            });
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Valid values should not produce validation errors', () => {
+      fc.assert(
+        fc.property(
+          fc.record({
+            tradingMode: fc.oneof(fc.constant('paper'), fc.constant('live')),
+            signalCheckInterval: fc.integer({ min: 1, max: 3600 }),
+            lookbackDays: fc.integer({ min: 1, max: 365 }),
+            entryRsiThreshold: fc.integer({ min: 0, max: 100 }),
+            cacheDurationSeconds: fc.integer({ min: 0, max: 3600 }),
+            historicalCacheLookbackDays: fc.integer({ min: 0, max: 1000 }),
+            historicalCacheTtlSeconds: fc.integer({ min: 0, max: 86400 }),
+            redisDb: fc.integer({ min: 0, max: 15 }),
+            entryFallbackSmaPeriod: fc.integer({ min: 0, max: 200 }),
+            entryFallbackAtrMultiplier: fc.float({ min: 0, max: 10 }),
+            exitTakeProfitPct: fc.float({ min: 0, max: 100 }),
+            exitStopLossAtrMult: fc.float({ min: 0, max: 10 })
+          }),
+          (validValues) => {
+            // Set all fields to valid values
+            component.portfolioConfig!.tradingMode = validValues.tradingMode;
+            component.portfolioConfig!.signalCheckInterval = validValues.signalCheckInterval;
+            component.portfolioConfig!.lookbackDays = validValues.lookbackDays;
+            component.portfolioConfig!.entryRsiThreshold = validValues.entryRsiThreshold;
+            component.portfolioConfig!.cacheDurationSeconds = validValues.cacheDurationSeconds;
+            component.portfolioConfig!.historicalCacheLookbackDays = validValues.historicalCacheLookbackDays;
+            component.portfolioConfig!.historicalCacheTtlSeconds = validValues.historicalCacheTtlSeconds;
+            component.portfolioConfig!.redisDb = validValues.redisDb;
+            component.portfolioConfig!.entryFallbackSmaPeriod = validValues.entryFallbackSmaPeriod;
+            component.portfolioConfig!.entryFallbackAtrMultiplier = validValues.entryFallbackAtrMultiplier;
+            component.portfolioConfig!.exitTakeProfitPct = validValues.exitTakeProfitPct;
+            component.portfolioConfig!.exitStopLossAtrMult = validValues.exitStopLossAtrMult;
+            
+            // Disable Redis to avoid conditional validation
+            component.portfolioConfig!.redisEnabled = false;
+            
+            component.onFormChange();
+            
+            // Verify no validation errors
+            expect(component.isFormValid()).toBe(true);
+            expect(component.validationErrors.size).toBe(0);
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Property 3: Save button should be disabled when form is invalid', () => {
+      fc.assert(
+        fc.property(
+          fc.oneof(
+            fc.constant(''),
+            fc.constant('   ')
+          ),
+          (invalidTradingMode) => {
+            // Make form dirty
+            component.portfolioConfig!.tradingMode = 'paper';
+            component.onFormChange();
+            expect(component.isFormDirty).toBe(true);
+            
+            // Now make it invalid
+            component.portfolioConfig!.tradingMode = invalidTradingMode;
+            component.onFormChange();
+            
+            // Verify form is invalid
+            expect(component.isFormValid()).toBe(false);
+            
+            // In the template, save button is disabled when: !isFormDirty || isSaving || !isFormValid()
+            // Since form is dirty and not saving, button should be disabled due to !isFormValid()
+            const shouldBeDisabled = !component.isFormDirty || component.isSaving || !component.isFormValid();
+            expect(shouldBeDisabled).toBe(true);
+          }
+        ),
+        { numRuns: 100 }
+      );
     });
   });
 });
