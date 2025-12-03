@@ -148,6 +148,30 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     { label: 'Threshold-based', value: 'THRESHOLD' }
   ];
 
+  // Dropdown options for Configure tab
+  tradingModeOptions = [
+    { label: 'Paper Trading', value: 'paper' },
+    { label: 'Live Trading', value: 'live' }
+  ];
+
+  exchangeOptions = [
+    { label: 'NSE', value: 'NSE' },
+    { label: 'BSE', value: 'BSE' }
+  ];
+
+  candleIntervalOptions = [
+    { label: 'Minute', value: 'minute' },
+    { label: 'Day', value: 'day' },
+    { label: 'Week', value: 'week' },
+    { label: 'Month', value: 'month' }
+  ];
+
+  instrumentTypeOptions = [
+    { label: 'Equity (EQ)', value: 'EQ' },
+    { label: 'Futures (FUT)', value: 'FUT' },
+    { label: 'Options (OPT)', value: 'OPT' }
+  ];
+
   // Trades tab state
   trades: PortfolioTrade[] = [];
   tradesLoading = false;

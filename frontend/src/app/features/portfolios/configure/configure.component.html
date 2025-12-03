@@ -30,13 +30,17 @@
           <div class="form-row">
             <div class="form-field">
               <label for="tradingMode">Trading Mode <span class="required">*</span></label>
-              <input pInputText 
-                     id="tradingMode"
-                     [(ngModel)]="portfolioConfig.tradingMode"
-                     (ngModelChange)="onFormChange()"
-                     placeholder="paper"
-                     [disabled]="isSaving"
-                     [class.invalid]="hasValidationError('tradingMode')" />
+              <p-select 
+                id="tradingMode"
+                [(ngModel)]="portfolioConfig.tradingMode"
+                (ngModelChange)="onFormChange()"
+                [options]="tradingModeOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select trading mode"
+                [disabled]="isSaving"
+                [class.invalid]="hasValidationError('tradingMode')">
+              </p-select>
               @if (hasValidationError('tradingMode')) {
                 <small class="validation-error">{{ getValidationError('tradingMode') }}</small>
               }
@@ -94,23 +98,31 @@
             </div>
             <div class="form-field">
               <label for="exchange">Exchange</label>
-              <input pInputText 
-                     id="exchange"
-                     [(ngModel)]="portfolioConfig.exchange"
-                     (ngModelChange)="onFormChange()"
-                     placeholder="NSE"
-                     [disabled]="isSaving" />
+              <p-select 
+                id="exchange"
+                [(ngModel)]="portfolioConfig.exchange"
+                (ngModelChange)="onFormChange()"
+                [options]="exchangeOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select exchange"
+                [disabled]="isSaving">
+              </p-select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-field">
               <label for="candleInterval">Candle Interval</label>
-              <input pInputText 
-                     id="candleInterval"
-                     [(ngModel)]="portfolioConfig.candleInterval"
-                     (ngModelChange)="onFormChange()"
-                     placeholder="day"
-                     [disabled]="isSaving" />
+              <p-select 
+                id="candleInterval"
+                [(ngModel)]="portfolioConfig.candleInterval"
+                (ngModelChange)="onFormChange()"
+                [options]="candleIntervalOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select candle interval"
+                [disabled]="isSaving">
+              </p-select>
             </div>
           </div>
         </div>
@@ -142,32 +154,44 @@
           <div class="form-row">
             <div class="form-field">
               <label for="historicalCacheExchange">Exchange</label>
-              <input pInputText 
-                     id="historicalCacheExchange"
-                     [(ngModel)]="portfolioConfig.historicalCacheExchange"
-                     (ngModelChange)="onFormChange()"
-                     placeholder="NSE"
-                     [disabled]="isSaving" />
+              <p-select 
+                id="historicalCacheExchange"
+                [(ngModel)]="portfolioConfig.historicalCacheExchange"
+                (ngModelChange)="onFormChange()"
+                [options]="exchangeOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select exchange"
+                [disabled]="isSaving">
+              </p-select>
             </div>
             <div class="form-field">
               <label for="historicalCacheInstrumentType">Instrument Type</label>
-              <input pInputText 
-                     id="historicalCacheInstrumentType"
-                     [(ngModel)]="portfolioConfig.historicalCacheInstrumentType"
-                     (ngModelChange)="onFormChange()"
-                     placeholder="EQ"
-                     [disabled]="isSaving" />
+              <p-select 
+                id="historicalCacheInstrumentType"
+                [(ngModel)]="portfolioConfig.historicalCacheInstrumentType"
+                (ngModelChange)="onFormChange()"
+                [options]="instrumentTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select instrument type"
+                [disabled]="isSaving">
+              </p-select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-field">
               <label for="historicalCacheCandleInterval">Candle Interval</label>
-              <input pInputText 
-                     id="historicalCacheCandleInterval"
-                     [(ngModel)]="portfolioConfig.historicalCacheCandleInterval"
-                     (ngModelChange)="onFormChange()"
-                     placeholder="day"
-                     [disabled]="isSaving" />
+              <p-select 
+                id="historicalCacheCandleInterval"
+                [(ngModel)]="portfolioConfig.historicalCacheCandleInterval"
+                (ngModelChange)="onFormChange()"
+                [options]="candleIntervalOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select candle interval"
+                [disabled]="isSaving">
+              </p-select>
             </div>
             <div class="form-field">
               <label for="historicalCacheTtlSeconds">TTL (seconds)</label>

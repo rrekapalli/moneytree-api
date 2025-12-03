@@ -34,6 +34,10 @@ import {
 })
 export class PortfolioConfigureComponent implements OnInit, OnChanges {
   @Input() selectedPortfolio: PortfolioWithMetrics | null = null;
+  @Input() tradingModeOptions: { label: string; value: string }[] = [];
+  @Input() exchangeOptions: { label: string; value: string }[] = [];
+  @Input() candleIntervalOptions: { label: string; value: string }[] = [];
+  @Input() instrumentTypeOptions: { label: string; value: string }[] = [];
 
   @Output() saveChanges = new EventEmitter<PortfolioConfig>();
   @Output() cancel = new EventEmitter<void>();
