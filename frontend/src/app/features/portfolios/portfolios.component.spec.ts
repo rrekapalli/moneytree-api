@@ -10,6 +10,7 @@ import { PortfolioWithMetrics } from './portfolio.types';
 import * as fc from 'fast-check';
 import { DebugElement, ChangeDetectionStrategy } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { ActivatedRoute } from '@angular/router';
 
 describe('PortfoliosComponent', () => {
   let component: PortfoliosComponent;
@@ -64,6 +65,11 @@ describe('PortfoliosComponent', () => {
         { provide: PortfolioHoldingApiService, useValue: mockPortfolioHoldingApiService },
         { provide: PortfolioTradeApiService, useValue: mockPortfolioTradeApiService },
         { provide: PortfolioConfigApiService, useValue: mockPortfolioConfigApiService },
+        { provide: ActivatedRoute, useValue: { 
+          snapshot: { params: {}, queryParams: {} }, 
+          params: of({}),
+          queryParams: of({}) 
+        } },
         ToastService
       ]
     })
@@ -1273,7 +1279,8 @@ describe('PortfoliosComponent', () => {
               // Verify we're in create mode (empty ID)
               expect(component.selectedPortfolio).toBeTruthy();
               expect(component.selectedPortfolio?.id).toBe('');
-              expect(component.activeTab).toBe('configure');
+              // Per Requirement 6.3: When creating a new portfolio, navigate to Details tab
+              expect(component.activeTab).toBe('details');
 
               // Fill in the form with valid data
               component.configForm.name = newPortfolioData.name;

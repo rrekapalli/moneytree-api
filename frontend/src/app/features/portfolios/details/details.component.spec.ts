@@ -4,6 +4,7 @@ import { PortfolioApiService } from '../../../services/apis/portfolio.api';
 import { AuthService } from '../../../services/security/auth.service';
 import { of, throwError } from 'rxjs';
 import { PortfolioWithMetrics } from '../portfolio.types';
+import * as fc from 'fast-check';
 
 describe('PortfolioDetailsComponent', () => {
   let component: PortfolioDetailsComponent;
@@ -313,14 +314,12 @@ describe('PortfolioDetailsComponent', () => {
       expect(component.formatDate('invalid-date')).toBe('-');
     });
   });
-});
 
   describe('Property-Based Tests', () => {
     // **Feature: portfolio-details-config-split, Property 1: Form dirty state reflects changes**
     // **Validates: Requirements 1.3, 2.3**
     describe('Property 1: Form dirty state reflects changes', () => {
       it('should set form dirty flag when any field is modified', () => {
-        const fc = require('fast-check');
         
         fc.assert(
           fc.property(

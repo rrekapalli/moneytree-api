@@ -1022,20 +1022,12 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   }
 
   // Configure component event handlers
-  onConfigureSave(updatedPortfolio: PortfolioWithMetrics): void {
-    // Update the portfolio in the list
-    const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
-    if (index !== -1) {
-      this.portfolios[index] = updatedPortfolio;
-      this.selectedPortfolio = updatedPortfolio;
-    } else {
-      // New portfolio created
-      this.portfolios.push(updatedPortfolio);
-      this.selectedPortfolio = updatedPortfolio;
-    }
-    this.applyFilters();
+  onConfigSave(savedConfig: PortfolioConfig): void {
+    // Configuration saved successfully
+    // Update the portfolioConfig state
+    this.portfolioConfig = savedConfig;
     this.cdr.markForCheck();
-    this.toastService.show('success', 'Success', 'Portfolio saved successfully');
+    this.toastService.show('success', 'Success', 'Portfolio configuration saved successfully');
   }
 
   onConfigureCancel(): void {

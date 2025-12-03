@@ -6,9 +6,9 @@
  * the compact design principles.
  */
 
-// Theme compatibility mixin for different PrimeNG themes
+/* Theme compatibility mixin for different PrimeNG themes */
 @mixin query-builder-theme-compatibility {
-  // Ensure compatibility with Aura theme (default)
+  /* Ensure compatibility with Aura theme (default) */
   &.p-theme-aura {
     --qb-surface-card: var(--p-surface-card, #ffffff);
     --qb-surface-ground: var(--p-surface-ground, #f8f9fa);
@@ -17,7 +17,7 @@
     --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
   }
 
-  // Compatibility with Lara theme
+  /* Compatibility with Lara theme */
   &.p-theme-lara {
     --qb-surface-card: var(--p-surface-card, #ffffff);
     --qb-surface-ground: var(--p-surface-ground, #f8f9fa);
@@ -26,7 +26,7 @@
     --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
   }
 
-  // Compatibility with Material theme
+  /* Compatibility with Material theme */
   &.p-theme-material {
     --qb-surface-card: var(--p-surface-card, #ffffff);
     --qb-surface-ground: var(--p-surface-ground, #fafafa);
@@ -35,7 +35,7 @@
     --qb-primary-contrast-color: var(--p-primary-contrast-color, #ffffff);
   }
 
-  // Compatibility with Bootstrap theme
+  /* Compatibility with Bootstrap theme */
   &.p-theme-bootstrap {
     --qb-surface-card: var(--p-surface-card, #ffffff);
     --qb-surface-ground: var(--p-surface-ground, #f8f9fa);
@@ -45,7 +45,7 @@
   }
 }
 
-// Dark theme support
+/* Dark theme support */
 @mixin query-builder-dark-theme {
   &.p-dark {
     --qb-surface-card: var(--p-surface-card, #1e293b);
@@ -54,7 +54,7 @@
     --qb-text-color: var(--p-text-color, #f1f5f9);
     --qb-text-color-secondary: var(--p-text-color-secondary, #94a3b8);
 
-    // Adjust colors for better contrast in dark mode
+    /* Adjust colors for better contrast in dark mode */
     --qb-primary-50: var(--p-primary-50, rgba(16, 185, 129, 0.1));
     --qb-primary-100: var(--p-primary-100, rgba(16, 185, 129, 0.2));
     --qb-primary-200: var(--p-primary-200, rgba(16, 185, 129, 0.3));
@@ -70,7 +70,7 @@
   }
 }
 
-// High contrast theme support
+/* High contrast theme support */
 @mixin query-builder-high-contrast {
   @media (prefers-contrast: high) {
     --qb-border-width: 2px;
@@ -92,7 +92,7 @@
   }
 }
 
-// Reduced motion support
+/* Reduced motion support */
 @mixin query-builder-reduced-motion {
   @media (prefers-reduced-motion: reduce) {
     .p-component {
@@ -109,9 +109,9 @@
   }
 }
 
-// Responsive design adjustments for compact layout
+/* Responsive design adjustments for compact layout */
 @mixin query-builder-responsive {
-  // Tablet adjustments
+  /* Tablet adjustments */
   @media (max-width: 768px) {
     --qb-font-size: 0.9375rem;
     --qb-input-height: 36px;
@@ -122,7 +122,7 @@
     --qb-operator-select-width: 90px;
   }
 
-  // Mobile adjustments
+  /* Mobile adjustments */
   @media (max-width: 480px) {
     --qb-font-size: 1rem;
     --qb-input-height: 44px;
@@ -156,7 +156,7 @@
     }
   }
 
-  // Large screen optimizations
+  /* Large screen optimizations */
   @media (min-width: 1200px) {
     --qb-field-select-width: 160px;
     --qb-operator-select-width: 120px;
@@ -164,7 +164,7 @@
   }
 }
 
-// Apply all theme mixins to the query builder
+/* Apply all theme mixins to the query builder */
 .query-builder {
   @include query-builder-theme-compatibility;
   @include query-builder-dark-theme;
@@ -173,7 +173,7 @@
   @include query-builder-responsive;
 }
 
-// Utility classes for theme integration
+/* Utility classes for theme integration */
 .qb-theme-primary {
   color: var(--qb-primary-color) !important;
 }
@@ -222,9 +222,9 @@
   border-color: var(--qb-surface-border) !important;
 }
 
-// Theme-aware component variants
+/* Theme-aware component variants */
 .query-builder {
-  // Compact variant for space-constrained layouts
+  /* Compact variant for space-constrained layouts */
   &.qb-compact {
     --qb-gap: 2px;
     --qb-padding: 2px 4px;
@@ -233,7 +233,7 @@
     --qb-font-size: 0.8125rem;
   }
 
-  // Dense variant for maximum space efficiency
+  /* Dense variant for maximum space efficiency */
   &.qb-dense {
     --qb-gap: 1px;
     --qb-padding: 1px 3px;
@@ -244,7 +244,7 @@
     --qb-operator-select-width: 60px;
   }
 
-  // Comfortable variant for better accessibility
+  /* Comfortable variant for better accessibility */
   &.qb-comfortable {
     --qb-gap: 8px;
     --qb-padding: 8px 12px;
@@ -254,7 +254,7 @@
   }
 }
 
-// Print styles for query builder
+/* Print styles for query builder */
 @media print {
   .query-builder {
     --qb-font-size: 10pt;

@@ -16,6 +16,46 @@ import {
   PortfolioConfigUpdateRequest 
 } from '../../../services/entities/portfolio.entities';
 
+/**
+ * Portfolio Configure Component
+ * 
+ * Manages technical trading configuration for portfolios including signal intervals,
+ * entry/exit conditions, Redis settings, and historical cache configuration.
+ * This component is part of the portfolio details/config split refactoring that
+ * separates technical trading settings from basic portfolio metadata.
+ * 
+ * Features:
+ * - Load existing configuration or display defaults
+ * - Organize settings into logical sections (Trading, Cache, Redis, Entry/Exit)
+ * - Comprehensive form validation with field-level error messages
+ * - Automatic POST/PUT selection based on config existence
+ * - Conditional validation (e.g., Redis fields required when Redis enabled)
+ * - Comprehensive error handling with user-friendly messages
+ * 
+ * Configuration Sections:
+ * 1. Trading Configuration: Mode, intervals, lookback periods
+ * 2. Historical Cache: Cache settings for historical data
+ * 3. Redis Configuration: Redis connection and caching settings
+ * 4. Entry Conditions: Technical indicators for trade entry
+ * 5. Exit Conditions: Take profit and stop loss settings
+ * 
+ * Usage:
+ * ```html
+ * <app-portfolio-configure
+ *   [selectedPortfolio]="portfolio"
+ *   [tradingModeOptions]="tradingModes"
+ *   [exchangeOptions]="exchanges"
+ *   [candleIntervalOptions]="intervals"
+ *   [instrumentTypeOptions]="instruments"
+ *   (saveChanges)="onConfigSave($event)"
+ *   (cancel)="onCancel()">
+ * </app-portfolio-configure>
+ * ```
+ * 
+ * @see {@link PortfolioDetailsComponent} for basic portfolio information
+ * @see {@link PortfolioConfig} for the configuration data model
+ * @see {@link PortfolioConfigApiService} for API operations
+ */
 @Component({
   selector: 'app-portfolio-configure',
   standalone: true,
@@ -33,47 +73,70 @@ import {
   styleUrls: ['./configure.component.scss']
 })
 export class PortfolioConfigureComponent implements OnInit, OnChanges {
+  /** The portfolio to configure. Configuration is loaded based on this portfolio's ID. */
   @Input() selectedPortfolio: PortfolioWithMetrics | null = null;
+  
+  /** Available trading mode options (paper, live) */
   @Input() tradingModeOptions: { label: string; value: string }[] = [];
+  
+  /** Available exchange options (NSE, BSE) */
   @Input() exchangeOptions: { label: string; value: string }[] = [];
+  
+  /** Available candle interval options (minute, day, week, month) */
   @Input() candleIntervalOptions: { label: string; value: string }[] = [];
+  
+  /** Available instrument type options (EQ, FUT, OPT) */
   @Input() instrumentTypeOptions: { label: string; value: string }[] = [];
 
+  /** Emitted when configuration is successfully saved */
   @Output() saveChanges = new EventEmitter<PortfolioConfig>();
+  
+  /** Emitted when user cancels editing */
   @Output() cancel = new EventEmitter<void>();
+  
+  /** Emitted when user wants to navigate to overview tab */
   @Output() goToOverview = new EventEmitter<void>();
 
-  // Inject the portfolio config API service
+  /** Portfolio config API service for CRUD operations */
   private portfolioConfigApiService = inject(PortfolioConfigApiService);
 
-  // Local copy for editing
+  /** Current configuration being edited */
   portfolioConfig: PortfolioConfig | null = null;
   
-  // Original config for dirty checking
+  /** Original configuration for dirty checking and reset */
   originalConfig: PortfolioConfig | null = null;
   
-  // Flag to track if config exists (determines POST vs PUT)
+  /** True if config exists in database (determines POST vs PUT) */
   configExists = false;
 
-  // Loading state for config load operation
+  /** True when loading configuration from API */
   isLoading = false;
 
-  // Loading state for save operation
+  /** True when save operation is in progress */
   isSaving = false;
 
-  // Form dirty state
+  /** True when form has unsaved changes */
   isFormDirty = false;
 
-  // Form validation state
+  /** Map of field names to validation error messages */
   validationErrors: Map<string, string> = new Map();
 
-  // Error state
+  /** Current error message to display to user, or null if no error */
   errorMessage: string | null = null;
 
+  /**
+   * Component initialization lifecycle hook
+   */
   ngOnInit(): void {
     // Component initialization
   }
 
+  /**
+   * Lifecycle hook called when input properties change
+   * Loads configuration when a new portfolio is selected
+   * 
+   * @param changes - Object containing changed properties
+   */
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedPortfolio'] && this.selectedPortfolio?.id) {
       // Load config when portfolio changes
@@ -89,7 +152,13 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Load portfolio configuration from API
+   * Loads portfolio configuration from the API
+   * 
+   * If configuration exists (status 200): Loads and displays it
+   * If configuration doesn't exist (status 404): Displays default values
+   * For other errors: Displays error message with retry option if applicable
+   * 
+   * @param portfolioId - The ID of the portfolio to load configuration for
    */
   loadConfig(portfolioId: string): void {
     this.isLoading = true;
@@ -128,7 +197,24 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Get default configuration values matching backend entity defaults
+   * Returns default configuration values matching backend entity defaults
+   * 
+   * These defaults are used when no configuration exists for a portfolio.
+   * Values match the default values defined in the backend PortfolioConfig entity.
+   * 
+   * Default Values:
+   * - Trading Mode: paper
+   * - Signal Check Interval: 300 seconds (5 minutes)
+   * - Lookback Days: 30
+   * - Historical Cache: Disabled
+   * - Redis: Disabled
+   * - Entry RSI Threshold: 30
+   * - Exit Take Profit: 5%
+   * - Exit Stop Loss: 2x ATR
+   * 
+   * @param portfolioId - The portfolio ID to associate with the config
+   * @returns A PortfolioConfig object with default values
+   * @private
    */
   private getDefaultConfig(portfolioId: string): PortfolioConfig {
     return {
@@ -184,7 +270,8 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Track form changes and validate
+   * Called when any form field changes
+   * Updates dirty state and runs validation
    */
   onFormChange(): void {
     this.isFormDirty = this.hasFormChanged();
@@ -192,7 +279,11 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Check if form has changed from original config
+   * Checks if form has unsaved changes by comparing with original config
+   * Uses JSON serialization for deep comparison
+   * 
+   * @returns True if any field has been modified, false otherwise
+   * @private
    */
   private hasFormChanged(): boolean {
     if (!this.portfolioConfig || !this.originalConfig) {
@@ -204,7 +295,16 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Validate the entire form
+   * Validates all form fields and populates validationErrors map
+   * 
+   * Validation Rules:
+   * - Required fields: tradingMode, signalCheckInterval, lookbackDays
+   * - Conditional required: Redis fields when redisEnabled is true
+   * - Range validation: entryRsiThreshold (0-100), redisPort (1-65535)
+   * - Positive number validation: All numeric fields must be >= 0
+   * 
+   * Validation errors are stored in the validationErrors Map and can be
+   * retrieved using getValidationError() or hasValidationError()
    */
   validateForm(): void {
     this.validationErrors.clear();
@@ -277,28 +377,58 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Check if form is valid
+   * Checks if the form passes all validation rules
+   * 
+   * @returns True if no validation errors exist, false otherwise
    */
   isFormValid(): boolean {
     return this.validationErrors.size === 0;
   }
 
   /**
-   * Get validation error for a field
+   * Retrieves the validation error message for a specific field
+   * 
+   * @param fieldName - The name of the field to check
+   * @returns The error message if validation failed, undefined otherwise
    */
   getValidationError(fieldName: string): string | undefined {
     return this.validationErrors.get(fieldName);
   }
 
   /**
-   * Check if a field has a validation error
+   * Checks if a specific field has a validation error
+   * 
+   * @param fieldName - The name of the field to check
+   * @returns True if the field has a validation error, false otherwise
    */
   hasValidationError(fieldName: string): boolean {
     return this.validationErrors.has(fieldName);
   }
 
   /**
-   * Save configuration using POST (create) or PUT (update) based on configExists flag
+   * Saves configuration using POST (create) or PUT (update) based on configExists flag
+   * 
+   * Behavior:
+   * - If configExists is false: Calls POST /api/portfolio/{id}/config (create)
+   * - If configExists is true: Calls PUT /api/portfolio/{id}/config (update)
+   * 
+   * Validation:
+   * - Runs full form validation before saving
+   * - Prevents save if validation fails
+   * 
+   * Error Handling:
+   * - Network errors (status 0): Connection message
+   * - Auth errors (status 401): Session expired message
+   * - Permission errors (status 403): Permission denied message
+   * - Validation errors (status 400): Displays field-specific errors
+   * - Server errors (status 500+): Service unavailable message
+   * 
+   * On Success:
+   * - Updates local state with saved config
+   * - Sets configExists to true
+   * - Resets form dirty state
+   * - Displays success message
+   * - Emits saveChanges event to parent
    */
   saveConfiguration(): void {
     if (!this.portfolioConfig || !this.selectedPortfolio?.id || this.isSaving) {
@@ -392,7 +522,8 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Cancel editing and reset to original values
+   * Cancels editing and resets form to original configuration values
+   * Clears all validation errors and error messages
    */
   cancelEdit(): void {
     if (this.originalConfig) {
@@ -404,14 +535,14 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   }
 
   /**
-   * Emit cancel event
+   * Emits cancel event to parent component
    */
   onCancel(): void {
     this.cancel.emit();
   }
 
   /**
-   * Navigate to overview tab
+   * Emits navigation event to switch to the Overview tab
    */
   navigateToOverview(): void {
     this.goToOverview.emit();

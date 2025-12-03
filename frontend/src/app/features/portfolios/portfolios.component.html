@@ -254,15 +254,11 @@
             <p-tabpanel value="configure" role="tabpanel" id="configure-panel" [attr.aria-labelledby]="'Configure tab for ' + selectedPortfolio.name">
               <app-portfolio-configure
                 [selectedPortfolio]="selectedPortfolio"
-                [portfolioConfig]="portfolioConfig"
-                [configLoading]="configLoading"
-                [configError]="configError"
-                [riskProfileOptions]="riskProfileOptions"
                 [tradingModeOptions]="tradingModeOptions"
                 [exchangeOptions]="exchangeOptions"
                 [candleIntervalOptions]="candleIntervalOptions"
                 [instrumentTypeOptions]="instrumentTypeOptions"
-                (saveChanges)="onConfigureSave($event)"
+                (saveChanges)="onConfigSave($event)"
                 (cancel)="onConfigureCancel()"
                 (goToOverview)="onTabChange('overview')">
               </app-portfolio-configure>

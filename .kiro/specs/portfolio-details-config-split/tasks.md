@@ -217,7 +217,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "style(task-10): add styling for Configure tab sections"
   - _Requirements: 3.1_
 
-- [-] 11. Update error handling for all API calls
+- [x] 11. Update error handling for all API calls
   - Ensure network errors (status 0) show connection message
   - Ensure auth errors (status 401) clear token and redirect
   - Ensure authorization errors (status 403) show permission message
@@ -232,16 +232,16 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Test retry functionality
   - _Requirements: 5.2, 5.3, 5.4_
 
-- [-] 11.2 Verify and commit task 11
+- [x] 11.2 Verify and commit task 11
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify error handling works for all scenarios
   - Commit to git with message: "feat(task-11): enhance error handling for all API calls with tests"
   - _Requirements: 5.2, 5.3, 5.4_
 
-- [ ] 12. Checkpoint - Ensure all tests pass
+- [x] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Manual testing and refinement
+- [x] 13. Manual testing and refinement
   - Test creating new portfolio via Details tab
   - Test editing existing portfolio via Details tab
   - Test creating new config via Configure tab
@@ -255,7 +255,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Verify all existing tabs still work (Overview, Holdings, Trades)
   - _Requirements: All_
 
-- [ ] 14. Documentation updates
+- [x] 14. Documentation updates
   - Update component documentation with new Details tab
   - Document PortfolioConfig interface
   - Document API service methods
