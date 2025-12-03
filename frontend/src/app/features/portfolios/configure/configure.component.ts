@@ -7,6 +7,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
+import { AccordionModule } from 'primeng/accordion';
 
 import { PortfolioWithMetrics } from '../portfolio.types';
 import { PortfolioConfigApiService } from '../../../services/apis/portfolio-config.api';
@@ -67,7 +68,8 @@ import {
     TextareaModule,
     SelectModule,
     ToggleSwitchModule,
-    FormsModule
+    FormsModule,
+    AccordionModule
   ],
   templateUrl: './configure.component.html',
   styleUrls: ['./configure.component.scss']
@@ -124,6 +126,9 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
   /** Current error message to display to user, or null if no error */
   errorMessage: string | null = null;
 
+  /** Active accordion panel value (only one panel open at a time) */
+  activeAccordionValue: number = 0; // Open first panel by default
+
   /**
    * Component initialization lifecycle hook
    */
@@ -138,11 +143,19 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
    * @param changes - Object containing changed properties
    */
   ngOnChanges(changes: SimpleChanges): void {
+    console.log('[ConfigureComponent] ngOnChanges called', {
+      hasChanges: !!changes['selectedPortfolio'],
+      portfolioId: this.selectedPortfolio?.id,
+      portfolioName: this.selectedPortfolio?.name
+    });
+    
     if (changes['selectedPortfolio'] && this.selectedPortfolio?.id) {
       // Load config when portfolio changes
+      console.log('[ConfigureComponent] Loading config for portfolio:', this.selectedPortfolio.id);
       this.loadConfig(this.selectedPortfolio.id);
     } else if (!this.selectedPortfolio) {
       // Reset state when no portfolio is selected
+      console.log('[ConfigureComponent] No portfolio selected, resetting state');
       this.portfolioConfig = null;
       this.originalConfig = null;
       this.configExists = false;
@@ -161,6 +174,7 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
    * @param portfolioId - The ID of the portfolio to load configuration for
    */
   loadConfig(portfolioId: string): void {
+    console.log('[ConfigureComponent] loadConfig called for portfolio:', portfolioId);
     this.isLoading = true;
     this.errorMessage = null;
 
