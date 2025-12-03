@@ -14,141 +14,123 @@
     box-shadow: var(--card-shadow, 0 2px 12px rgba(0, 0, 0, 0.08));
     border: 1px solid var(--surface-border, #e9ecef);
 
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+    .form-field {
+      display: flex;
+      flex-direction: column;
       margin-bottom: 1.5rem;
 
-      .form-field {
-        display: flex;
-        flex-direction: column;
-
-        label {
-          font-weight: 600;
-          color: var(--text-color, #495057);
-          margin-bottom: 0.5rem;
-          font-size: 0.875rem;
-        }
-
-        input,
-        ::ng-deep .p-select {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid var(--surface-border, #dee2e6);
-          border-radius: 6px;
-          font-size: 0.875rem;
-          transition: all 0.2s ease;
-
-          &:focus {
-            outline: none;
-            border-color: var(--primary-color, #667eea);
-            box-shadow: 0 0 0 2px var(--primary-color-alpha-20, rgba(102, 126, 234, 0.2));
-          }
-
-          &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            background-color: var(--surface-100, #f8f9fa);
-          }
-        }
-
-        &.toggle-field {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-
-          label {
-            margin-bottom: 0;
-          }
-
-          ::ng-deep .p-toggleswitch {
-            width: 3rem;
-            height: 1.75rem;
-
-            .p-toggleswitch-slider {
-              background: var(--surface-300, #dee2e6);
-              border-radius: 1.75rem;
-              transition: background-color 0.2s ease;
-
-              &:before {
-                width: 1.25rem;
-                height: 1.25rem;
-                left: 0.25rem;
-                bottom: 0.25rem;
-                background: white;
-                border-radius: 50%;
-                transition: transform 0.2s ease;
-              }
-            }
-
-            &.p-toggleswitch-checked .p-toggleswitch-slider {
-              background: var(--success-color, #28a745);
-
-              &:before {
-                transform: translateX(1.25rem);
-              }
-            }
-
-            &:not(.p-disabled):hover .p-toggleswitch-slider {
-              background: var(--surface-400, #ced4da);
-            }
-
-            &.p-toggleswitch-checked:not(.p-disabled):hover .p-toggleswitch-slider {
-              background: var(--success-color-hover, #218838);
-            }
-          }
-        }
-      }
-    }
-
-    .portfolio-info-section {
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--surface-border, #e9ecef);
-
-      h3 {
-        font-size: 1.125rem;
+      label {
         font-weight: 600;
         color: var(--text-color, #495057);
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
       }
 
-      .info-row {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 1.5rem;
+      input,
+      textarea,
+      ::ng-deep .p-select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--surface-border, #dee2e6);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
 
-        .info-item {
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
+        &:focus {
+          outline: none;
+          border-color: var(--primary-color, #667eea);
+          box-shadow: 0 0 0 2px var(--primary-color-alpha-20, rgba(102, 126, 234, 0.2));
+        }
 
-          .info-label {
-            font-size: 0.75rem;
-            color: var(--text-color-secondary, #6c757d);
-            font-weight: 500;
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background-color: var(--surface-100, #f8f9fa);
+        }
+      }
+
+      &.toggle-field {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.75rem;
+
+        label {
+          margin-bottom: 0;
+          order: 2;
+        }
+
+        ::ng-deep .p-toggleswitch {
+          width: 3rem;
+          height: 1.75rem;
+          order: 1;
+
+          .p-toggleswitch-slider {
+            background: var(--surface-300, #dee2e6);
+            border-radius: 1.75rem;
+            transition: background-color 0.2s ease;
+
+            &:before {
+              width: 1.25rem;
+              height: 1.25rem;
+              left: 0.25rem;
+              bottom: 0.25rem;
+              background: white;
+              border-radius: 50%;
+              transition: transform 0.2s ease;
+            }
           }
 
-          .info-value {
-            font-size: 0.875rem;
-            color: var(--text-color, #495057);
-            font-weight: 600;
+          &.p-toggleswitch-checked .p-toggleswitch-slider {
+            background: var(--success-color, #28a745);
+
+            &:before {
+              transform: translateX(1.25rem);
+            }
+          }
+
+          &:not(.p-disabled):hover .p-toggleswitch-slider {
+            background: var(--surface-400, #ced4da);
+          }
+
+          &.p-toggleswitch-checked:not(.p-disabled):hover .p-toggleswitch-slider {
+            background: var(--success-color-hover, #218838);
           }
         }
       }
     }
 
-    .form-actions {
+    .form-footer {
       display: flex;
-      justify-content: flex-end;
-      gap: 1rem;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 2rem;
-      padding-top: 1.5rem;
+      padding-top: 1rem;
       border-top: 1px solid var(--surface-border, #e9ecef);
 
-      button {
-        min-width: 140px;
+      .timestamp-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.75rem;
+        color: var(--text-color-secondary, #6c757d);
+
+        .timestamp-item {
+          white-space: nowrap;
+        }
+
+        .timestamp-separator {
+          color: var(--surface-border, #dee2e6);
+        }
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 1rem;
+
+        button {
+          min-width: 140px;
+        }
       }
     }
   }
@@ -192,24 +174,22 @@
     .details-form {
       padding: 1rem;
 
-      .form-row {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-
-      .portfolio-info-section {
-        .info-row {
-          grid-template-columns: 1fr;
-          gap: 1rem;
-        }
-      }
-
-      .form-actions {
+      .form-footer {
         flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
 
-        button {
+        .timestamp-info {
+          flex-wrap: wrap;
+        }
+
+        .form-actions {
           width: 100%;
+          flex-direction: column;
+
+          button {
+            width: 100%;
+          }
         }
       }
     }
