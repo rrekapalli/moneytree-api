@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { Router } from '@angular/router';
 import { PortfolioConfigApiService } from './portfolio-config.api';
 import { AuthService } from '../security/auth.service';
 import { environment } from '../../../environments/environment';
@@ -13,22 +14,27 @@ describe('PortfolioConfigApiService', () => {
   let service: PortfolioConfigApiService;
   let httpMock: HttpTestingController;
   let authServiceSpy: jasmine.SpyObj<AuthService>;
+  let routerSpy: jasmine.SpyObj<Router>;
 
   beforeEach(() => {
-    const authSpy = jasmine.createSpyObj('AuthService', ['getToken']);
+    const authSpy = jasmine.createSpyObj('AuthService', ['getToken', 'logout']);
     authSpy.getToken.and.returnValue('mock-token');
+    
+    const routerSpyObj = jasmine.createSpyObj('Router', ['navigate']);
 
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         PortfolioConfigApiService,
-        { provide: AuthService, useValue: authSpy }
+        { provide: AuthService, useValue: authSpy },
+        { provide: Router, useValue: routerSpyObj }
       ]
     });
 
     service = TestBed.inject(PortfolioConfigApiService);
     httpMock = TestBed.inject(HttpTestingController);
     authServiceSpy = TestBed.inject(AuthService) as jasmine.SpyObj<AuthService>;
+    routerSpy = TestBed.inject(Router) as jasmine.SpyObj<Router>;
   });
 
   afterEach(() => {
@@ -90,7 +96,8 @@ describe('PortfolioConfigApiService', () => {
         next: () => fail('should have failed with 404 error'),
         error: (error) => {
           expect(error.status).toBe(404);
-          expect(error.userMessage).toBe('Portfolio configuration not found.');
+          expect(error.userMessage).toBe('The requested resource was not found.');
+          expect(error.canRetry).toBe(false);
         }
       });
 
@@ -98,7 +105,7 @@ describe('PortfolioConfigApiService', () => {
       req.flush('Not found', { status: 404, statusText: 'Not Found' });
     });
 
-    it('should handle network error (status 0)', () => {
+    it('should handle network error (status 0) with retry option', () => {
       const portfolioId = 'test-portfolio-id';
 
       service.getConfig(portfolioId).subscribe({
@@ -106,6 +113,7 @@ describe('PortfolioConfigApiService', () => {
         error: (error) => {
           expect(error.status).toBe(0);
           expect(error.userMessage).toBe('Unable to connect to the server. Please check your internet connection.');
+          expect(error.canRetry).toBe(true);
         }
       });
 
@@ -113,7 +121,7 @@ describe('PortfolioConfigApiService', () => {
       req.error(new ProgressEvent('error'), { status: 0 });
     });
 
-    it('should handle authentication error (status 401)', () => {
+    it('should handle authentication error (status 401) and trigger logout', () => {
       const portfolioId = 'test-portfolio-id';
 
       service.getConfig(portfolioId).subscribe({
@@ -121,6 +129,8 @@ describe('PortfolioConfigApiService', () => {
         error: (error) => {
           expect(error.status).toBe(401);
           expect(error.userMessage).toBe('Your session has expired. Please log in again.');
+          expect(error.canRetry).toBe(false);
+          expect(authServiceSpy.logout).toHaveBeenCalled();
         }
       });
 
@@ -136,6 +146,7 @@ describe('PortfolioConfigApiService', () => {
         error: (error) => {
           expect(error.status).toBe(403);
           expect(error.userMessage).toBe('You do not have permission to perform this action.');
+          expect(error.canRetry).toBe(false);
         }
       });
 
@@ -143,7 +154,7 @@ describe('PortfolioConfigApiService', () => {
       req.flush('Forbidden', { status: 403, statusText: 'Forbidden' });
     });
 
-    it('should handle server error (status 500)', () => {
+    it('should handle server error (status 500) with retry option', () => {
       const portfolioId = 'test-portfolio-id';
 
       service.getConfig(portfolioId).subscribe({
@@ -151,6 +162,7 @@ describe('PortfolioConfigApiService', () => {
         error: (error) => {
           expect(error.status).toBe(500);
           expect(error.userMessage).toBe('Server error occurred. Please try again later.');
+          expect(error.canRetry).toBe(true);
         }
       });
 
@@ -221,7 +233,7 @@ describe('PortfolioConfigApiService', () => {
       req.flush(mockResponse);
     });
 
-    it('should handle validation error (status 400)', () => {
+    it('should handle validation error (status 400) with field errors', () => {
       const portfolioId = 'test-portfolio-id';
       const createRequest: PortfolioConfigCreateRequest = {
         tradingMode: 'invalid',
@@ -233,12 +245,43 @@ describe('PortfolioConfigApiService', () => {
         next: () => fail('should have failed with 400 error'),
         error: (error) => {
           expect(error.status).toBe(400);
-          expect(error.userMessage).toContain('Invalid configuration data');
+          expect(error.userMessage).toBe('Validation failed. Please check your inputs.');
+          expect(error.validationErrors).toBeDefined();
+          expect(error.validationErrors?.tradingMode).toContain('Invalid trading mode');
+          expect(error.canRetry).toBe(false);
         }
       });
 
       const req = httpMock.expectOne(`${environment.apiUrl}/portfolio/${portfolioId}/config`);
-      req.flush({ message: 'Validation failed' }, { status: 400, statusText: 'Bad Request' });
+      req.flush({ 
+        message: 'Validation failed',
+        errors: {
+          tradingMode: ['Invalid trading mode'],
+          signalCheckInterval: ['Must be positive'],
+          lookbackDays: ['Must be greater than 0']
+        }
+      }, { status: 400, statusText: 'Bad Request' });
+    });
+
+    it('should handle validation error (status 400) with simple message', () => {
+      const portfolioId = 'test-portfolio-id';
+      const createRequest: PortfolioConfigCreateRequest = {
+        tradingMode: 'invalid',
+        signalCheckInterval: -1,
+        lookbackDays: 0
+      };
+
+      service.createConfig(portfolioId, createRequest).subscribe({
+        next: () => fail('should have failed with 400 error'),
+        error: (error) => {
+          expect(error.status).toBe(400);
+          expect(error.userMessage).toBe('Invalid configuration data');
+          expect(error.canRetry).toBe(false);
+        }
+      });
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/portfolio/${portfolioId}/config`);
+      req.flush({ message: 'Invalid configuration data' }, { status: 400, statusText: 'Bad Request' });
     });
   });
 

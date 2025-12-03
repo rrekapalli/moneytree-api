@@ -114,8 +114,11 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
           this.configExists = false;
           this.isFormDirty = false;
         } else {
-          // Other errors - show error message
+          // Other errors - show error message with retry option for retryable errors
           this.errorMessage = error.userMessage || 'Failed to load configuration';
+          if (error.canRetry) {
+            this.errorMessage += ' Click here to retry.';
+          }
           this.portfolioConfig = null;
           this.originalConfig = null;
           this.configExists = false;
@@ -367,8 +370,22 @@ export class PortfolioConfigureComponent implements OnInit, OnChanges {
       error: (error) => {
         this.isSaving = false;
         
-        // Show user-friendly error message
-        this.errorMessage = error.userMessage || 'Failed to save configuration';
+        // Show user-friendly error message with validation errors if present
+        if (error.validationErrors) {
+          // Display validation errors
+          const errorMessages = Object.entries(error.validationErrors)
+            .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+            .join('\n');
+          this.errorMessage = `${error.userMessage}\n\n${errorMessages}`;
+        } else {
+          this.errorMessage = error.userMessage || 'Failed to save configuration';
+        }
+        
+        // Add retry option for retryable errors
+        if (error.canRetry) {
+          this.errorMessage += '\n\nClick Save to retry.';
+        }
+        
         alert(this.errorMessage);
       }
     });
