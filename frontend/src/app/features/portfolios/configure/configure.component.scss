@@ -278,6 +278,16 @@
       background: var(--surface-50, #f8f9fa);
       border-radius: 8px;
       border: 1px solid var(--surface-border, #e9ecef);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      transition: box-shadow 0.2s ease;
+
+      &:hover {
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
 
       .section-title {
         font-size: 1.125rem;
@@ -285,7 +295,19 @@
         color: var(--text-color, #495057);
         margin-bottom: 1.5rem;
         padding-bottom: 0.75rem;
-        border-bottom: 1px solid var(--surface-border, #dee2e6);
+        border-bottom: 2px solid var(--primary-color-alpha-20, rgba(102, 126, 234, 0.2));
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        &::before {
+          content: '';
+          display: inline-block;
+          width: 4px;
+          height: 1.125rem;
+          background: var(--primary-color, #667eea);
+          border-radius: 2px;
+        }
       }
     }
 

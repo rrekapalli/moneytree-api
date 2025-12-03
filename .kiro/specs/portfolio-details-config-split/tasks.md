@@ -189,7 +189,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "feat(task-8): add config loading to parent component with tests"
   - _Requirements: 2.1, 4.5_
 
-- [-] 9. Add dropdown options for Configure tab
+- [x] 9. Add dropdown options for Configure tab
   - Create tradingModeOptions: ["paper", "live"]
   - Create exchangeOptions: ["NSE", "BSE"]
   - Create candleIntervalOptions: ["minute", "day", "week", "month"]
@@ -197,7 +197,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Pass options to PortfolioConfigureComponent
   - _Requirements: 3.2, 3.3_
 
-- [-] 9.1 Verify and commit task 9
+- [x] 9.1 Verify and commit task 9
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify dropdown options display correctly
   - Commit to git with message: "feat(task-9): add dropdown options for Configure tab"
