@@ -28,7 +28,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Test request payload formatting
   - _Requirements: 4.4, 5.2_
 
-- [-] 1.2 Verify and commit task 1
+- [x] 1.2 Verify and commit task 1
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify TypeScript compilation succeeds
   - Commit to git with message: "feat(task-1): add PortfolioConfig interface and API service with tests"
