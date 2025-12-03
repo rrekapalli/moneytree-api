@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, inject, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -9,9 +9,12 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { FormsModule } from '@angular/forms';
 
 import { PortfolioWithMetrics } from '../portfolio.types';
-import { PortfolioApiService } from '../../../services/apis/portfolio.api';
-import { PortfolioCreateRequest, PortfolioUpdateRequest } from '../../../services/entities/portfolio.entities';
-import { AuthService } from '../../../services/security/auth.service';
+import { PortfolioConfigApiService } from '../../../services/apis/portfolio-config.api';
+import { 
+  PortfolioConfig, 
+  PortfolioConfigCreateRequest, 
+  PortfolioConfigUpdateRequest 
+} from '../../../services/entities/portfolio.entities';
 
 @Component({
   selector: 'app-portfolio-configure',
@@ -29,54 +32,27 @@ import { AuthService } from '../../../services/security/auth.service';
   templateUrl: './configure.component.html',
   styleUrls: ['./configure.component.scss']
 })
-export class PortfolioConfigureComponent implements OnInit {
+export class PortfolioConfigureComponent implements OnInit, OnChanges {
   @Input() selectedPortfolio: PortfolioWithMetrics | null = null;
-  @Input() riskProfileOptions: any[] = [];
 
-  @Output() saveChanges = new EventEmitter<PortfolioWithMetrics>();
+  @Output() saveChanges = new EventEmitter<PortfolioConfig>();
   @Output() cancel = new EventEmitter<void>();
   @Output() goToOverview = new EventEmitter<void>();
 
-  // Dropdown options
-  currencyOptions = [
-    { label: 'INR', value: 'INR' },
-    { label: 'USD', value: 'USD' },
-    { label: 'EUR', value: 'EUR' }
-  ];
-
-  strategyOptions = [
-    { label: 'Momentum Investing', value: 'Momentum Investing' },
-    { label: 'Value Investing', value: 'Value Investing' },
-    { label: 'Growth Investing', value: 'Growth Investing' }
-  ];
-
-  tradingModeOptions = [
-    { label: 'paper', value: 'paper' },
-    { label: 'live', value: 'live' }
-  ];
-
-  dematAccountOptions = [
-    { label: 'AB1234567B', value: 'AB1234567B' },
-    { label: 'CD9876543C', value: 'CD9876543C' }
-  ];
-
-  // Inject the portfolio API service
-  private portfolioApiService = inject(PortfolioApiService);
-  
-  // Inject the auth service to get current user ID
-  private authService = inject(AuthService);
+  // Inject the portfolio config API service
+  private portfolioConfigApiService = inject(PortfolioConfigApiService);
 
   // Local copy for editing
-  editingPortfolio: PortfolioWithMetrics | null = null;
+  portfolioConfig: PortfolioConfig | null = null;
   
-  // Original portfolio for dirty checking
-  originalPortfolio: PortfolioWithMetrics | null = null;
+  // Original config for dirty checking
+  originalConfig: PortfolioConfig | null = null;
   
-  // Flag to distinguish between creation and editing modes
-  isCreationMode = false;
+  // Flag to track if config exists (determines POST vs PUT)
+  configExists = false;
 
-  // Single editing state for all fields
-  isEditing = false;
+  // Loading state for config load operation
+  isLoading = false;
 
   // Loading state for save operation
   isSaving = false;
@@ -84,231 +60,248 @@ export class PortfolioConfigureComponent implements OnInit {
   // Form dirty state
   isFormDirty = false;
 
+  // Error state
+  errorMessage: string | null = null;
+
   ngOnInit(): void {
     // Component initialization
   }
 
-  // Format date for display - handles both ISO strings and epoch timestamps
-  formatDate(dateValue: any): string {
-    if (!dateValue) {
-      return '-';
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['selectedPortfolio'] && this.selectedPortfolio?.id) {
+      // Load config when portfolio changes
+      this.loadConfig(this.selectedPortfolio.id);
+    } else if (!this.selectedPortfolio) {
+      // Reset state when no portfolio is selected
+      this.portfolioConfig = null;
+      this.originalConfig = null;
+      this.configExists = false;
+      this.isFormDirty = false;
+      this.errorMessage = null;
     }
+  }
 
-    let date: Date;
+  /**
+   * Load portfolio configuration from API
+   */
+  loadConfig(portfolioId: string): void {
+    this.isLoading = true;
+    this.errorMessage = null;
 
-    // If it's a number (epoch timestamp)
-    if (typeof dateValue === 'number') {
-      // If the number is less than a reasonable year 2000 timestamp in milliseconds,
-      // it's likely in seconds, so convert to milliseconds
-      if (dateValue < 10000000000) {
-        date = new Date(dateValue * 1000);
-      } else {
-        date = new Date(dateValue);
+    this.portfolioConfigApiService.getConfig(portfolioId).subscribe({
+      next: (config) => {
+        // Config exists, use it
+        this.portfolioConfig = { ...config };
+        this.originalConfig = { ...config };
+        this.configExists = true;
+        this.isLoading = false;
+        this.isFormDirty = false;
+      },
+      error: (error) => {
+        this.isLoading = false;
+        
+        // If 404, config doesn't exist yet - use defaults
+        if (error.status === 404) {
+          this.portfolioConfig = this.getDefaultConfig(portfolioId);
+          this.originalConfig = { ...this.portfolioConfig };
+          this.configExists = false;
+          this.isFormDirty = false;
+        } else {
+          // Other errors - show error message
+          this.errorMessage = error.userMessage || 'Failed to load configuration';
+          this.portfolioConfig = null;
+          this.originalConfig = null;
+          this.configExists = false;
+        }
       }
-    } else if (typeof dateValue === 'string') {
-      // Try parsing as ISO string
-      date = new Date(dateValue);
-    } else {
-      return '-';
-    }
-
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      return '-';
-    }
-
-    // Format the date manually
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-
-    return `${day}/${month}/${year}, ${displayHours}:${minutes} ${ampm}`;
+    });
   }
 
-  ngOnChanges(): void {
-    if (this.selectedPortfolio) {
-      // Check if this is a new portfolio (creation mode)
-      this.isCreationMode = !this.selectedPortfolio.id || this.selectedPortfolio.id === '';
-      // Create a deep copy for editing
-      this.editingPortfolio = { ...this.selectedPortfolio };
-      this.originalPortfolio = { ...this.selectedPortfolio };
+  /**
+   * Get default configuration values matching backend entity defaults
+   */
+  private getDefaultConfig(portfolioId: string): PortfolioConfig {
+    return {
+      portfolioId: portfolioId,
       
-      // Automatically enter edit mode (always editable in Configure tab)
-      this.isEditing = true;
+      // Trading Configuration
+      tradingMode: 'paper',
+      signalCheckInterval: 300,
+      lookbackDays: 30,
       
-      // Reset dirty state
-      this.isFormDirty = false;
-    } else {
-      this.editingPortfolio = null;
-      this.originalPortfolio = null;
-      this.isCreationMode = false;
-      this.isEditing = false;
-      this.isFormDirty = false;
-    }
+      // Historical Cache Configuration
+      historicalCacheEnabled: false,
+      historicalCacheLookbackDays: 365,
+      historicalCacheExchange: 'NSE',
+      historicalCacheInstrumentType: 'EQ',
+      historicalCacheCandleInterval: 'day',
+      historicalCacheTtlSeconds: 86400,
+      
+      // Redis Configuration
+      redisEnabled: false,
+      redisHost: 'localhost',
+      redisPort: 6379,
+      redisPassword: undefined,
+      redisDb: 0,
+      redisKeyPrefix: 'portfolio:',
+      
+      // Additional Trading Settings
+      enableConditionalLogging: false,
+      cacheDurationSeconds: 300,
+      exchange: 'NSE',
+      candleInterval: 'day',
+      
+      // Entry Conditions
+      entryBbLower: true,
+      entryRsiThreshold: 30,
+      entryMacdTurnPositive: true,
+      entryVolumeAboveAvg: true,
+      entryFallbackSmaPeriod: 20,
+      entryFallbackAtrMultiplier: 2.0,
+      
+      // Exit Conditions
+      exitTakeProfitPct: 5.0,
+      exitStopLossAtrMult: 2.0,
+      exitAllowTpExitsOnly: false,
+      
+      // Custom JSON
+      customJson: undefined,
+      
+      // Timestamps (will be set by backend)
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
   }
 
-  // Track form changes
+  /**
+   * Track form changes
+   */
   onFormChange(): void {
     this.isFormDirty = this.hasFormChanged();
   }
 
-  // Check if form has changed
+  /**
+   * Check if form has changed from original config
+   */
   private hasFormChanged(): boolean {
-    if (!this.editingPortfolio || !this.originalPortfolio) {
+    if (!this.portfolioConfig || !this.originalConfig) {
       return false;
     }
 
-    return (
-      this.editingPortfolio.name !== this.originalPortfolio.name ||
-      this.editingPortfolio.description !== this.originalPortfolio.description ||
-      this.editingPortfolio.baseCurrency !== this.originalPortfolio.baseCurrency ||
-      this.editingPortfolio.riskProfile !== this.originalPortfolio.riskProfile ||
-      this.editingPortfolio.initialCapital !== this.originalPortfolio.initialCapital ||
-      this.editingPortfolio.currentCash !== this.originalPortfolio.currentCash ||
-      this.editingPortfolio.tradingMode !== this.originalPortfolio.tradingMode ||
-      this.editingPortfolio.isActive !== this.originalPortfolio.isActive
-    );
+    // Compare all config fields
+    return JSON.stringify(this.portfolioConfig) !== JSON.stringify(this.originalConfig);
   }
 
-  // Save all changes using the appropriate API endpoint
-  saveEditAll(): void {
-    if (this.editingPortfolio && !this.isSaving) {
-      // Validate required fields
-      if (!this.editingPortfolio.name || this.editingPortfolio.name.trim() === '') {
-        alert('Portfolio name is required');
-        return;
-      }
-      
-      if (!this.editingPortfolio.riskProfile) {
-        alert('Risk profile is required');
-        return;
-      }
-
-      this.isSaving = true;
-
-      if (this.isCreationMode) {
-        // Get current user ID
-        const currentUser = this.authService.getCurrentUser();
-        if (!currentUser || !currentUser.id) {
-          alert('User not authenticated. Please log in again.');
-          this.isSaving = false;
-          return;
-        }
-
-        // Create new portfolio
-        const createRequest: PortfolioCreateRequest = {
-          name: this.editingPortfolio.name,
-          description: this.editingPortfolio.description || '',
-          baseCurrency: this.editingPortfolio.baseCurrency,
-          riskProfile: this.editingPortfolio.riskProfile,
-          isActive: true,
-          userId: currentUser.id // User ID is now a string (UUID)
-        };
-
-
-
-        this.portfolioApiService.createPortfolio(createRequest).subscribe({
-          next: (createdPortfolio) => {
-            // Update the local portfolio with the created one
-            this.editingPortfolio = { ...this.editingPortfolio, ...createdPortfolio };
-            this.originalPortfolio = { ...this.editingPortfolio };
-            this.isEditing = false;
-            this.isSaving = false;
-            this.isFormDirty = false;
-            // Emit the updated portfolio
-            this.saveChanges.emit(this.editingPortfolio);
-          },
-          error: (error) => {
-
-            
-            // Show user-friendly error message
-            if (error.status === 500) {
-              alert('Backend service temporarily unavailable. Changes have been saved locally and will be synchronized when the service is restored.');
-            } else if (error.status === 401) {
-              alert('Authentication expired. Please log in again.');
-            } else if (error.status === 403) {
-              alert('You do not have permission to create portfolios.');
-            } else if (error.status === 400) {
-              alert('Invalid portfolio data. Please check your input and try again.');
-            } else {
-              alert(`Failed to create portfolio (${error.status}). Changes have been saved locally.`);
-            }
-            
-            // Fallback: save locally and emit
-            this.isEditing = false;
-            this.isSaving = false;
-            if (this.editingPortfolio) {
-              this.saveChanges.emit(this.editingPortfolio);
-            }
-          }
-        });
-      } else {
-        // Update existing portfolio
-        const updateRequest: PortfolioUpdateRequest = {
-          name: this.editingPortfolio.name,
-          description: this.editingPortfolio.description,
-          riskProfile: this.editingPortfolio.riskProfile
-        };
-
-
-
-        this.portfolioApiService.updatePortfolio(this.editingPortfolio.id, updateRequest).subscribe({
-          next: (updatedPortfolio) => {
-            // Update the local portfolio with the updated one
-            this.editingPortfolio = { ...this.editingPortfolio, ...updatedPortfolio };
-            this.originalPortfolio = { ...this.editingPortfolio };
-            this.isEditing = false;
-            this.isSaving = false;
-            this.isFormDirty = false;
-            // Emit the updated portfolio
-            this.saveChanges.emit(this.editingPortfolio);
-          },
-          error: (error) => {
-
-            
-            // Fallback: save locally and emit
-            this.isEditing = false;
-            this.isSaving = false;
-            if (this.editingPortfolio) {
-              this.saveChanges.emit(this.editingPortfolio);
-            }
-            
-            // Show user-friendly error message
-            if (error.status === 500) {
-              alert('Backend service temporarily unavailable. Changes have been saved locally and will be synchronized when the service is restored.');
-            } else if (error.status === 401) {
-              alert('Authentication expired. Please log in again.');
-            } else if (error.status === 403) {
-              alert('You do not have permission to update this portfolio.');
-            } else if (error.status === 404) {
-              alert('Portfolio not found. It may have been deleted by another user.');
-            } else {
-              alert(`Failed to update portfolio (${error.status}). Changes have been saved locally.`);
-            }
-          }
-        });
-      }
+  /**
+   * Save configuration using POST (create) or PUT (update) based on configExists flag
+   */
+  saveConfiguration(): void {
+    if (!this.portfolioConfig || !this.selectedPortfolio?.id || this.isSaving) {
+      return;
     }
+
+    // Validate required fields
+    if (!this.portfolioConfig.tradingMode) {
+      alert('Trading mode is required');
+      return;
+    }
+    
+    if (!this.portfolioConfig.signalCheckInterval || this.portfolioConfig.signalCheckInterval <= 0) {
+      alert('Signal check interval must be a positive number');
+      return;
+    }
+    
+    if (!this.portfolioConfig.lookbackDays || this.portfolioConfig.lookbackDays <= 0) {
+      alert('Lookback days must be a positive number');
+      return;
+    }
+
+    this.isSaving = true;
+    this.errorMessage = null;
+
+    // Prepare request payload (exclude portfolioId, createdAt, updatedAt)
+    const request: PortfolioConfigCreateRequest = {
+      tradingMode: this.portfolioConfig.tradingMode,
+      signalCheckInterval: this.portfolioConfig.signalCheckInterval,
+      lookbackDays: this.portfolioConfig.lookbackDays,
+      historicalCacheEnabled: this.portfolioConfig.historicalCacheEnabled,
+      historicalCacheLookbackDays: this.portfolioConfig.historicalCacheLookbackDays,
+      historicalCacheExchange: this.portfolioConfig.historicalCacheExchange,
+      historicalCacheInstrumentType: this.portfolioConfig.historicalCacheInstrumentType,
+      historicalCacheCandleInterval: this.portfolioConfig.historicalCacheCandleInterval,
+      historicalCacheTtlSeconds: this.portfolioConfig.historicalCacheTtlSeconds,
+      redisEnabled: this.portfolioConfig.redisEnabled,
+      redisHost: this.portfolioConfig.redisHost,
+      redisPort: this.portfolioConfig.redisPort,
+      redisPassword: this.portfolioConfig.redisPassword,
+      redisDb: this.portfolioConfig.redisDb,
+      redisKeyPrefix: this.portfolioConfig.redisKeyPrefix,
+      enableConditionalLogging: this.portfolioConfig.enableConditionalLogging,
+      cacheDurationSeconds: this.portfolioConfig.cacheDurationSeconds,
+      exchange: this.portfolioConfig.exchange,
+      candleInterval: this.portfolioConfig.candleInterval,
+      entryBbLower: this.portfolioConfig.entryBbLower,
+      entryRsiThreshold: this.portfolioConfig.entryRsiThreshold,
+      entryMacdTurnPositive: this.portfolioConfig.entryMacdTurnPositive,
+      entryVolumeAboveAvg: this.portfolioConfig.entryVolumeAboveAvg,
+      entryFallbackSmaPeriod: this.portfolioConfig.entryFallbackSmaPeriod,
+      entryFallbackAtrMultiplier: this.portfolioConfig.entryFallbackAtrMultiplier,
+      exitTakeProfitPct: this.portfolioConfig.exitTakeProfitPct,
+      exitStopLossAtrMult: this.portfolioConfig.exitStopLossAtrMult,
+      exitAllowTpExitsOnly: this.portfolioConfig.exitAllowTpExitsOnly,
+      customJson: this.portfolioConfig.customJson
+    };
+
+    const saveObservable = this.configExists
+      ? this.portfolioConfigApiService.updateConfig(this.selectedPortfolio.id, request)
+      : this.portfolioConfigApiService.createConfig(this.selectedPortfolio.id, request);
+
+    saveObservable.subscribe({
+      next: (savedConfig) => {
+        // Update local state with saved config
+        this.portfolioConfig = { ...savedConfig };
+        this.originalConfig = { ...savedConfig };
+        this.configExists = true;
+        this.isSaving = false;
+        this.isFormDirty = false;
+        
+        // Show success message
+        alert('Configuration saved successfully');
+        
+        // Emit the saved config
+        this.saveChanges.emit(savedConfig);
+      },
+      error: (error) => {
+        this.isSaving = false;
+        
+        // Show user-friendly error message
+        this.errorMessage = error.userMessage || 'Failed to save configuration';
+        alert(this.errorMessage);
+      }
+    });
   }
 
+  /**
+   * Cancel editing and reset to original values
+   */
   cancelEdit(): void {
-    // Reset to original values and exit editing mode
-    if (this.originalPortfolio) {
-      this.editingPortfolio = { ...this.originalPortfolio };
+    if (this.originalConfig) {
+      this.portfolioConfig = { ...this.originalConfig };
     }
     this.isFormDirty = false;
-    this.isSaving = false;
-    // Stay on the same page - don't navigate to overview
+    this.errorMessage = null;
   }
 
+  /**
+   * Emit cancel event
+   */
   onCancel(): void {
     this.cancel.emit();
   }
 
+  /**
+   * Navigate to overview tab
+   */
   navigateToOverview(): void {
     this.goToOverview.emit();
   }

@@ -58,7 +58,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "feat(task-2): create PortfolioDetailsComponent with tests"
   - _Requirements: 4.1_
 
-- [ ] 3. Update PortfoliosComponent to include Details tab
+- [x] 3. Update PortfoliosComponent to include Details tab
   - Add PortfolioDetailsComponent to imports
   - Add "details" to tab list between "overview" and "configure"
   - Update tab order in template
@@ -66,22 +66,22 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Update default tab selection logic for new portfolios
   - _Requirements: 1.1, 6.1, 6.2, 6.3_
 
-- [ ] 3.1 Write integration tests for tab navigation
+- [x] 3.1 Write integration tests for tab navigation
   - Test tab order is correct
   - Test default tab selection
   - Test tab switching updates URL
   - Test deep linking to Details tab
   - _Requirements: 6.1, 6.2, 6.4, 6.5_
 
-- [ ] 3.2 Write property test for tab URL synchronization
+- [x] 3.2 Write property test for tab URL synchronization
   - **Property 4: Tab switching updates URL**
   - **Validates: Requirements 6.4**
 
-- [ ] 3.3 Write property test for deep link navigation
+- [x] 3.3 Write property test for deep link navigation
   - **Property 5: Deep link navigation displays correct tab**
   - **Validates: Requirements 6.5**
 
-- [ ] 3.4 Verify and commit task 3
+- [x] 3.4 Verify and commit task 3
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify tab navigation works correctly
   - Commit to git with message: "feat(task-3): add Details tab to PortfoliosComponent with navigation tests"
