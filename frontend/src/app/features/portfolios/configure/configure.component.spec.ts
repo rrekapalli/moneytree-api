@@ -793,4 +793,547 @@ describe('PortfolioConfigureComponent', () => {
       );
     });
   });
+
+  /**
+   * Integration Tests for Config Save
+   * Task 7.1: Test creating new config (POST), updating existing config (PUT), error handling, success message
+   * Requirements: 2.4, 2.5, 5.2
+   */
+  describe('Integration Tests: Config Save', () => {
+    beforeEach((done) => {
+      const mockPortfolio = createMockPortfolio({ id: '1' });
+      const mockConfig = createMockConfig('1');
+      
+      mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+      
+      component.selectedPortfolio = mockPortfolio;
+      component.ngOnChanges({ selectedPortfolio: { currentValue: mockPortfolio, previousValue: null, firstChange: true, isFirstChange: () => true } });
+      
+      setTimeout(() => {
+        fixture.detectChanges();
+        done();
+      }, 100);
+    });
+
+    it('should create new config using POST when configExists is false', (done) => {
+      // Set up component state for new config
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const savedConfig = createMockConfig('1', { tradingMode: 'live' });
+      mockPortfolioConfigApiService.createConfig.and.returnValue(of(savedConfig));
+      
+      // Spy on alert to verify success message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify POST was called
+        expect(mockPortfolioConfigApiService.createConfig).toHaveBeenCalledWith('1', jasmine.objectContaining({
+          tradingMode: 'live'
+        }));
+        
+        // Verify PUT was not called
+        expect(mockPortfolioConfigApiService.updateConfig).not.toHaveBeenCalled();
+        
+        // Verify state updates
+        expect(component.configExists).toBe(true);
+        expect(component.isFormDirty).toBe(false);
+        expect(component.isSaving).toBe(false);
+        
+        // Verify success message
+        expect(window.alert).toHaveBeenCalledWith('Configuration saved successfully');
+        
+        // Verify event emission
+        expect(component.saveChanges.emit).toBeDefined();
+        
+        done();
+      }, 100);
+    });
+
+    it('should update existing config using PUT when configExists is true', (done) => {
+      // Set up component state for existing config
+      component.configExists = true;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const savedConfig = createMockConfig('1', { tradingMode: 'live' });
+      mockPortfolioConfigApiService.updateConfig.and.returnValue(of(savedConfig));
+      
+      // Spy on alert to verify success message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify PUT was called
+        expect(mockPortfolioConfigApiService.updateConfig).toHaveBeenCalledWith('1', jasmine.objectContaining({
+          tradingMode: 'live'
+        }));
+        
+        // Verify POST was not called
+        expect(mockPortfolioConfigApiService.createConfig).not.toHaveBeenCalled();
+        
+        // Verify state updates
+        expect(component.configExists).toBe(true);
+        expect(component.isFormDirty).toBe(false);
+        expect(component.isSaving).toBe(false);
+        
+        // Verify success message
+        expect(window.alert).toHaveBeenCalledWith('Configuration saved successfully');
+        
+        done();
+      }, 100);
+    });
+
+    it('should handle save failure with network error (status 0)', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const networkError = { 
+        status: 0, 
+        userMessage: 'Unable to connect to the server. Please check your internet connection.' 
+      };
+      mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => networkError));
+      
+      // Spy on alert to verify error message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify error state
+        expect(component.isSaving).toBe(false);
+        expect(component.errorMessage).toBe('Unable to connect to the server. Please check your internet connection.');
+        
+        // Verify error message displayed
+        expect(window.alert).toHaveBeenCalledWith('Unable to connect to the server. Please check your internet connection.');
+        
+        // Verify config state not updated
+        expect(component.configExists).toBe(false);
+        expect(component.isFormDirty).toBe(true);
+        
+        done();
+      }, 100);
+    });
+
+    it('should handle save failure with authentication error (status 401)', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const authError = { 
+        status: 401, 
+        userMessage: 'Your session has expired. Please log in again.' 
+      };
+      mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => authError));
+      
+      // Spy on alert to verify error message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify error state
+        expect(component.isSaving).toBe(false);
+        expect(component.errorMessage).toBe('Your session has expired. Please log in again.');
+        
+        // Verify error message displayed
+        expect(window.alert).toHaveBeenCalledWith('Your session has expired. Please log in again.');
+        
+        done();
+      }, 100);
+    });
+
+    it('should handle save failure with authorization error (status 403)', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const forbiddenError = { 
+        status: 403, 
+        userMessage: 'You do not have permission to perform this action.' 
+      };
+      mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => forbiddenError));
+      
+      // Spy on alert to verify error message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify error state
+        expect(component.isSaving).toBe(false);
+        expect(component.errorMessage).toBe('You do not have permission to perform this action.');
+        
+        // Verify error message displayed
+        expect(window.alert).toHaveBeenCalledWith('You do not have permission to perform this action.');
+        
+        done();
+      }, 100);
+    });
+
+    it('should handle save failure with validation error (status 400)', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const validationError = { 
+        status: 400, 
+        userMessage: 'Invalid configuration data. Please check your inputs.' 
+      };
+      mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => validationError));
+      
+      // Spy on alert to verify error message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify error state
+        expect(component.isSaving).toBe(false);
+        expect(component.errorMessage).toBe('Invalid configuration data. Please check your inputs.');
+        
+        // Verify error message displayed
+        expect(window.alert).toHaveBeenCalledWith('Invalid configuration data. Please check your inputs.');
+        
+        done();
+      }, 100);
+    });
+
+    it('should handle save failure with server error (status 500)', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const serverError = { 
+        status: 500, 
+        userMessage: 'Server error occurred. Please try again later.' 
+      };
+      mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => serverError));
+      
+      // Spy on alert to verify error message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify error state
+        expect(component.isSaving).toBe(false);
+        expect(component.errorMessage).toBe('Server error occurred. Please try again later.');
+        
+        // Verify error message displayed
+        expect(window.alert).toHaveBeenCalledWith('Server error occurred. Please try again later.');
+        
+        done();
+      }, 100);
+    });
+
+    it('should display success message on successful save', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      const savedConfig = createMockConfig('1', { tradingMode: 'live' });
+      mockPortfolioConfigApiService.createConfig.and.returnValue(of(savedConfig));
+      
+      // Spy on alert to verify success message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify success message displayed
+        expect(window.alert).toHaveBeenCalledWith('Configuration saved successfully');
+        
+        done();
+      }, 100);
+    });
+
+    it('should update form dirty state after successful save', (done) => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      // Verify form is dirty before save
+      expect(component.isFormDirty).toBe(true);
+      
+      const savedConfig = createMockConfig('1', { tradingMode: 'live' });
+      mockPortfolioConfigApiService.createConfig.and.returnValue(of(savedConfig));
+      
+      component.saveConfiguration();
+      
+      setTimeout(() => {
+        // Verify form is no longer dirty after save
+        expect(component.isFormDirty).toBe(false);
+        
+        done();
+      }, 100);
+    });
+
+    it('should not save when form is invalid', () => {
+      // Make form invalid
+      component.portfolioConfig!.tradingMode = '';
+      component.onFormChange();
+      
+      // Spy on alert to verify validation message
+      spyOn(window, 'alert');
+      
+      component.saveConfiguration();
+      
+      // Verify API was not called
+      expect(mockPortfolioConfigApiService.createConfig).not.toHaveBeenCalled();
+      expect(mockPortfolioConfigApiService.updateConfig).not.toHaveBeenCalled();
+      
+      // Verify validation alert was shown
+      expect(window.alert).toHaveBeenCalledWith('Please fix validation errors before saving');
+    });
+
+    it('should not save when already saving', () => {
+      component.configExists = false;
+      component.portfolioConfig!.tradingMode = 'live';
+      component.onFormChange();
+      
+      // Set saving state
+      component.isSaving = true;
+      
+      component.saveConfiguration();
+      
+      // Verify API was not called
+      expect(mockPortfolioConfigApiService.createConfig).not.toHaveBeenCalled();
+      expect(mockPortfolioConfigApiService.updateConfig).not.toHaveBeenCalled();
+    });
+
+    it('should not save when no portfolio is selected', () => {
+      component.selectedPortfolio = null;
+      
+      component.saveConfiguration();
+      
+      // Verify API was not called
+      expect(mockPortfolioConfigApiService.createConfig).not.toHaveBeenCalled();
+      expect(mockPortfolioConfigApiService.updateConfig).not.toHaveBeenCalled();
+    });
+
+    it('should not save when no config exists', () => {
+      component.portfolioConfig = null;
+      
+      component.saveConfiguration();
+      
+      // Verify API was not called
+      expect(mockPortfolioConfigApiService.createConfig).not.toHaveBeenCalled();
+      expect(mockPortfolioConfigApiService.updateConfig).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * Property-Based Tests for API Error Handling
+   * Feature: portfolio-details-config-split, Property 2: API error handling displays messages
+   * Validates: Requirements 5.2
+   */
+  describe('Property-Based Tests: API Error Handling', () => {
+    beforeEach((done) => {
+      const mockPortfolio = createMockPortfolio({ id: '1' });
+      const mockConfig = createMockConfig('1');
+      
+      mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+      
+      component.selectedPortfolio = mockPortfolio;
+      component.ngOnChanges({ selectedPortfolio: { currentValue: mockPortfolio, previousValue: null, firstChange: true, isFirstChange: () => true } });
+      
+      setTimeout(() => {
+        fixture.detectChanges();
+        done();
+      }, 100);
+    });
+
+    it('Property 2: API error handling displays messages - various error statuses', (done) => {
+      fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            status: fc.oneof(
+              fc.constant(0),
+              fc.constant(400),
+              fc.constant(401),
+              fc.constant(403),
+              fc.constant(404),
+              fc.constant(500),
+              fc.constant(502),
+              fc.constant(503)
+            ),
+            configExists: fc.boolean()
+          }),
+          async ({ status, configExists }) => {
+            // Set up component state
+            component.configExists = configExists;
+            component.portfolioConfig!.tradingMode = 'live';
+            component.onFormChange();
+            
+            // Define expected error messages for each status
+            const errorMessages: Record<number, string> = {
+              0: 'Unable to connect to the server. Please check your internet connection.',
+              400: 'Invalid configuration data. Please check your inputs.',
+              401: 'Your session has expired. Please log in again.',
+              403: 'You do not have permission to perform this action.',
+              404: 'Portfolio configuration not found.',
+              500: 'Server error occurred. Please try again later.',
+              502: 'Server error occurred. Please try again later.',
+              503: 'Server error occurred. Please try again later.'
+            };
+            
+            const error = { 
+              status, 
+              userMessage: errorMessages[status] || 'An error occurred'
+            };
+            
+            // Mock the appropriate API call based on configExists
+            if (configExists) {
+              mockPortfolioConfigApiService.updateConfig.and.returnValue(throwError(() => error));
+            } else {
+              mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => error));
+            }
+            
+            // Spy on alert to verify error message
+            spyOn(window, 'alert');
+            
+            component.saveConfiguration();
+            
+            // Wait for async operation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Verify error message is displayed
+            expect(component.errorMessage).toBe(errorMessages[status] || 'An error occurred');
+            expect(window.alert).toHaveBeenCalledWith(errorMessages[status] || 'An error occurred');
+            
+            // Verify saving state is reset
+            expect(component.isSaving).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      ).then(() => done());
+    });
+
+    it('Property 2: API error handling displays messages - error without userMessage', (done) => {
+      fc.assert(
+        fc.asyncProperty(
+          fc.boolean(),
+          async (configExists) => {
+            // Set up component state
+            component.configExists = configExists;
+            component.portfolioConfig!.tradingMode = 'live';
+            component.onFormChange();
+            
+            // Create error without userMessage
+            const error = { 
+              status: 500
+            };
+            
+            // Mock the appropriate API call based on configExists
+            if (configExists) {
+              mockPortfolioConfigApiService.updateConfig.and.returnValue(throwError(() => error));
+            } else {
+              mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => error));
+            }
+            
+            // Spy on alert to verify error message
+            spyOn(window, 'alert');
+            
+            component.saveConfiguration();
+            
+            // Wait for async operation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Verify default error message is displayed
+            expect(component.errorMessage).toBe('Failed to save configuration');
+            expect(window.alert).toHaveBeenCalledWith('Failed to save configuration');
+            
+            // Verify saving state is reset
+            expect(component.isSaving).toBe(false);
+          }
+        ),
+        { numRuns: 100 }
+      ).then(() => done());
+    });
+
+    it('Property 2: API error handling preserves form dirty state on error', (done) => {
+      fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            status: fc.integer({ min: 400, max: 599 }),
+            configExists: fc.boolean()
+          }),
+          async ({ status, configExists }) => {
+            // Set up component state
+            component.configExists = configExists;
+            component.portfolioConfig!.tradingMode = 'live';
+            component.onFormChange();
+            
+            // Verify form is dirty before save
+            expect(component.isFormDirty).toBe(true);
+            
+            const error = { 
+              status, 
+              userMessage: 'Error occurred'
+            };
+            
+            // Mock the appropriate API call based on configExists
+            if (configExists) {
+              mockPortfolioConfigApiService.updateConfig.and.returnValue(throwError(() => error));
+            } else {
+              mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => error));
+            }
+            
+            component.saveConfiguration();
+            
+            // Wait for async operation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Verify form is still dirty after error
+            expect(component.isFormDirty).toBe(true);
+          }
+        ),
+        { numRuns: 100 }
+      ).then(() => done());
+    });
+
+    it('Property 2: API error handling does not update configExists on error', (done) => {
+      fc.assert(
+        fc.asyncProperty(
+          fc.record({
+            status: fc.integer({ min: 400, max: 599 }),
+            initialConfigExists: fc.boolean()
+          }),
+          async ({ status, initialConfigExists }) => {
+            // Set up component state
+            component.configExists = initialConfigExists;
+            component.portfolioConfig!.tradingMode = 'live';
+            component.onFormChange();
+            
+            const error = { 
+              status, 
+              userMessage: 'Error occurred'
+            };
+            
+            // Mock the appropriate API call based on configExists
+            if (initialConfigExists) {
+              mockPortfolioConfigApiService.updateConfig.and.returnValue(throwError(() => error));
+            } else {
+              mockPortfolioConfigApiService.createConfig.and.returnValue(throwError(() => error));
+            }
+            
+            component.saveConfiguration();
+            
+            // Wait for async operation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Verify configExists is unchanged after error
+            expect(component.configExists).toBe(initialConfigExists);
+          }
+        ),
+        { numRuns: 100 }
+      ).then(() => done());
+    });
+  });
 });

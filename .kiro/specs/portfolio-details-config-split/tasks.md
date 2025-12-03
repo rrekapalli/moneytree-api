@@ -107,7 +107,7 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Commit to git with message: "refactor(task-4): update PortfolioConfigureComponent to use config API"
   - _Requirements: 2.1, 2.2, 2.4_
 
-- [ ] 5. Create Configure tab form sections
+- [x] 5. Create Configure tab form sections
   - Create Trading Configuration section with fields: tradingMode, signalCheckInterval, lookbackDays, enableConditionalLogging, cacheDurationSeconds, exchange, candleInterval
   - Create Historical Cache Configuration section with fields: historicalCacheEnabled, historicalCacheLookbackDays, historicalCacheExchange, historicalCacheInstrumentType, historicalCacheCandleInterval, historicalCacheTtlSeconds
   - Create Redis Configuration section with fields: redisEnabled, redisHost, redisPort, redisPassword, redisDb, redisKeyPrefix
@@ -115,19 +115,19 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Create Exit Conditions section with fields: exitTakeProfitPct, exitStopLossAtrMult, exitAllowTpExitsOnly
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [ ] 5.1 Write unit tests for form sections
+- [x] 5.1 Write unit tests for form sections
   - Test all sections render correctly
   - Test all fields are present in each section
   - Test field types and validation
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [ ] 5.2 Verify and commit task 5
+- [x] 5.2 Verify and commit task 5
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify all form sections render correctly
   - Commit to git with message: "feat(task-5): create Configure tab form sections with tests"
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
 
-- [ ] 6. Implement form validation for Configure tab
+- [x] 6. Implement form validation for Configure tab
   - Add required field validation for tradingMode, signalCheckInterval, lookbackDays
   - Add conditional validation for Redis fields when redisEnabled is true
   - Add range validation for entryRsiThreshold (0-100)
@@ -135,11 +135,11 @@ Each major task includes a verification subtask (e.g., 1.2, 2.3, 3.4) to ensure 
   - Update save button to disable when form is invalid
   - _Requirements: 5.1_
 
-- [ ] 6.1 Write property test for required field validation
+- [x] 6.1 Write property test for required field validation
   - **Property 3: Required field validation disables save**
   - **Validates: Requirements 5.1**
 
-- [ ] 6.2 Verify and commit task 6
+- [x] 6.2 Verify and commit task 6
   - Run getDiagnostics on all modified files to ensure no errors/warnings
   - Verify form validation works correctly
   - Commit to git with message: "feat(task-6): implement form validation for Configure tab"
