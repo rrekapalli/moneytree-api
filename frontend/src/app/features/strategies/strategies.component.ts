@@ -486,15 +486,20 @@ export class StrategiesComponent implements OnInit, OnDestroy {
   /**
    * Handles the strategySaved event from the DetailsComponent
    * Updates the strategy in the list and refreshes the display
+   * For new strategies, adds them to the list
    */
   onStrategySaved(updatedStrategy: StrategyWithMetrics): void {
     // Find and update the strategy in the strategies array
     const index = this.strategies.findIndex(s => s.id === updatedStrategy.id);
     if (index !== -1) {
+      // Update existing strategy
       this.strategies[index] = {
         ...this.strategies[index],
         ...updatedStrategy
       };
+    } else {
+      // Add new strategy to the list
+      this.strategies.push(updatedStrategy);
     }
 
     // Update the selected strategy
