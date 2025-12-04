@@ -15,6 +15,7 @@ import { StrategyApiService } from '../../services/apis/strategy.api';
 import { StrategyWithMetrics } from './strategy.types';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
+import { OverviewComponent } from './overview/overview.component';
 
 @Component({
   selector: 'app-strategies',
@@ -30,7 +31,8 @@ import { ToastService } from '../../services/toast.service';
     TabsModule,
     FormsModule,
     ScrollPanelModule,
-    PageHeaderComponent
+    PageHeaderComponent,
+    OverviewComponent
   ],
   templateUrl: './strategies.component.html',
   styleUrls: ['./strategies.component.scss'],

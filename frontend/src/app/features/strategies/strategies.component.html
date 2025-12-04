@@ -173,10 +173,7 @@
           <p-tabpanels>
             <!-- Overview Tab -->
             <p-tabpanel value="overview" role="tabpanel" id="overview-panel" [attr.aria-labelledby]="'Overview tab for ' + selectedStrategy.name">
-              <div class="tab-content">
-                <h3>Overview - {{ selectedStrategy.name }}</h3>
-                <p>Overview content will be implemented in future tasks</p>
-              </div>
+              <app-strategy-overview [strategy]="selectedStrategy"></app-strategy-overview>
             </p-tabpanel>
 
             <!-- Details Tab -->
