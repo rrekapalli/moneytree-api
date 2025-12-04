@@ -347,7 +347,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Handle empty state after last deletion
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [-] 15. Frontend - Styling and UI consistency
+- [x] 15. Frontend - Styling and UI consistency
   - [x] 15.1 Copy and adapt SCSS from Portfolios page
     - Copy portfolios.component.scss as base
     - Adapt class names for strategies
@@ -366,7 +366,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Style empty states
     - _Requirements: 11.5_
 
-- [-] 15.4 Frontend checkpoint - Verify all components
+- [x] 15.4 Frontend checkpoint - Verify all components
   - Run `npm run build` - ensure no errors or warnings
   - Test all tabs (Overview, Details, Configure, Backtest Results)
   - Test all CRUD operations (Create, Read, Update, Delete)
