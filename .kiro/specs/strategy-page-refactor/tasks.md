@@ -71,7 +71,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - GET /api/strategies/{id}/metrics/history - Get historical metrics
     - _Requirements: 3.2, 3.3_
 
-- [-] 5. Backend API - Backtest Integration
+- [x] 5. Backend API - Backtest Integration
   - [x] 5.1 Create Backtest service integration
     - Implement BacktestService to trigger backtest execution
     - Add methods to query backtest_runs and backtest_trades tables
@@ -85,7 +85,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - GET /api/backtests/{runId}/trades - Get backtest trades
     - _Requirements: 6.1, 6.3, 6.5, 7.1, 7.3, 7.4, 7.5_
 
-- [-] 5.3 Backend checkpoint - Verify all backend APIs
+- [x] 5.3 Backend checkpoint - Verify all backend APIs
   - Run `mvn clean compile` - ensure no compilation errors
   - Run `mvn test` - ensure all tests pass
   - Test all API endpoints with Postman or curl
