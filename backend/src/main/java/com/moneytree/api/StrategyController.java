@@ -47,14 +47,14 @@ public class StrategyController {
     @Operation(summary = "List all strategies for user", description = "Retrieve a list of all strategies for the authenticated user")
     @ApiResponse(responseCode = "200", description = "Successfully retrieved strategies")
     public ResponseEntity<List<Strategy>> listStrategies(
-            @Parameter(description = "User ID (optional, defaults to first user for testing)")
+            @Parameter(description = "User ID (optional, defaults to all strategies for testing)")
             @RequestParam(required = false) UUID userId) {
         
         if (userId != null) {
             return ResponseEntity.ok(strategyService.listStrategiesByUser(userId));
         } else {
-            // For testing purposes, return all active strategies
-            return ResponseEntity.ok(strategyService.listActiveStrategies());
+            // For testing purposes, return all strategies (both active and inactive)
+            return ResponseEntity.ok(strategyService.listAllStrategies());
         }
     }
 

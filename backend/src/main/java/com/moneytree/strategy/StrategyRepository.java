@@ -24,6 +24,9 @@ public interface StrategyRepository extends JpaRepository<Strategy, UUID> {
     @Query("SELECT s FROM Strategy s WHERE s.isActive = true ORDER BY s.updatedAt DESC")
     List<Strategy> findAllActiveOrderByUpdatedAtDesc();
 
+    @Query("SELECT s FROM Strategy s ORDER BY s.updatedAt DESC")
+    List<Strategy> findAllByOrderByUpdatedAtDesc();
+
     @Query("SELECT s FROM Strategy s WHERE s.user.id = ?1 ORDER BY s.updatedAt DESC")
     List<Strategy> findByUserIdOrderByUpdatedAtDesc(UUID userId);
 }

@@ -52,6 +52,16 @@ public class StrategyService {
     }
 
     /**
+     * List all strategies (both active and inactive).
+     * 
+     * @return list of all strategies ordered by updated_at descending
+     */
+    public List<Strategy> listAllStrategies() {
+        log.info("listAllStrategies called");
+        return strategyRepository.findAllByOrderByUpdatedAtDesc();
+    }
+
+    /**
      * Get a strategy by ID.
      * 
      * @param id the strategy ID
