@@ -140,9 +140,15 @@ export class StrategiesComponent implements OnInit, OnDestroy {
             }
           });
         } else {
-          // No deep link: load strategies and select first one
+          // No deep link: clear selection and show empty state or auto-select first strategy
           loadPromise.then(() => {
-            if (this.strategies.length > 0 && !this.selectedStrategy) {
+            // Clear the selected strategy when navigating to /strategies without an ID
+            this.selectedStrategy = null;
+            this.cdr.markForCheck();
+            
+            // Optionally auto-select the first strategy if strategies exist
+            // Comment out the lines below if you want to show an empty state instead
+            if (this.strategies.length > 0) {
               this.selectStrategy(this.strategies[0]);
               this.activeTab = 'overview';
             }
