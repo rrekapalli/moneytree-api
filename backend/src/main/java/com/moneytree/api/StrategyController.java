@@ -1,9 +1,11 @@
 package com.moneytree.api;
 
 import com.moneytree.strategy.StrategyConfigService;
+import com.moneytree.strategy.StrategyMetricsService;
 import com.moneytree.strategy.StrategyService;
 import com.moneytree.strategy.entity.Strategy;
 import com.moneytree.strategy.entity.StrategyConfig;
+import com.moneytree.strategy.entity.StrategyMetrics;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,10 +24,14 @@ public class StrategyController {
 
     private final StrategyService strategyService;
     private final StrategyConfigService strategyConfigService;
+    private final StrategyMetricsService strategyMetricsService;
 
-    public StrategyController(StrategyService strategyService, StrategyConfigService strategyConfigService) {
+    public StrategyController(StrategyService strategyService, 
+                            StrategyConfigService strategyConfigService,
+                            StrategyMetricsService strategyMetricsService) {
         this.strategyService = strategyService;
         this.strategyConfigService = strategyConfigService;
+        this.strategyMetricsService = strategyMetricsService;
     }
 
     @GetMapping
@@ -158,5 +164,29 @@ public class StrategyController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("{\"valid\": false, \"message\": \"" + e.getMessage() + "\"}");
         }
+    }
+
+    // ========== Strategy Metrics Endpoints ==========
+
+    @GetMapping("/{id}/metrics")
+    @Operation(summary = "Get latest strategy metrics", description = "Retrieve the most recent performance metrics for a strategy")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Metrics found"),
+        @ApiResponse(responseCode = "404", description = "Metrics not found")
+    })
+    public ResponseEntity<StrategyMetrics> getLatestMetrics(
+            @Parameter(description = "Strategy ID", required = true) @PathVariable UUID id) {
+        return strategyMetricsService.getLatestMetrics(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/{id}/metrics/history")
+    @Operation(summary = "Get strategy metrics history", description = "Retrieve historical performance metrics for a strategy")
+    @ApiResponse(responseCode = "200", description = "Successfully retrieved metrics history")
+    public ResponseEntity<List<StrategyMetrics>> getMetricsHistory(
+            @Parameter(description = "Strategy ID", required = true) @PathVariable UUID id) {
+        List<StrategyMetrics> history = strategyMetricsService.getMetricsHistory(id);
+        return ResponseEntity.ok(history);
     }
 }
