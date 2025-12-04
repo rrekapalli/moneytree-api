@@ -384,7 +384,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Run `npm run build` and `mvn clean compile` - ensure no errors
     - Commit: `git commit -m "feat: integrate frontend with backend APIs"`
   
-  - [-] 16.2 Test complete user flows
+  - [x] 16.2 Test complete user flows
     - Test create → configure → backtest → view results flow
     - Test strategy activation/deactivation
     - Test strategy deletion
@@ -393,7 +393,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Fix all issues before proceeding
     - Commit: `git commit -m "test: verify all user flows work correctly"`
   
-  - [ ] 16.3 Perform accessibility audit
+  - [-] 16.3 Perform accessibility audit
     - Test keyboard navigation
     - Verify ARIA labels
     - Test with screen reader
