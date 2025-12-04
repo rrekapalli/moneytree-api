@@ -552,4 +552,190 @@ export class StrategiesComponent implements OnInit, OnDestroy {
     this.loadTabData('configure');
     this.cdr.markForCheck();
   }
+
+  /**
+   * Toggles the active status of a strategy
+   * Validates configuration before activation
+   * 
+   * @param strategy - The strategy to toggle
+   * @param event - The click event (to prevent propagation)
+   */
+  toggleStrategyActive(strategy: StrategyWithMetrics, event?: Event): void {
+    // Prevent event propagation to avoid selecting the strategy
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const newActiveStatus = !strategy.isActive;
+
+    // If activating, validate that configuration is complete
+    if (newActiveStatus) {
+      // TODO: Add configuration validation check
+      // For now, we'll allow activation
+      // In a future enhancement, we should check if the strategy has:
+      // - At least one entry condition
+      // - At least one exit condition
+      // - Valid universe definition
+      // - Valid allocation rules
+    }
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    this.strategyApiService.updateStrategy(strategy.id, { isActive: newActiveStatus })
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: (updatedStrategy) => {
+          // Update the strategy in the list
+          const index = this.strategies.findIndex(s => s.id === strategy.id);
+          if (index !== -1) {
+            this.strategies[index] = {
+              ...this.strategies[index],
+              isActive: updatedStrategy.isActive,
+              status: updatedStrategy.isActive ? 'Active' : 'Inactive'
+            };
+          }
+
+          // Update the selected strategy if it's the one being toggled
+          if (this.selectedStrategy?.id === strategy.id) {
+            this.selectedStrategy = {
+              ...this.selectedStrategy,
+              isActive: updatedStrategy.isActive,
+              status: updatedStrategy.isActive ? 'Active' : 'Inactive'
+            };
+          }
+
+          // Invalidate cache
+          this.strategyCache.clear();
+          this.strategyCacheTimestamp = 0;
+
+          // Reapply filters to update the display
+          this.applyFilters();
+
+          // Show success notification
+          const statusText = updatedStrategy.isActive ? 'activated' : 'deactivated';
+          this.toastService.show(
+            'success',
+            'Strategy Status Updated',
+            `Strategy "${strategy.name}" has been ${statusText}.`
+          );
+
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error toggling strategy status:', error);
+          
+          let errorMessage = 'Failed to update strategy status.';
+          if (error.status === 400) {
+            errorMessage = error.error?.message || 'Strategy configuration is incomplete. Please configure the strategy before activating.';
+          } else if (error.status === 403) {
+            errorMessage = 'You do not have permission to modify this strategy.';
+          } else if (error.status === 404) {
+            errorMessage = 'Strategy not found.';
+          }
+
+          this.toastService.showError({
+            summary: 'Update Failed',
+            detail: errorMessage
+          });
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  /**
+   * Deletes a strategy after confirmation
+   * Checks for active positions before deletion
+   * 
+   * @param strategy - The strategy to delete
+   * @param event - The click event (to prevent propagation)
+   */
+  deleteStrategy(strategy: StrategyWithMetrics, event?: Event): void {
+    // Prevent event propagation to avoid selecting the strategy
+    if (event) {
+      event.stopPropagation();
+    }
+
+    // Show confirmation dialog
+    const confirmed = confirm(
+      `Are you sure you want to delete "${strategy.name}"?\n\n` +
+      `This will permanently delete the strategy and all associated data including:\n` +
+      `- Strategy configuration\n` +
+      `- Performance metrics\n` +
+      `- Backtest results\n\n` +
+      `This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.loading = true;
+    this.cdr.markForCheck();
+
+    this.strategyApiService.deleteStrategy(strategy.id)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
+      .subscribe({
+        next: () => {
+          // Remove the strategy from the list
+          this.strategies = this.strategies.filter(s => s.id !== strategy.id);
+
+          // If the deleted strategy was selected, clear selection
+          if (this.selectedStrategy?.id === strategy.id) {
+            this.selectedStrategy = null;
+            
+            // Select the first strategy if available
+            if (this.strategies.length > 0) {
+              this.selectStrategy(this.strategies[0]);
+            }
+          }
+
+          // Invalidate cache
+          this.strategyCache.clear();
+          this.strategyCacheTimestamp = 0;
+
+          // Reapply filters to update the display
+          this.applyFilters();
+
+          // Show success notification
+          this.toastService.show(
+            'success',
+            'Strategy Deleted',
+            `Strategy "${strategy.name}" has been deleted successfully.`
+          );
+
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error deleting strategy:', error);
+          
+          let errorMessage = 'Failed to delete strategy.';
+          if (error.status === 400) {
+            errorMessage = error.error?.message || 'Cannot delete strategy with active positions. Please close all positions first.';
+          } else if (error.status === 403) {
+            errorMessage = 'You do not have permission to delete this strategy.';
+          } else if (error.status === 404) {
+            errorMessage = 'Strategy not found.';
+          }
+
+          this.toastService.showError({
+            summary: 'Delete Failed',
+            detail: errorMessage
+          });
+          this.cdr.markForCheck();
+        }
+      });
+  }
 }

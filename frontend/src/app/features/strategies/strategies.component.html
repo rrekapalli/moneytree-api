@@ -102,6 +102,31 @@
                 {{ getRiskProfileLabel(strategy.riskProfile) }}
               </span>
             </div>
+
+            <!-- Action Buttons -->
+            <div class="strategy-actions">
+              <p-button
+                [icon]="strategy.isActive ? 'pi pi-pause' : 'pi pi-play'"
+                [label]="strategy.isActive ? 'Deactivate' : 'Activate'"
+                [severity]="strategy.isActive ? 'secondary' : 'success'"
+                [outlined]="true"
+                size="small"
+                (onClick)="toggleStrategyActive(strategy, $event)"
+                [pTooltip]="strategy.isActive ? 'Deactivate strategy' : 'Activate strategy'"
+                tooltipPosition="top"
+                [attr.aria-label]="(strategy.isActive ? 'Deactivate' : 'Activate') + ' strategy ' + strategy.name">
+              </p-button>
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [outlined]="true"
+                size="small"
+                (onClick)="deleteStrategy(strategy, $event)"
+                pTooltip="Delete strategy"
+                tooltipPosition="top"
+                [attr.aria-label]="'Delete strategy ' + strategy.name">
+              </p-button>
+            </div>
           </div>
 
           <!-- Empty State -->

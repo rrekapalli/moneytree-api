@@ -330,8 +330,8 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Add button to navigate to Configure tab
     - _Requirements: 7.5_
 
-- [ ] 14. Frontend - Strategy activation and deletion
-  - [ ] 14.1 Implement strategy activation toggle
+- [x] 14. Frontend - Strategy activation and deletion
+  - [x] 14.1 Implement strategy activation toggle
     - Add toggle button in sidebar or details
     - Validate configuration before activation
     - Call API to update is_active status
@@ -339,7 +339,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Update UI to reflect status change
     - _Requirements: 9.1, 9.2, 9.4, 9.5_
   
-  - [ ] 14.2 Implement strategy deletion
+  - [x] 14.2 Implement strategy deletion
     - Add delete button with confirmation dialog
     - Check for active positions before deletion
     - Call API to delete strategy

@@ -243,6 +243,24 @@
   gap: 0.25rem;
 }
 
+.strategy-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--surface-border, #e9ecef);
+
+  ::ng-deep .p-button {
+    flex: 1;
+    justify-content: center;
+
+    &.p-button-sm {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+  }
+}
+
 /* Empty, Loading, and Error States */
 .empty-state,
 .loading-state,
