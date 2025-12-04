@@ -53,39 +53,39 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - POST /api/strategies/{id}/validate-config - Validate configuration
     - _Requirements: 5.1, 5.6_
 
-- [ ] 4. Backend API - Strategy Metrics
-  - [ ] 4.1 Create StrategyMetrics entity and repository
+- [x] 4. Backend API - Strategy Metrics
+  - [x] 4.1 Create StrategyMetrics entity and repository
     - Implement StrategyMetrics JPA entity
     - Create StrategyMetricsRepository with time-series queries
     - Add aggregation methods for performance calculations
     - _Requirements: 12.3_
   
-  - [ ] 4.2 Implement StrategyMetrics service layer
+  - [x] 4.2 Implement StrategyMetrics service layer
     - Create StrategyMetricsService for metrics management
     - Add methods to calculate and store performance metrics
     - Implement metrics aggregation logic
     - _Requirements: 3.2, 7.2_
   
-  - [ ] 4.3 Create StrategyMetrics REST API endpoints
+  - [x] 4.3 Create StrategyMetrics REST API endpoints
     - GET /api/strategies/{id}/metrics - Get latest metrics
     - GET /api/strategies/{id}/metrics/history - Get historical metrics
     - _Requirements: 3.2, 3.3_
 
-- [ ] 5. Backend API - Backtest Integration
-  - [ ] 5.1 Create Backtest service integration
+- [-] 5. Backend API - Backtest Integration
+  - [x] 5.1 Create Backtest service integration
     - Implement BacktestService to trigger backtest execution
     - Add methods to query backtest_runs and backtest_trades tables
     - Implement backtest status tracking
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
   
-  - [ ] 5.2 Create Backtest REST API endpoints
+  - [x] 5.2 Create Backtest REST API endpoints
     - POST /api/strategies/{id}/backtest - Trigger backtest execution
     - GET /api/strategies/{id}/backtests - List all backtests for strategy
     - GET /api/backtests/{runId} - Get backtest run details
     - GET /api/backtests/{runId}/trades - Get backtest trades
     - _Requirements: 6.1, 6.3, 6.5, 7.1, 7.3, 7.4, 7.5_
 
-- [ ] 5.3 Backend checkpoint - Verify all backend APIs
+- [-] 5.3 Backend checkpoint - Verify all backend APIs
   - Run `mvn clean compile` - ensure no compilation errors
   - Run `mvn test` - ensure all tests pass
   - Test all API endpoints with Postman or curl
