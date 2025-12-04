@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WidgetConfigComponent } from './widget-config.component';
 import { IWidget } from '../entities/IWidget';
+import { MessageService } from 'primeng/api';
 
 describe('WidgetConfigComponent', () => {
   let component: WidgetConfigComponent;
@@ -9,6 +10,7 @@ describe('WidgetConfigComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [WidgetConfigComponent],
+      providers: [MessageService]
     }).compileComponents();
 
     fixture = TestBed.createComponent(WidgetConfigComponent);

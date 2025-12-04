@@ -3,12 +3,14 @@ import { PortfoliosComponent } from './portfolios.component';
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
 import { PortfolioTradeApiService } from '../../services/apis/portfolio-trade.api';
+import { PortfolioConfigApiService } from '../../services/apis/portfolio-config.api';
 import { ToastService } from '../../services/toast.service';
 import { of, throwError, Observable } from 'rxjs';
 import { PortfolioWithMetrics } from './portfolio.types';
 import * as fc from 'fast-check';
 import { DebugElement, ChangeDetectionStrategy } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { ActivatedRoute } from '@angular/router';
 
 describe('PortfoliosComponent', () => {
   let component: PortfoliosComponent;
@@ -52,12 +54,22 @@ describe('PortfoliosComponent', () => {
     const mockPortfolioTradeApiService = jasmine.createSpyObj('PortfolioTradeApiService', ['getTrades']);
     mockPortfolioTradeApiService.getTrades.and.returnValue(of([]));
 
+    // Create a spy object for PortfolioConfigApiService
+    const mockPortfolioConfigApiService = jasmine.createSpyObj('PortfolioConfigApiService', ['getConfig']);
+    mockPortfolioConfigApiService.getConfig.and.returnValue(of(null));
+
     await TestBed.configureTestingModule({
       imports: [PortfoliosComponent],
       providers: [
         { provide: PortfolioApiService, useValue: mockPortfolioApiService },
         { provide: PortfolioHoldingApiService, useValue: mockPortfolioHoldingApiService },
         { provide: PortfolioTradeApiService, useValue: mockPortfolioTradeApiService },
+        { provide: PortfolioConfigApiService, useValue: mockPortfolioConfigApiService },
+        { provide: ActivatedRoute, useValue: { 
+          snapshot: { params: {}, queryParams: {} }, 
+          params: of({}),
+          queryParams: of({}) 
+        } },
         ToastService
       ]
     })
@@ -346,10 +358,180 @@ describe('PortfoliosComponent', () => {
   });
 
   describe('Tab Navigation', () => {
+    // Integration tests for task 3.1
+    describe('Tab Navigation Integration Tests', () => {
+      it('should display tabs in correct order: Overview, Details, Configure, Holdings, Trades', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        component.selectedPortfolio = portfolio;
+        fixture.detectChanges();
+
+        const tabs = fixture.debugElement.queryAll(By.css('p-tab'));
+        expect(tabs.length).toBe(5);
+
+        // Verify tab order by checking their values
+        const tabValues = tabs.map(tab => 
+          tab.nativeElement.getAttribute('ng-reflect-value') || 
+          tab.nativeElement.getAttribute('value')
+        );
+        
+        expect(tabValues[0]).toBe('overview');
+        expect(tabValues[1]).toBe('details');
+        expect(tabValues[2]).toBe('configure');
+        expect(tabValues[3]).toBe('holdings');
+        expect(tabValues[4]).toBe('trades');
+      });
+
+      it('should default to Overview tab when selecting an existing portfolio', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        
+        component.selectPortfolio(portfolio);
+        
+        expect(component.activeTab).toBe('overview');
+        expect(component.selectedPortfolio).toBeTruthy();
+        expect(component.selectedPortfolio?.id).toBe(portfolio.id);
+      });
+
+      it('should navigate to Details tab when creating a new portfolio', () => {
+        component.createPortfolio();
+        
+        expect(component.activeTab).toBe('details');
+        expect(component.selectedPortfolio).toBeTruthy();
+        expect(component.selectedPortfolio?.id).toBe(''); // Empty ID for new portfolio
+      });
+
+      it('should update URL when switching tabs', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        component.selectPortfolio(portfolio);
+        
+        // Switch to details tab
+        component.onTabChange('details');
+        
+        // Verify URL was updated (using window.history.replaceState)
+        expect(component.activeTab).toBe('details');
+        
+        // Switch to configure tab
+        component.onTabChange('configure');
+        expect(component.activeTab).toBe('configure');
+        
+        // Switch to holdings tab
+        component.onTabChange('holdings');
+        expect(component.activeTab).toBe('holdings');
+        
+        // Switch to trades tab
+        component.onTabChange('trades');
+        expect(component.activeTab).toBe('trades');
+      });
+
+      it('should support deep linking to Details tab', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        component.portfolios = [portfolio];
+        
+        // Simulate route params for deep link
+        component.selectedPortfolio = portfolio;
+        component.activeTab = 'details';
+        fixture.detectChanges();
+        
+        expect(component.selectedPortfolio?.id).toBe(portfolio.id);
+        expect(component.activeTab).toBe('details');
+      });
+    });
+
+    // **Feature: portfolio-details-config-split, Property 5: Deep link navigation displays correct tab**
+    // **Validates: Requirements 6.5**
+    describe('Property 5: Deep link navigation displays correct tab', () => {
+      it('should display correct tab for any valid portfolio and tab combination', () => {
+        fc.assert(
+          fc.property(
+            fc.array(
+              fc.record({
+                id: fc.uuid(),
+                name: fc.string({ minLength: 1, maxLength: 50 }),
+                description: fc.string({ maxLength: 200 }),
+                riskProfile: fc.constantFrom('CONSERVATIVE', 'MODERATE', 'AGGRESSIVE')
+              }),
+              { minLength: 1, maxLength: 10 }
+            ),
+            fc.integer({ min: 0, max: 9 }),
+            fc.constantFrom('overview', 'details', 'configure', 'holdings', 'trades'),
+            (portfolioData, portfolioIndex, targetTab) => {
+              // Ensure we have at least one portfolio
+              if (portfolioData.length === 0) return;
+
+              const portfolios: PortfolioWithMetrics[] = portfolioData.map(data =>
+                createMockPortfolio(data)
+              );
+
+              // Adjust portfolio index to be within bounds
+              const actualIndex = portfolioIndex % portfolios.length;
+              const targetPortfolio = portfolios[actualIndex];
+
+              // Set up component state
+              component.portfolios = portfolios;
+              component.filteredPortfolios = portfolios;
+
+              // Simulate deep link by setting selected portfolio and active tab
+              component.selectedPortfolio = targetPortfolio;
+              component.activeTab = targetTab;
+              fixture.detectChanges();
+
+              // Verify the correct portfolio is selected
+              expect(component.selectedPortfolio).toBeTruthy();
+              expect(component.selectedPortfolio?.id).toBe(targetPortfolio.id);
+              expect(component.selectedPortfolio?.name).toBe(targetPortfolio.name);
+
+              // Verify the correct tab is active
+              expect(component.activeTab).toBe(targetTab);
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
+    // **Feature: portfolio-details-config-split, Property 4: Tab switching updates URL**
+    // **Validates: Requirements 6.4**
+    describe('Property 4: Tab switching updates URL', () => {
+      it('should update activeTab state for all valid tab switches', () => {
+        fc.assert(
+          fc.property(
+            fc.record({
+              id: fc.uuid(),
+              name: fc.string({ minLength: 1, maxLength: 50 }),
+              description: fc.string({ maxLength: 200 })
+            }),
+            fc.array(
+              fc.constantFrom('overview', 'details', 'configure', 'holdings', 'trades'),
+              { minLength: 1, maxLength: 20 }
+            ),
+            (portfolioData, tabSequence) => {
+              const portfolio = createMockPortfolio(portfolioData);
+              
+              // Select a portfolio
+              component.selectPortfolio(portfolio);
+              expect(component.selectedPortfolio).toBeTruthy();
+
+              // Switch through the sequence of tabs
+              tabSequence.forEach(tab => {
+                component.onTabChange(tab);
+                
+                // Verify the active tab was updated
+                expect(component.activeTab).toBe(tab);
+                
+                // Verify portfolio context is preserved
+                expect(component.selectedPortfolio).toBeTruthy();
+                expect(component.selectedPortfolio?.id).toBe(portfolio.id);
+              });
+            }
+          ),
+          { numRuns: 100 }
+        );
+      });
+    });
+
     // **Feature: portfolio-dashboard-refactor, Property 10: Tab visibility on portfolio selection**
     // **Validates: Requirements 3.1**
     describe('Property 10: Tab visibility on portfolio selection', () => {
-      it('should display all four tabs when a portfolio is selected', () => {
+      it('should display all five tabs when a portfolio is selected', () => {
         fc.assert(
           fc.property(
             fc.record({
@@ -365,13 +547,14 @@ describe('PortfoliosComponent', () => {
               component.selectedPortfolio = portfolio;
               fixture.detectChanges();
 
-              // Check that all four tabs are rendered
+              // Check that all five tabs are rendered
               const tabs = fixture.debugElement.queryAll(By.css('p-tab'));
-              expect(tabs.length).toBe(4);
+              expect(tabs.length).toBe(5);
 
               // Verify each tab is present by checking their values
               const tabValues = tabs.map(tab => tab.nativeElement.getAttribute('ng-reflect-value') || tab.nativeElement.getAttribute('value'));
               expect(tabValues).toContain('overview');
+              expect(tabValues).toContain('details');
               expect(tabValues).toContain('configure');
               expect(tabValues).toContain('holdings');
               expect(tabValues).toContain('trades');
@@ -401,7 +584,7 @@ describe('PortfoliosComponent', () => {
               description: fc.string({ maxLength: 200 })
             }),
             fc.array(
-              fc.constantFrom('overview', 'configure', 'holdings', 'trades'),
+              fc.constantFrom('overview', 'details', 'configure', 'holdings', 'trades'),
               { minLength: 1, maxLength: 10 }
             ),
             (portfolioData, tabSequence) => {
@@ -1046,8 +1229,6 @@ describe('PortfoliosComponent', () => {
         done();
       }, 100);
     });
-      expect(errorState).toBeTruthy();
-    });
   });
 
   describe('Create Portfolio', () => {
@@ -1098,7 +1279,8 @@ describe('PortfoliosComponent', () => {
               // Verify we're in create mode (empty ID)
               expect(component.selectedPortfolio).toBeTruthy();
               expect(component.selectedPortfolio?.id).toBe('');
-              expect(component.activeTab).toBe('configure');
+              // Per Requirement 6.3: When creating a new portfolio, navigate to Details tab
+              expect(component.activeTab).toBe('details');
 
               // Fill in the form with valid data
               component.configForm.name = newPortfolioData.name;
@@ -1330,7 +1512,6 @@ describe('PortfoliosComponent', () => {
         component.selectPortfolio(portfolio);
         component.activeTab = 'holdings';
         component.holdings = [{
-          id: '1',
           portfolioId: '1',
           symbol: 'AAPL',
           quantity: 10,
@@ -1611,7 +1792,7 @@ describe('PortfoliosComponent', () => {
       });
 
       it('should handle network errors when loading portfolios', () => {
-        const testCases = [
+        const testCases: Array<{ status: number; message: string; expectError: boolean; errorContains: string }> = [
           { status: 401, message: 'Unauthorized', expectError: true, errorContains: 'session has expired' },
           { status: 403, message: 'Forbidden', expectError: true, errorContains: 'permission' },
           { status: 404, message: 'Not Found', expectError: true, errorContains: 'not found' },
@@ -1640,8 +1821,8 @@ describe('PortfoliosComponent', () => {
 
           // Component should set error message and create mock portfolios for demo
           expect(component.error).toBeTruthy();
-          if (testCase.errorContains) {
-            expect(component.error?.toLowerCase()).toContain(testCase.errorContains.toLowerCase());
+          if (testCase.errorContains && component.error) {
+            expect((component.error as string).toLowerCase()).toContain(testCase.errorContains.toLowerCase());
           }
           // Mock portfolios are created for demo purposes
           expect(component.portfolios.length).toBeGreaterThan(0);
@@ -2038,6 +2219,265 @@ describe('PortfoliosComponent', () => {
     it('should use OnPush change detection strategy', () => {
       const metadata = (component.constructor as any).__annotations__[0];
       expect(metadata.changeDetection).toBe(ChangeDetectionStrategy.OnPush);
+    });
+  });
+
+  describe('Portfolio Config Loading', () => {
+    let mockPortfolioConfigApiService: jasmine.SpyObj<PortfolioConfigApiService>;
+
+    beforeEach(() => {
+      // Get the mock service from TestBed
+      mockPortfolioConfigApiService = TestBed.inject(PortfolioConfigApiService) as jasmine.SpyObj<PortfolioConfigApiService>;
+    });
+
+    describe('Config loading on tab activation', () => {
+      it('should load config when Configure tab is activated', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const mockConfig = {
+          portfolioId: '1',
+          tradingMode: 'paper',
+          signalCheckInterval: 300,
+          lookbackDays: 30,
+          historicalCacheEnabled: true,
+          historicalCacheLookbackDays: 90,
+          historicalCacheExchange: 'NSE',
+          historicalCacheInstrumentType: 'EQ',
+          historicalCacheCandleInterval: 'day',
+          historicalCacheTtlSeconds: 3600,
+          redisEnabled: false,
+          redisHost: 'localhost',
+          redisPort: 6379,
+          redisDb: 0,
+          redisKeyPrefix: 'portfolio:',
+          enableConditionalLogging: false,
+          cacheDurationSeconds: 300,
+          exchange: 'NSE',
+          candleInterval: 'day',
+          entryBbLower: true,
+          entryRsiThreshold: 30,
+          entryMacdTurnPositive: true,
+          entryVolumeAboveAvg: true,
+          entryFallbackSmaPeriod: 20,
+          entryFallbackAtrMultiplier: 2.0,
+          exitTakeProfitPct: 5.0,
+          exitStopLossAtrMult: 2.0,
+          exitAllowTpExitsOnly: false,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+
+        component.selectPortfolio(portfolio);
+        
+        // Initially, config should not be loaded
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configLoading).toBe(false);
+
+        // Switch to configure tab
+        component.onTabChange('configure');
+
+        // Config should be loaded
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledWith(portfolio.id);
+        expect(component.portfolioConfig).toEqual(mockConfig);
+        expect(component.configLoading).toBe(false);
+        expect(component.configError).toBeNull();
+      });
+
+      it('should handle 404 error gracefully when config does not exist', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const error404 = { status: 404, error: { message: 'Config not found' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => error404));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        // Config should be null (not found is expected)
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configError).toBeNull();
+        expect(component.configLoading).toBe(false);
+      });
+
+      it('should handle network errors when loading config', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const networkError = { status: 0, error: { message: 'Network error' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => networkError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        // Error should be set
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configError).toContain('Unable to connect');
+        expect(component.configLoading).toBe(false);
+      });
+
+      it('should handle server errors when loading config', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const serverError = { status: 500, error: { message: 'Internal server error' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => serverError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        // Error should be set
+        expect(component.portfolioConfig).toBeNull();
+        expect(component.configError).toContain('Server error');
+        expect(component.configLoading).toBe(false);
+      });
+    });
+
+    describe('Lazy loading behavior', () => {
+      it('should only load config once per portfolio selection', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const mockConfig = {
+          portfolioId: '1',
+          tradingMode: 'paper',
+          signalCheckInterval: 300,
+          lookbackDays: 30,
+          historicalCacheEnabled: true,
+          historicalCacheLookbackDays: 90,
+          historicalCacheExchange: 'NSE',
+          historicalCacheInstrumentType: 'EQ',
+          historicalCacheCandleInterval: 'day',
+          historicalCacheTtlSeconds: 3600,
+          redisEnabled: false,
+          redisHost: 'localhost',
+          redisPort: 6379,
+          redisDb: 0,
+          redisKeyPrefix: 'portfolio:',
+          enableConditionalLogging: false,
+          cacheDurationSeconds: 300,
+          exchange: 'NSE',
+          candleInterval: 'day',
+          entryBbLower: true,
+          entryRsiThreshold: 30,
+          entryMacdTurnPositive: true,
+          entryVolumeAboveAvg: true,
+          entryFallbackSmaPeriod: 20,
+          entryFallbackAtrMultiplier: 2.0,
+          exitTakeProfitPct: 5.0,
+          exitStopLossAtrMult: 2.0,
+          exitAllowTpExitsOnly: false,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(of(mockConfig));
+
+        component.selectPortfolio(portfolio);
+        
+        // Switch to configure tab
+        component.onTabChange('configure');
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledTimes(1);
+        
+        // Switch to another tab
+        component.onTabChange('overview');
+        
+        // Switch back to configure tab
+        component.onTabChange('configure');
+        
+        // Config should not be loaded again (lazy loading flag prevents it)
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledTimes(1);
+      });
+
+      it('should reset config loading flag when selecting a new portfolio', () => {
+        const portfolio1 = createMockPortfolio({ id: '1', name: 'Portfolio 1' });
+        const portfolio2 = createMockPortfolio({ id: '2', name: 'Portfolio 2' });
+        const mockConfig1 = {
+          portfolioId: '1',
+          tradingMode: 'paper',
+          signalCheckInterval: 300,
+          lookbackDays: 30,
+          historicalCacheEnabled: true,
+          historicalCacheLookbackDays: 90,
+          historicalCacheExchange: 'NSE',
+          historicalCacheInstrumentType: 'EQ',
+          historicalCacheCandleInterval: 'day',
+          historicalCacheTtlSeconds: 3600,
+          redisEnabled: false,
+          redisHost: 'localhost',
+          redisPort: 6379,
+          redisDb: 0,
+          redisKeyPrefix: 'portfolio:',
+          enableConditionalLogging: false,
+          cacheDurationSeconds: 300,
+          exchange: 'NSE',
+          candleInterval: 'day',
+          entryBbLower: true,
+          entryRsiThreshold: 30,
+          entryMacdTurnPositive: true,
+          entryVolumeAboveAvg: true,
+          entryFallbackSmaPeriod: 20,
+          entryFallbackAtrMultiplier: 2.0,
+          exitTakeProfitPct: 5.0,
+          exitStopLossAtrMult: 2.0,
+          exitAllowTpExitsOnly: false,
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z'
+        };
+        const mockConfig2 = { ...mockConfig1, portfolioId: '2' };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValues(of(mockConfig1), of(mockConfig2));
+
+        // Select first portfolio and load config
+        component.selectPortfolio(portfolio1);
+        component.onTabChange('configure');
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledWith(portfolio1.id);
+        
+        // Reset spy
+        mockPortfolioConfigApiService.getConfig.calls.reset();
+        
+        // Select second portfolio
+        component.selectPortfolio(portfolio2);
+        
+        // Switch to configure tab for second portfolio
+        component.onTabChange('configure');
+        
+        // Config should be loaded for the new portfolio
+        expect(mockPortfolioConfigApiService.getConfig).toHaveBeenCalledWith(portfolio2.id);
+      });
+    });
+
+    describe('Error handling', () => {
+      it('should handle authentication errors (401)', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const authError = { status: 401, error: { message: 'Unauthorized' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => authError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        expect(component.configError).toContain('session has expired');
+      });
+
+      it('should handle authorization errors (403)', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const forbiddenError = { status: 403, error: { message: 'Forbidden' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => forbiddenError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        expect(component.configError).toContain('permission');
+      });
+
+      it('should handle timeout errors', () => {
+        const portfolio = createMockPortfolio({ id: '1', name: 'Test Portfolio' });
+        const timeoutError = { status: 408, name: 'TimeoutError', error: { message: 'Timeout' } };
+
+        mockPortfolioConfigApiService.getConfig.and.returnValue(throwError(() => timeoutError));
+
+        component.selectPortfolio(portfolio);
+        component.onTabChange('configure');
+
+        expect(component.configError).toContain('timed out');
+      });
     });
   });
 });

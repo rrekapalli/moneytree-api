@@ -75,10 +75,33 @@ public class PortfolioService {
 
     public Optional<Portfolio> updatePortfolio(Portfolio portfolio) {
         log.info("updatePortfolio id={}", portfolio.getId());
-        if (!portfolioRepository.existsById(portfolio.getId())) {
+        
+        // Fetch existing portfolio to preserve user relationship
+        Optional<Portfolio> existingOpt = portfolioRepository.findById(portfolio.getId());
+        if (existingOpt.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(portfolioRepository.save(portfolio));
+        
+        Portfolio existing = existingOpt.get();
+        
+        // Update only the fields that should be updatable, preserve user
+        existing.setName(portfolio.getName());
+        existing.setDescription(portfolio.getDescription());
+        existing.setBaseCurrency(portfolio.getBaseCurrency());
+        existing.setInceptionDate(portfolio.getInceptionDate());
+        existing.setRiskProfile(portfolio.getRiskProfile());
+        existing.setIsActive(portfolio.getIsActive());
+        existing.setTargetAllocation(portfolio.getTargetAllocation());
+        existing.setInitialCapital(portfolio.getInitialCapital());
+        existing.setCurrentCash(portfolio.getCurrentCash());
+        existing.setTradingMode(portfolio.getTradingMode());
+        existing.setStrategyName(portfolio.getStrategyName());
+        existing.setStrategyParams(portfolio.getStrategyParams());
+        existing.setKiteApiKey(portfolio.getKiteApiKey());
+        existing.setKiteApiSecret(portfolio.getKiteApiSecret());
+        existing.setLastSignalCheck(portfolio.getLastSignalCheck());
+        
+        return Optional.of(portfolioRepository.save(existing));
     }
 
     public boolean deletePortfolio(UUID id) {

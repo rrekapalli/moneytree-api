@@ -1,0 +1,174 @@
+<div class="details-tab-content">
+  @if (editingPortfolio) {
+    <!-- Details Form -->
+    <div class="details-form">
+      <!-- Name -->
+      <div class="form-field">
+        <label for="portfolioName">Name</label>
+        <input pInputText 
+               id="portfolioName"
+               [(ngModel)]="editingPortfolio.name"
+               (ngModelChange)="onFormChange()"
+               placeholder="TestPortfolio"
+               [disabled]="!isEditing || isSaving" />
+      </div>
+
+      <!-- Description -->
+      <div class="form-field">
+        <label for="portfolioDescription">Description</label>
+        <textarea pTextarea
+               id="portfolioDescription"
+               [(ngModel)]="editingPortfolio.description"
+               (ngModelChange)="onFormChange()"
+               placeholder="Test"
+               rows="2"
+               [disabled]="!isEditing || isSaving">
+        </textarea>
+      </div>
+
+      <!-- Base Currency -->
+      <div class="form-field">
+        <label for="baseCurrency">Base Currency</label>
+        <p-select id="baseCurrency"
+                 [options]="currencyOptions" 
+                 [(ngModel)]="editingPortfolio.baseCurrency"
+                 (ngModelChange)="onFormChange()"
+                 optionLabel="label"
+                 optionValue="value"
+                 placeholder="Select currency"
+                 [disabled]="!isEditing || isSaving">
+        </p-select>
+      </div>
+
+      <!-- Initial Capital -->
+      <div class="form-field">
+        <label for="initialCapital">Initial Capital</label>
+        <input pInputText 
+               id="initialCapital"
+               type="number"
+               [(ngModel)]="editingPortfolio.initialCapital"
+               (ngModelChange)="onFormChange()"
+               placeholder="100000"
+               [disabled]="!isEditing || isSaving" />
+      </div>
+
+      <!-- Current Cash -->
+      <div class="form-field">
+        <label for="currentCash">Current Cash</label>
+        <input pInputText 
+               id="currentCash"
+               type="number"
+               [(ngModel)]="editingPortfolio.currentCash"
+               (ngModelChange)="onFormChange()"
+               placeholder="15000"
+               [disabled]="!isEditing || isSaving" />
+      </div>
+
+      <!-- Risk Profile -->
+      <div class="form-field">
+        <label for="riskProfile">Risk Profile</label>
+        <p-select id="riskProfile"
+                 [options]="riskProfileOptions" 
+                 [(ngModel)]="editingPortfolio.riskProfile"
+                 (ngModelChange)="onFormChange()"
+                 optionLabel="label"
+                 optionValue="value"
+                 placeholder="Select risk profile"
+                 [disabled]="!isEditing || isSaving">
+        </p-select>
+      </div>
+
+      <!-- Trading Mode -->
+      <div class="form-field">
+        <label for="tradingMode">Trading Mode</label>
+        <p-select id="tradingMode"
+                 [options]="tradingModeOptions" 
+                 [(ngModel)]="editingPortfolio.tradingMode"
+                 (ngModelChange)="onFormChange()"
+                 optionLabel="label"
+                 optionValue="value"
+                 placeholder="paper"
+                 [disabled]="!isEditing || isSaving">
+        </p-select>
+      </div>
+
+      <!-- Strategy Name -->
+      <div class="form-field">
+        <label for="strategyName">Strategy Name</label>
+        <p-select id="strategyName"
+                 [options]="strategyOptions" 
+                 [(ngModel)]="editingPortfolio.strategyName"
+                 optionLabel="label"
+                 optionValue="value"
+                 placeholder="Momentum Investing"
+                 [disabled]="true">
+        </p-select>
+      </div>
+
+      <!-- Demat Account -->
+      <div class="form-field">
+        <label for="dematAccount">Demat Account</label>
+        <p-select id="dematAccount"
+                 [options]="dematAccountOptions" 
+                 [(ngModel)]="editingPortfolio.dematAccount"
+                 optionLabel="label"
+                 optionValue="value"
+                 placeholder="AB1234567B"
+                 [disabled]="true">
+        </p-select>
+      </div>
+
+      <!-- Is Active -->
+      <div class="form-field toggle-field">
+        <p-toggleSwitch id="isActive"
+                       [(ngModel)]="editingPortfolio.isActive"
+                       (ngModelChange)="onFormChange()"
+                       [disabled]="!isEditing || isSaving">
+        </p-toggleSwitch>
+        <label for="isActive">Is Active</label>
+      </div>
+
+      <!-- Footer with Timestamps and Action Buttons -->
+      <div class="form-footer">
+        <div class="timestamp-info">
+          <span class="timestamp-item">Last Signal Check: {{ formatDate(editingPortfolio.lastSignalCheck) }}</span>
+          <span class="timestamp-separator">|</span>
+          <span class="timestamp-item">Created: {{ formatDate(editingPortfolio.createdAt) }}</span>
+          <span class="timestamp-separator">|</span>
+          <span class="timestamp-item">Updated: {{ formatDate(editingPortfolio.updatedAt) }}</span>
+        </div>
+        <div class="form-actions">
+          <button pButton 
+                  label="Reset" 
+                  class="p-button-outlined"
+                  (click)="cancelEdit()"
+                  [disabled]="!isFormDirty || isSaving">
+          </button>
+          <button pButton 
+                  label="Save Details" 
+                  class="p-button-success"
+                  (click)="saveEditAll()"
+                  [disabled]="!isFormDirty || isSaving">
+            @if (isSaving) {
+              <i class="pi pi-spin pi-spinner"></i>
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+  } @else {
+    <div class="no-selection-message">
+      <i class="pi pi-info-circle"></i>
+      <h3>No Portfolio Selected</h3>
+      <p>Please select a portfolio from the Overview tab to view its details, or click "Create Portfolio" to create a new one.</p>
+      <button pButton 
+              label="Back to Overview" 
+              icon="pi pi-arrow-left" 
+              class="p-button-outlined"
+              (click)="navigateToOverview()">
+      </button>
+    </div>
+  }
+</div>

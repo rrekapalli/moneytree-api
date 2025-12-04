@@ -21,12 +21,14 @@ import { Subject, takeUntil, finalize, retry, timer, catchError, throwError, deb
 import { PortfolioApiService } from '../../services/apis/portfolio.api';
 import { PortfolioHoldingApiService } from '../../services/apis/portfolio-holding.api';
 import { PortfolioTradeApiService } from '../../services/apis/portfolio-trade.api';
-import { PortfolioDto, PortfolioHolding, PortfolioTrade } from '../../services/entities/portfolio.entities';
+import { PortfolioConfigApiService } from '../../services/apis/portfolio-config.api';
+import { PortfolioDto, PortfolioHolding, PortfolioTrade, PortfolioConfig } from '../../services/entities/portfolio.entities';
 import { PortfolioWithMetrics } from './portfolio.types';
 import { PortfolioConfigForm } from '../../services/entities/portfolio.entities';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
 import { PortfolioConfigureComponent } from './configure/configure.component';
+import { PortfolioDetailsComponent } from './details/details.component';
 import { PortfolioHoldingsComponent } from './holdings/holdings.component';
 import { PortfolioTradesComponent } from './trades/trades.component';
 
@@ -53,6 +55,7 @@ import { PortfolioTradesComponent } from './trades/trades.component';
     ScrollPanelModule,
     PageHeaderComponent,
     PortfolioConfigureComponent,
+    PortfolioDetailsComponent,
     PortfolioHoldingsComponent,
     PortfolioTradesComponent
   ],
@@ -92,8 +95,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   // Selected portfolio for detail view
   selectedPortfolio: PortfolioWithMetrics | null = null;
   
-  // Active tab for the detail panel (overview, configure, holdings, trades)
-  activeTab: 'overview' | 'configure' | 'holdings' | 'trades' = 'overview';
+  // Active tab for the detail panel (overview, details, configure, holdings, trades)
+  activeTab: 'overview' | 'details' | 'configure' | 'holdings' | 'trades' = 'overview';
   
   // Cache for portfolio data
   private portfolioCache: Map<string, PortfolioWithMetrics[]> = new Map();
@@ -107,12 +110,18 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
   // Lazy loading flags for tabs
   private holdingsLoaded = false;
   private tradesLoaded = false;
+  private configLoaded = false;
 
   // Configure tab form state
   configForm: PortfolioConfigForm = this.getDefaultConfigForm();
   originalConfigForm: PortfolioConfigForm = this.getDefaultConfigForm();
   configFormDirty = false;
   savingConfig = false;
+
+  // Portfolio config state
+  portfolioConfig: PortfolioConfig | null = null;
+  configLoading = false;
+  configError: string | null = null;
 
   // Holdings tab state
   holdings: PortfolioHolding[] = [];
@@ -139,6 +148,30 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     { label: 'Threshold-based', value: 'THRESHOLD' }
   ];
 
+  // Dropdown options for Configure tab
+  tradingModeOptions = [
+    { label: 'Paper Trading', value: 'paper' },
+    { label: 'Live Trading', value: 'live' }
+  ];
+
+  exchangeOptions = [
+    { label: 'NSE', value: 'NSE' },
+    { label: 'BSE', value: 'BSE' }
+  ];
+
+  candleIntervalOptions = [
+    { label: 'Minute', value: 'minute' },
+    { label: 'Day', value: 'day' },
+    { label: 'Week', value: 'week' },
+    { label: 'Month', value: 'month' }
+  ];
+
+  instrumentTypeOptions = [
+    { label: 'Equity (EQ)', value: 'EQ' },
+    { label: 'Futures (FUT)', value: 'FUT' },
+    { label: 'Options (OPT)', value: 'OPT' }
+  ];
+
   // Trades tab state
   trades: PortfolioTrade[] = [];
   tradesLoading = false;
@@ -149,6 +182,7 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     private portfolioApiService: PortfolioApiService,
     private portfolioHoldingApiService: PortfolioHoldingApiService,
     private portfolioTradeApiService: PortfolioTradeApiService,
+    private portfolioConfigApiService: PortfolioConfigApiService,
     private toastService: ToastService,
     private cdr: ChangeDetectorRef,
     private router: Router,
@@ -616,8 +650,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         labels: ['Now']
       }
     };
-    // Switch to Configure tab for new portfolio creation
-    this.activeTab = 'configure';
+    // Switch to Details tab for new portfolio creation
+    this.activeTab = 'details';
   }
 
   selectPortfolio(portfolio: PortfolioWithMetrics): void {
@@ -630,17 +664,18 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     // Reset lazy loading flags when selecting a new portfolio
     this.holdingsLoaded = false;
     this.tradesLoaded = false;
+    this.configLoaded = false;
     
     // Update URL with deep link
     this.router.navigate(['/portfolios', portfolio.id, this.activeTab]);
   }
 
   // Method to handle tab changes
-  onTabChange(tab: 'overview' | 'configure' | 'holdings' | 'trades' | string | number | undefined): void {
+  onTabChange(tab: 'overview' | 'details' | 'configure' | 'holdings' | 'trades' | string | number | undefined): void {
     if (tab !== undefined) {
       // Handle both string and number types from PrimeNG tabs
       const tabValue = typeof tab === 'string' ? tab : tab.toString();
-      if (tabValue === 'overview' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
+      if (tabValue === 'overview' || tabValue === 'details' || tabValue === 'configure' || tabValue === 'holdings' || tabValue === 'trades') {
         this.activeTab = tabValue;
         
         // Update URL with deep link using Location API to avoid full navigation
@@ -656,6 +691,9 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
         } else if (tabValue === 'trades' && this.selectedPortfolio && !this.tradesLoaded) {
           this.loadTrades(this.selectedPortfolio.id);
           this.tradesLoaded = true;
+        } else if (tabValue === 'configure' && this.selectedPortfolio && !this.configLoaded) {
+          this.loadPortfolioConfig(this.selectedPortfolio.id);
+          this.configLoaded = true;
         }
       }
     }
@@ -962,8 +1000,8 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     this.configFormDirty = false;
   }
 
-  // Configure component event handlers
-  onConfigureSave(updatedPortfolio: PortfolioWithMetrics): void {
+  // Details component event handlers
+  onDetailsSave(updatedPortfolio: PortfolioWithMetrics): void {
     // Update the portfolio in the list
     const index = this.portfolios.findIndex(p => p.id === updatedPortfolio.id);
     if (index !== -1) {
@@ -976,7 +1014,20 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
     }
     this.applyFilters();
     this.cdr.markForCheck();
-    this.toastService.show('success', 'Success', 'Portfolio saved successfully');
+    this.toastService.show('success', 'Success', 'Portfolio details saved successfully');
+  }
+
+  onDetailsCancel(): void {
+    // Handle cancel if needed
+  }
+
+  // Configure component event handlers
+  onConfigSave(savedConfig: PortfolioConfig): void {
+    // Configuration saved successfully
+    // Update the portfolioConfig state
+    this.portfolioConfig = savedConfig;
+    this.cdr.markForCheck();
+    this.toastService.show('success', 'Success', 'Portfolio configuration saved successfully');
   }
 
   onConfigureCancel(): void {
@@ -1220,6 +1271,63 @@ export class PortfoliosComponent implements OnInit, OnDestroy {
           // Error already handled in catchError
         }
       });
+  }
+
+  // Portfolio config loading method
+  loadPortfolioConfig(portfolioId: string): void {
+    this.configLoading = true;
+    this.configError = null;
+    this.portfolioConfig = null;
+    this.cdr.markForCheck();
+    
+    this.portfolioConfigApiService.getConfig(portfolioId)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.configLoading = false;
+          this.cdr.markForCheck();
+        }),
+        catchError((error) => {
+          // Handle 404 as expected - config doesn't exist yet
+          if (error.status === 404) {
+            this.configError = null;
+            this.portfolioConfig = null;
+            return of(null);
+          }
+          
+          this.handleConfigLoadError(error);
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: (config) => {
+          this.portfolioConfig = config;
+          this.configError = null;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Error already handled in catchError
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  private handleConfigLoadError(error: any): void {
+    console.error('Error loading portfolio config:', error);
+    
+    if (error.status === 0) {
+      this.configError = 'Unable to connect to the server. Please check your internet connection.';
+    } else if (error.status === 401) {
+      this.configError = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      this.configError = 'You do not have permission to view configuration for this portfolio.';
+    } else if (error.status >= 500) {
+      this.configError = 'Server error occurred. Please try again later.';
+    } else if (error.status === 408 || error.name === 'TimeoutError') {
+      this.configError = 'Request timed out. Please try again.';
+    } else {
+      this.configError = error.error?.message || error.userMessage || 'Failed to load portfolio configuration. Please try again.';
+    }
   }
 
 }

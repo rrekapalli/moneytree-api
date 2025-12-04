@@ -1,4 +1,5 @@
 export * from './api.base';
+export * from './backtest.api';
 export * from './engines-api.base';
 export * from './feature-flag.api';
 export * from './indices.api';
@@ -8,6 +9,10 @@ export * from './nse-historical-data.api';
 export * from './nse-quote-equity.api';
 export * from './nse-indices.api';
 export * from './portfolio.api';
+export * from './portfolio-config.api';
 export * from './portfolio-holding.api';
 export * from './portfolio-trade.api';
 export * from './screener.api';
+export * from './strategy.api';
+export * from './strategy-config.api';
+export * from './strategy-metrics.api';

@@ -1,0 +1,402 @@
+/**
+ * Backtest Results Component Styles
+ * 
+ * Styles for the backtest results tab, following the patterns established
+ * in the Overview component and Portfolios page for consistency.
+ */
+
+// Empty State
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  min-height: 400px;
+
+  i {
+    font-size: 4rem;
+    color: var(--text-color-secondary);
+    margin-bottom: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: var(--text-color-secondary);
+    margin-bottom: 1.5rem;
+    max-width: 500px;
+  }
+}
+
+// Loading State
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  min-height: 400px;
+
+  i {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--text-color-secondary);
+    font-size: 1rem;
+  }
+}
+
+// Error State
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  min-height: 400px;
+
+  i {
+    font-size: 3rem;
+    color: var(--red-600);
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    max-width: 500px;
+  }
+}
+
+// Backtest Results Content
+.backtest-results-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+// Backtest Info Header
+.backtest-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  background: var(--surface-card);
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  gap: 2rem;
+
+  .backtest-info {
+    flex: 1;
+
+    h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-color);
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-color-secondary);
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+
+      i {
+        font-size: 0.9rem;
+      }
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .backtest-capital {
+    display: flex;
+    gap: 2rem;
+
+    .capital-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+
+      .capital-label {
+        font-size: 0.85rem;
+        color: var(--text-color-secondary);
+        margin-bottom: 0.25rem;
+      }
+
+      .capital-value {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+      }
+    }
+  }
+}
+
+// Summary Metrics Section
+.summary-metrics-section {
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .metric-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--surface-card);
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    transition: all 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .metric-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      i {
+        font-size: 1.5rem;
+      }
+    }
+
+    .metric-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1;
+
+      .metric-label {
+        font-size: 0.85rem;
+        color: var(--text-color-secondary);
+        font-weight: 500;
+      }
+
+      .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-color);
+      }
+    }
+  }
+}
+
+// Equity Curve Section
+.equity-curve-section {
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+  }
+
+  .chart-loading,
+  .chart-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: var(--surface-card);
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+
+    i {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: var(--text-color-secondary);
+    }
+  }
+
+  .chart-loading i {
+    color: var(--primary-color);
+  }
+
+  .chart-error i {
+    color: var(--red-600);
+  }
+
+  .chart-container {
+    background: var(--surface-card);
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    padding: 1rem;
+
+    .equity-chart {
+      width: 100%;
+      height: 400px;
+    }
+  }
+}
+
+// Trades Table Section
+.trades-table-section {
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 1rem;
+  }
+
+  .trades-loading,
+  .trades-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    background: var(--surface-card);
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+
+    i {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: var(--text-color-secondary);
+    }
+  }
+
+  .trades-loading i {
+    color: var(--primary-color);
+  }
+
+  .trades-error i {
+    color: var(--red-600);
+  }
+
+  .empty-trades-message {
+    padding: 2rem;
+    text-align: center;
+
+    i {
+      font-size: 2.5rem;
+      color: var(--text-color-secondary);
+      margin-bottom: 1rem;
+    }
+
+    p {
+      color: var(--text-color-secondary);
+    }
+  }
+
+  // Table styling
+  ::ng-deep {
+    .p-datatable {
+      .p-datatable-thead > tr > th {
+        background: var(--surface-card);
+        color: var(--text-color);
+        font-weight: 600;
+        border-bottom: 2px solid var(--surface-border);
+        padding: 1rem;
+
+        &.text-right {
+          text-align: right;
+        }
+      }
+
+      .p-datatable-tbody > tr {
+        &:hover {
+          background: var(--surface-hover);
+        }
+
+        > td {
+          padding: 1rem;
+          border-bottom: 1px solid var(--surface-border);
+
+          &.text-right {
+            text-align: right;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .backtest-info-header {
+    flex-direction: column;
+    gap: 1.5rem;
+
+    .backtest-capital {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  .summary-metrics-section {
+    .metrics-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .metric-card {
+      padding: 1rem;
+
+      .metric-icon {
+        width: 40px;
+        height: 40px;
+
+        i {
+          font-size: 1.25rem;
+        }
+      }
+
+      .metric-content {
+        .metric-value {
+          font-size: 1.25rem;
+        }
+      }
+    }
+  }
+
+  .equity-curve-section {
+    .chart-container {
+      .equity-chart {
+        height: 300px;
+      }
+    }
+  }
+}

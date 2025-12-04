@@ -6,7 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -18,10 +18,20 @@ class KiteHistoryEdgeCasesTest {
 
     @Test
     void invalidDateRangeReturnsBadRequest() throws Exception {
-        mockMvc.perform(get("/api/marketdata/kite/test-token/history")
-                        .param("interval", "1m")
-                        .param("from", "2024-01-02T09:30:00Z")
-                        .param("to", "2024-01-01T09:30:00Z"))
+        String requestBody = """
+                {
+                    "tradingsymbol": "test-token",
+                    "instrumenttoken": "test-token",
+                    "exchange": "NSE",
+                    "interval": "1m",
+                    "from": "2024-01-02T09:30:00Z",
+                    "to": "2024-01-01T09:30:00Z"
+                }
+                """;
+        
+        mockMvc.perform(post("/api/marketdata/kite/test-token/history")
+                        .contentType("application/json")
+                        .content(requestBody))
                 .andExpect(status().isBadRequest());
     }
 }

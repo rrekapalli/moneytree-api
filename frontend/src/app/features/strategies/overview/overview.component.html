@@ -1,0 +1,329 @@
+<div class="overview-container" role="region" [attr.aria-label]="'Overview for ' + strategy.name">
+  <!-- Strategy Header -->
+  <div class="overview-header">
+    <h2 class="strategy-title">{{ strategy.name }}</h2>
+    <p class="strategy-description">{{ strategy.description }}</p>
+  </div>
+
+  <!-- Performance Metrics Section -->
+  <section class="metrics-section" aria-labelledby="metrics-heading">
+    <h3 id="metrics-heading" class="section-title">Performance Metrics</h3>
+    
+    <!-- Loading State -->
+    <div *ngIf="metricsLoading" class="loading-state" role="status" aria-live="polite" aria-busy="true">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+      <p>Loading performance metrics...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="metricsError && !metricsLoading" class="error-state" role="alert" aria-live="assertive">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <p>{{ metricsError }}</p>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div *ngIf="!metricsLoading && !metricsError && metrics" class="metrics-grid">
+      <!-- Total Return Card -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i class="pi pi-chart-line" aria-hidden="true"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Total Return</span>
+          <span 
+            class="metric-value" 
+            [style.color]="getPerformanceColor(metrics.totalReturn)">
+            {{ formatPercent(metrics.totalReturn) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- CAGR Card -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i class="pi pi-trending-up" aria-hidden="true"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">CAGR</span>
+          <span 
+            class="metric-value" 
+            [style.color]="getPerformanceColor(metrics.cagr)">
+            {{ formatPercent(metrics.cagr) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Sharpe Ratio Card -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i class="pi pi-star" aria-hidden="true"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Sharpe Ratio</span>
+          <span class="metric-value">
+            {{ formatNumber(metrics.sharpeRatio) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Max Drawdown Card -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i class="pi pi-arrow-down" aria-hidden="true"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Max Drawdown</span>
+          <span 
+            class="metric-value" 
+            style="color: var(--red-600)">
+            {{ formatPercent(metrics.maxDrawdown) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Win Rate Card -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i class="pi pi-percentage" aria-hidden="true"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Win Rate</span>
+          <span class="metric-value">
+            {{ formatPercent(metrics.winRate) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Total Trades Card -->
+      <div class="metric-card">
+        <div class="metric-icon">
+          <i class="pi pi-list" aria-hidden="true"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Total Trades</span>
+          <span class="metric-value">
+            {{ metrics.totalTrades || 0 }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State when no metrics -->
+    <div *ngIf="!metricsLoading && !metricsError && !metrics" class="empty-state" role="status">
+      <i class="pi pi-chart-line" aria-hidden="true"></i>
+      <p>No performance metrics available yet</p>
+      <p class="empty-state-hint">Run a backtest to generate performance metrics</p>
+    </div>
+  </section>
+
+  <!-- Performance Chart Section -->
+  <section class="chart-section" aria-labelledby="chart-heading">
+    <h3 id="chart-heading" class="section-title">Performance Chart</h3>
+    
+    <!-- Loading State -->
+    <div *ngIf="chartLoading" class="loading-state" role="status" aria-live="polite" aria-busy="true">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+      <p>Loading performance chart...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="chartError && !chartLoading" class="error-state" role="alert" aria-live="assertive">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <p>{{ chartError }}</p>
+    </div>
+
+    <!-- Chart Display -->
+    <div *ngIf="!chartLoading && !chartError && chartOptions" class="chart-container">
+      <div 
+        echarts 
+        [options]="chartOptions" 
+        class="performance-chart"
+        [attr.aria-label]="'Performance chart for ' + strategy.name">
+      </div>
+    </div>
+
+    <!-- Empty State when no chart data -->
+    <div *ngIf="!chartLoading && !chartError && !chartOptions" class="empty-state" role="status">
+      <i class="pi pi-chart-line" aria-hidden="true"></i>
+      <p>No performance data available yet</p>
+      <p class="empty-state-hint">Run a backtest to generate performance history</p>
+    </div>
+  </section>
+
+  <!-- Recent Trades Section -->
+  <section class="trades-section" aria-labelledby="trades-heading">
+    <h3 id="trades-heading" class="section-title">Recent Trades</h3>
+    
+    <!-- Loading State -->
+    <div *ngIf="tradesLoading" class="loading-state" role="status" aria-live="polite" aria-busy="true">
+      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+      <p>Loading recent trades...</p>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="tradesError && !tradesLoading" class="error-state" role="alert" aria-live="assertive">
+      <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+      <p>{{ tradesError }}</p>
+    </div>
+
+    <!-- Trades Table -->
+    <div *ngIf="!tradesLoading && !tradesError && recentTrades.length > 0" class="trades-table-container">
+      <p-table 
+        [value]="recentTrades" 
+        [tableStyle]="{ 'min-width': '50rem' }"
+        styleClass="p-datatable-sm"
+        [attr.aria-label]="'Recent trades for ' + strategy.name">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Entry Price</th>
+            <th>Exit Price</th>
+            <th>Shares</th>
+            <th>Principal</th>
+            <th>Profit/Loss</th>
+            <th>P/L %</th>
+            <th>Holding Days</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-trade>
+          <tr>
+            <td>{{ formatDate(trade.tradeDate) }}</td>
+            <td>
+              <p-tag 
+                [value]="trade.tradeType" 
+                [severity]="trade.tradeType === 'BUY' ? 'success' : 'danger'">
+              </p-tag>
+            </td>
+            <td>{{ formatCurrency(trade.entryPrice) }}</td>
+            <td>{{ formatCurrency(trade.exitPrice) }}</td>
+            <td>{{ trade.shares }}</td>
+            <td>{{ formatCurrency(trade.principal) }}</td>
+            <td>
+              <span [style.color]="getPerformanceColor(trade.profit)">
+                {{ formatProfit(trade.profit) }}
+              </span>
+            </td>
+            <td>
+              <p-tag 
+                [value]="formatProfitPercent(trade.profitPct)" 
+                [severity]="getProfitSeverity(trade.profit)">
+              </p-tag>
+            </td>
+            <td>{{ trade.holdingDays }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="9" class="text-center">
+              <div class="empty-state">
+                <i class="pi pi-inbox" aria-hidden="true"></i>
+                <p>No trades found</p>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+
+    <!-- Empty State when no trades -->
+    <div *ngIf="!tradesLoading && !tradesError && recentTrades.length === 0" class="empty-state" role="status">
+      <i class="pi pi-inbox" aria-hidden="true"></i>
+      <p>No trades available yet</p>
+      <p class="empty-state-hint">Run a backtest to generate trade history</p>
+    </div>
+  </section>
+
+  <!-- Strategy Status Section -->
+  <section class="status-section" aria-labelledby="status-heading">
+    <h3 id="status-heading" class="section-title">Strategy Status</h3>
+    
+    <!-- Status indicators -->
+    <div class="status-indicators">
+      <!-- Current Status Card -->
+      <div class="status-card">
+        <div class="status-card-header">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          <span class="status-card-title">Current Status</span>
+        </div>
+        <div class="status-card-content">
+          <p-tag 
+            [value]="strategy.status || 'Inactive'" 
+            [severity]="getStatusSeverity(strategy.status)"
+            styleClass="status-badge"
+            [attr.aria-label]="'Strategy status: ' + (strategy.status || 'Inactive')">
+          </p-tag>
+          <p class="status-description">
+            <ng-container [ngSwitch]="strategy.status">
+              <span *ngSwitchCase="'Active'">Strategy is actively trading and generating signals</span>
+              <span *ngSwitchCase="'Backtesting'">Strategy is currently running a backtest</span>
+              <span *ngSwitchCase="'Inactive'">Strategy is not currently trading</span>
+              <span *ngSwitchCase="'Error'">Strategy encountered an error and needs attention</span>
+              <span *ngSwitchDefault>Strategy status is unknown</span>
+            </ng-container>
+          </p>
+        </div>
+      </div>
+
+      <!-- Last Execution Card -->
+      <div class="status-card">
+        <div class="status-card-header">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          <span class="status-card-title">Last Execution</span>
+        </div>
+        <div class="status-card-content">
+          <p class="status-value">
+            {{ strategy.lastBacktestDate ? formatDate(strategy.lastBacktestDate) : 'Never' }}
+          </p>
+          <p class="status-description">
+            <ng-container *ngIf="strategy.lastBacktestDate; else noExecution">
+              Last backtest was run on this date
+            </ng-container>
+            <ng-template #noExecution>
+              No backtest has been run yet
+            </ng-template>
+          </p>
+        </div>
+      </div>
+
+      <!-- Risk Profile Card -->
+      <div class="status-card">
+        <div class="status-card-header">
+          <i [class]="getStrategyIcon(strategy.riskProfile)" aria-hidden="true"></i>
+          <span class="status-card-title">Risk Profile</span>
+        </div>
+        <div class="status-card-content">
+          <p class="status-value">{{ getRiskProfileLabel(strategy.riskProfile) }}</p>
+          <p class="status-description">
+            <ng-container [ngSwitch]="strategy.riskProfile">
+              <span *ngSwitchCase="'CONSERVATIVE'">Lower risk with stable returns</span>
+              <span *ngSwitchCase="'MODERATE'">Balanced risk and return profile</span>
+              <span *ngSwitchCase="'AGGRESSIVE'">Higher risk with potential for higher returns</span>
+              <span *ngSwitchDefault>Risk profile not specified</span>
+            </ng-container>
+          </p>
+        </div>
+      </div>
+
+      <!-- Active Status Card -->
+      <div class="status-card">
+        <div class="status-card-header">
+          <i class="pi pi-power-off" aria-hidden="true"></i>
+          <span class="status-card-title">Trading Status</span>
+        </div>
+        <div class="status-card-content">
+          <p class="status-value">
+            <p-tag 
+              [value]="strategy.isActive ? 'Enabled' : 'Disabled'" 
+              [severity]="strategy.isActive ? 'success' : 'secondary'"
+              [attr.aria-label]="'Trading is ' + (strategy.isActive ? 'enabled' : 'disabled')">
+            </p-tag>
+          </p>
+          <p class="status-description">
+            {{ strategy.isActive ? 'Strategy is enabled for live trading' : 'Strategy is disabled and not trading' }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

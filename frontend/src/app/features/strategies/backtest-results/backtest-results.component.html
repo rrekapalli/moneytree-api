@@ -1,0 +1,292 @@
+<!-- Empty State - No Backtest Results -->
+<div *ngIf="hasNoBacktestResults && !backtestRunLoading" class="empty-state" role="status">
+  <i class="pi pi-chart-bar" aria-hidden="true"></i>
+  <h3>No Backtest Results Available</h3>
+  <p>Run a backtest to see performance metrics, equity curves, and trade history.</p>
+  <p-button 
+    label="Go to Configure" 
+    icon="pi pi-cog" 
+    (onClick)="onNavigateToConfigure()"
+    [outlined]="true"
+    aria-label="Navigate to Configure tab to run a backtest">
+  </p-button>
+</div>
+
+<!-- Loading State -->
+<div *ngIf="backtestRunLoading" class="loading-state" role="status" aria-live="polite" aria-busy="true">
+  <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+  <p>Loading backtest results...</p>
+</div>
+
+<!-- Error State -->
+<div *ngIf="backtestRunError" class="error-state" role="alert" aria-live="assertive">
+  <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+  <p>{{ backtestRunError }}</p>
+  <p-button 
+    label="Retry" 
+    icon="pi pi-refresh" 
+    (onClick)="loadBacktestResults()"
+    [text]="true"
+    aria-label="Retry loading backtest results">
+  </p-button>
+</div>
+
+<!-- Backtest Results Content -->
+<div *ngIf="backtestRun && !backtestRunLoading" class="backtest-results-content">
+  
+  <!-- Backtest Info Header -->
+  <div class="backtest-info-header">
+    <div class="backtest-info">
+      <h3>{{ backtestRun.strategyName }}</h3>
+      <p class="backtest-period">
+        <i class="pi pi-calendar"></i>
+        {{ formatDate(backtestRun.startDate) }} - {{ formatDate(backtestRun.endDate) }}
+      </p>
+      <p class="backtest-symbol">
+        <i class="pi pi-chart-line"></i>
+        Symbol: {{ backtestRun.symbol }}
+      </p>
+    </div>
+    <div class="backtest-capital">
+      <div class="capital-item">
+        <span class="capital-label">Initial Capital</span>
+        <span class="capital-value">{{ formatCurrency(backtestRun.initialCapital) }}</span>
+      </div>
+      <div class="capital-item">
+        <span class="capital-label">Final Equity</span>
+        <span class="capital-value" [style.color]="getPerformanceColor(backtestRun.totalReturnPct)">
+          {{ formatCurrency(backtestRun.finalEquity) }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Metrics Section -->
+  <div class="summary-metrics-section">
+    <h4>Performance Summary</h4>
+    <div class="metrics-grid">
+      <!-- Total Return -->
+      <div class="metric-card">
+        <div class="metric-icon" [style.background-color]="getPerformanceColor(backtestRun.totalReturnPct) + '20'">
+          <i class="pi pi-chart-line" [style.color]="getPerformanceColor(backtestRun.totalReturnPct)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Total Return</span>
+          <span class="metric-value" [style.color]="getPerformanceColor(backtestRun.totalReturnPct)">
+            {{ formatPercent(backtestRun.totalReturnPct) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- CAGR -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(99, 102, 241, 0.1)">
+          <i class="pi pi-arrow-up" style="color: var(--indigo-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">CAGR</span>
+          <span class="metric-value">{{ formatPercent(backtestRun.cagr) }}</span>
+        </div>
+      </div>
+
+      <!-- Sharpe Ratio -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.1)">
+          <i class="pi pi-star" style="color: var(--green-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Sharpe Ratio</span>
+          <span class="metric-value">{{ formatNumber(backtestRun.sharpeRatio) }}</span>
+        </div>
+      </div>
+
+      <!-- Sortino Ratio -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.1)">
+          <i class="pi pi-star-fill" style="color: var(--green-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Sortino Ratio</span>
+          <span class="metric-value">{{ formatNumber(backtestRun.sortinoRatio) }}</span>
+        </div>
+      </div>
+
+      <!-- Max Drawdown -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(239, 68, 68, 0.1)">
+          <i class="pi pi-arrow-down" style="color: var(--red-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Max Drawdown</span>
+          <span class="metric-value" style="color: var(--red-600)">
+            {{ formatPercent(backtestRun.maxDrawdownPct) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Win Rate -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.1)">
+          <i class="pi pi-check-circle" style="color: var(--green-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Win Rate</span>
+          <span class="metric-value">{{ formatPercent(backtestRun.winRate) }}</span>
+        </div>
+      </div>
+
+      <!-- Total Trades -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(99, 102, 241, 0.1)">
+          <i class="pi pi-list" style="color: var(--indigo-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Total Trades</span>
+          <span class="metric-value">{{ backtestRun.totalTrades }}</span>
+        </div>
+      </div>
+
+      <!-- Profit Factor -->
+      <div class="metric-card">
+        <div class="metric-icon" style="background-color: rgba(16, 185, 129, 0.1)">
+          <i class="pi pi-percentage" style="color: var(--green-600)"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Profit Factor</span>
+          <span class="metric-value">{{ formatNumber(backtestRun.profitFactor) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equity Curve Chart Section -->
+  <div class="equity-curve-section">
+    <h4>Equity Curve</h4>
+    
+    <!-- Chart Loading State -->
+    <div *ngIf="chartLoading" class="chart-loading" role="status" aria-live="polite">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading chart...</p>
+    </div>
+
+    <!-- Chart Error State -->
+    <div *ngIf="chartError" class="chart-error" role="alert">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>{{ chartError }}</p>
+    </div>
+
+    <!-- Chart -->
+    <div *ngIf="chartOptions && !chartLoading && !chartError" class="chart-container">
+      <div 
+        echarts 
+        [options]="chartOptions" 
+        class="equity-chart"
+        role="img"
+        [attr.aria-label]="'Equity curve chart showing strategy performance vs buy-and-hold benchmark'">
+      </div>
+    </div>
+  </div>
+
+  <!-- Trades Table Section -->
+  <div class="trades-table-section">
+    <h4>Trade History</h4>
+
+    <!-- Trades Loading State -->
+    <div *ngIf="tradesLoading" class="trades-loading" role="status" aria-live="polite">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading trades...</p>
+    </div>
+
+    <!-- Trades Error State -->
+    <div *ngIf="tradesError" class="trades-error" role="alert">
+      <i class="pi pi-exclamation-triangle"></i>
+      <p>{{ tradesError }}</p>
+    </div>
+
+    <!-- Trades Table -->
+    <p-table 
+      *ngIf="!tradesLoading && !tradesError"
+      [value]="backtestTrades" 
+      [paginator]="backtestTrades.length > 10"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      [sortField]="'tradeDate'"
+      [sortOrder]="-1"
+      [scrollable]="true"
+      scrollHeight="400px"
+      styleClass="p-datatable-sm"
+      responsiveLayout="scroll"
+      [attr.aria-label]="'Trade history table with ' + backtestTrades.length + ' trades'">
+      
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="tradeDate">
+            Entry Date
+            <p-sortIcon field="tradeDate"></p-sortIcon>
+          </th>
+          <th>Exit Date</th>
+          <th>Symbol</th>
+          <th pSortableColumn="entryPrice" class="text-right">
+            Entry Price
+            <p-sortIcon field="entryPrice"></p-sortIcon>
+          </th>
+          <th pSortableColumn="exitPrice" class="text-right">
+            Exit Price
+            <p-sortIcon field="exitPrice"></p-sortIcon>
+          </th>
+          <th pSortableColumn="shares" class="text-right">
+            Shares
+            <p-sortIcon field="shares"></p-sortIcon>
+          </th>
+          <th pSortableColumn="profit" class="text-right">
+            P/L
+            <p-sortIcon field="profit"></p-sortIcon>
+          </th>
+          <th pSortableColumn="profitPct" class="text-right">
+            P/L %
+            <p-sortIcon field="profitPct"></p-sortIcon>
+          </th>
+          <th pSortableColumn="holdingDays" class="text-right">
+            Holding Period
+            <p-sortIcon field="holdingDays"></p-sortIcon>
+          </th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-trade>
+        <tr>
+          <td>{{ formatDate(trade.tradeDate) }}</td>
+          <td>{{ formatDate(trade.tradeDate) }}</td>
+          <td><strong>{{ backtestRun.symbol || 'N/A' }}</strong></td>
+          <td class="text-right">{{ formatCurrency(trade.entryPrice) }}</td>
+          <td class="text-right">{{ formatCurrency(trade.exitPrice) }}</td>
+          <td class="text-right">{{ trade.shares }}</td>
+          <td class="text-right">
+            <p-tag 
+              [value]="formatProfit(trade.profit)" 
+              [severity]="getProfitSeverity(trade.profit)">
+            </p-tag>
+          </td>
+          <td class="text-right">
+            <span [style.color]="getPerformanceColor(trade.profitPct)">
+              {{ formatProfitPercent(trade.profitPct) }}
+            </span>
+          </td>
+          <td class="text-right">{{ trade.holdingDays }} days</td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="9" class="text-center">
+            <div class="empty-trades-message">
+              <i class="pi pi-inbox"></i>
+              <p>No trades found for this backtest</p>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+</div>

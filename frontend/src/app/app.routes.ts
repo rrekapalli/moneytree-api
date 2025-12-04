@@ -94,10 +94,15 @@ export const routes: Routes = [
         canActivate: [featureFlagGuard('strategies')]
       },
       {
-        path: 'strategies/:id',
+        path: 'strategies/:id/:tab',
         component: StrategiesComponent,
         title: 'Strategy Details - MoneyPlant',
         canActivate: [featureFlagGuard('strategies')]
+      },
+      {
+        path: 'strategies/:id',
+        redirectTo: 'strategies/:id/overview',
+        pathMatch: 'full'
       },
       {
         path: 'watchlists',

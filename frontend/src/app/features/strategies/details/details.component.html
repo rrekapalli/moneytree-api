@@ -1,0 +1,116 @@
+<div class="details-container">
+  <p-card>
+    <ng-template pTemplate="header">
+      <div class="card-header">
+        <h3>Strategy Details</h3>
+        <p class="text-secondary">Edit basic information about your strategy</p>
+      </div>
+    </ng-template>
+
+    <ng-template pTemplate="content">
+      <!-- Error message -->
+      <div *ngIf="error" class="error-message">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ error }}</span>
+      </div>
+
+      <!-- Details form -->
+      <form [formGroup]="detailsForm" class="details-form">
+        <!-- Strategy Name -->
+        <div class="form-field">
+          <label for="name" class="form-label required">Strategy Name</label>
+          <input
+            pInputText
+            id="name"
+            formControlName="name"
+            placeholder="Enter strategy name"
+            class="w-full"
+            [class.ng-invalid]="nameControl?.invalid && nameControl?.touched"
+          />
+          <small
+            *ngIf="nameControl?.invalid && nameControl?.touched"
+            class="error-text"
+          >
+            <span *ngIf="nameControl?.errors?.['required']">Strategy name is required.</span>
+            <span *ngIf="nameControl?.errors?.['maxlength']">
+              Strategy name must be less than 200 characters.
+            </span>
+          </small>
+        </div>
+
+        <!-- Description -->
+        <div class="form-field">
+          <label for="description" class="form-label">Description</label>
+          <textarea
+            pInputText
+            id="description"
+            formControlName="description"
+            placeholder="Enter strategy description (optional)"
+            rows="4"
+            class="w-full"
+            [class.ng-invalid]="descriptionControl?.invalid && descriptionControl?.touched"
+          ></textarea>
+          <small
+            *ngIf="descriptionControl?.invalid && descriptionControl?.touched"
+            class="error-text"
+          >
+            <span *ngIf="descriptionControl?.errors?.['maxlength']">
+              Description must be less than 1000 characters.
+            </span>
+          </small>
+        </div>
+
+        <!-- Risk Profile -->
+        <div class="form-field">
+          <label for="riskProfile" class="form-label required">Risk Profile</label>
+          <p-select
+            id="riskProfile"
+            formControlName="riskProfile"
+            [options]="riskProfileOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select risk profile"
+            class="w-full"
+            [class.ng-invalid]="riskProfileControl?.invalid && riskProfileControl?.touched"
+          ></p-select>
+          <small
+            *ngIf="riskProfileControl?.invalid && riskProfileControl?.touched"
+            class="error-text"
+          >
+            <span *ngIf="riskProfileControl?.errors?.['required']">Risk profile is required.</span>
+          </small>
+          <small class="help-text">
+            Choose the risk level that matches your trading style and risk tolerance.
+          </small>
+        </div>
+
+        <!-- Dirty state indicator -->
+        <div *ngIf="isDirty" class="unsaved-changes-notice">
+          <i class="pi pi-info-circle"></i>
+          <span>You have unsaved changes</span>
+        </div>
+      </form>
+    </ng-template>
+
+    <ng-template pTemplate="footer">
+      <div class="form-actions">
+        <p-button
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="onCancel()"
+          [disabled]="saving || !isDirty"
+        ></p-button>
+        <p-button
+          label="Save Changes"
+          icon="pi pi-check"
+          severity="primary"
+          (onClick)="onSave()"
+          [disabled]="saving || !isDirty || !isValid"
+          [loading]="saving"
+        ></p-button>
+      </div>
+    </ng-template>
+  </p-card>
+</div>

@@ -1,0 +1,164 @@
+.details-container {
+  padding: 1rem;
+  height: 100%;
+  overflow-y: auto;
+
+  :host ::ng-deep .p-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .p-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .p-card-content {
+      flex: 1;
+    }
+  }
+}
+
+.card-header {
+  padding: 1rem 1.5rem;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .text-secondary {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--red-50);
+  border: 1px solid var(--red-200);
+  border-radius: 6px;
+  color: var(--red-700);
+  font-size: 0.875rem;
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.details-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-color);
+
+  &.required::after {
+    content: ' *';
+    color: var(--red-500);
+  }
+}
+
+.error-text {
+  color: var(--red-500);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.help-text {
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.unsaved-changes-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--yellow-50);
+  border: 1px solid var(--yellow-200);
+  border-radius: 6px;
+  color: var(--yellow-700);
+  font-size: 0.875rem;
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--surface-border);
+}
+
+// Input validation styles
+:host ::ng-deep {
+  .ng-invalid.ng-touched {
+    border-color: var(--red-500);
+
+    &:focus {
+      border-color: var(--red-500);
+      box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25);
+    }
+  }
+
+  .p-inputtext,
+  textarea.p-inputtext {
+    width: 100%;
+  }
+  
+  textarea.p-inputtext {
+    resize: vertical;
+    min-height: 100px;
+  }
+
+  .p-select {
+    width: 100%;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .details-container {
+    padding: 0.5rem;
+  }
+
+  .card-header {
+    padding: 0.75rem 1rem;
+
+    h3 {
+      font-size: 1.125rem;
+    }
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+
+    p-button {
+      width: 100%;
+    }
+  }
+}

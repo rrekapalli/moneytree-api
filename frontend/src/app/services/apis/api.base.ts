@@ -1,9 +1,19 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { AuthService } from '../security/auth.service';
+
+export interface ApiError {
+  status: number;
+  statusText: string;
+  userMessage: string;
+  originalError: any;
+  canRetry: boolean;
+  validationErrors?: Record<string, string[]>;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +23,8 @@ export class ApiService {
 
   constructor(
     private http: HttpClient,
-    private authService: AuthService
+    private authService: AuthService,
+    private router: Router
   ) {}
 
   /**
@@ -111,11 +122,71 @@ export class ApiService {
   }
 
   /**
-   * Handles HTTP errors
+   * Handles HTTP errors with comprehensive error handling
    * @param error The HTTP error
-   * @returns An Observable with the error
+   * @returns An Observable with enhanced error information
    */
-  private handleError(error: any): Observable<never> {
-    return throwError(() => error);
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    const apiError: ApiError = {
+      status: error.status,
+      statusText: error.statusText,
+      userMessage: 'An error occurred',
+      originalError: error,
+      canRetry: false
+    };
+
+    // Network errors (status 0)
+    if (error.status === 0) {
+      apiError.userMessage = 'Unable to connect to the server. Please check your internet connection.';
+      apiError.canRetry = true;
+    }
+    // Authentication errors (status 401)
+    else if (error.status === 401) {
+      apiError.userMessage = 'Your session has expired. Please log in again.';
+      apiError.canRetry = false;
+      
+      // Clear token and redirect to login
+      this.authService.logout();
+    }
+    // Authorization errors (status 403)
+    else if (error.status === 403) {
+      apiError.userMessage = 'You do not have permission to perform this action.';
+      apiError.canRetry = false;
+    }
+    // Not found errors (status 404)
+    else if (error.status === 404) {
+      apiError.userMessage = 'The requested resource was not found.';
+      apiError.canRetry = false;
+    }
+    // Validation errors (status 400)
+    else if (error.status === 400) {
+      // Try to extract validation errors from response
+      if (error.error?.errors) {
+        apiError.validationErrors = error.error.errors;
+        apiError.userMessage = 'Validation failed. Please check your inputs.';
+      } else if (error.error?.message) {
+        apiError.userMessage = error.error.message;
+      } else {
+        apiError.userMessage = 'Invalid request. Please check your inputs.';
+      }
+      apiError.canRetry = false;
+    }
+    // Server errors (status 500+)
+    else if (error.status >= 500) {
+      apiError.userMessage = 'Server error occurred. Please try again later.';
+      apiError.canRetry = true;
+    }
+    // Other client errors (4xx)
+    else if (error.status >= 400 && error.status < 500) {
+      apiError.userMessage = error.error?.message || 'An error occurred processing your request.';
+      apiError.canRetry = false;
+    }
+    // Unknown errors
+    else {
+      apiError.userMessage = 'An unexpected error occurred. Please try again.';
+      apiError.canRetry = true;
+    }
+
+    return throwError(() => apiError);
   }
 }

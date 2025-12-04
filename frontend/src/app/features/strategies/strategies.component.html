@@ -9,149 +9,225 @@
 
 <div class="page-container">
 
-  <div class="content">
-    <p-card *ngIf="loading" styleClass="loading-card">
-      <div class="loading-message">
-        <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
-        <p>Loading strategies...</p>
-      </div>
-    </p-card>
-
-    <div *ngIf="!loading" class="strategies-layout">
-      <!-- Strategies Table -->
-      <p-card styleClass="strategies-table-card">
-        <ng-template pTemplate="header">
-          <div class="card-header">
-            <h2>My Strategies</h2>
-          </div>
-        </ng-template>
-        
-        <p-table [value]="strategies" styleClass="p-datatable-sm" [tableStyle]="{'min-width': '50rem'}">
-          <ng-template pTemplate="header">
-            <tr>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Performance</th>
-              <th>Last Updated</th>
-              <th>Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-strategy>
-            <tr>
-              <td>
-                <div class="strategy-name">
-                  <span class="name">{{ strategy.name }}</span>
-                  <span class="description">{{ strategy.description }}</span>
-                </div>
-              </td>
-              <td>{{ strategy.type }}</td>
-              <td>
-                <p-tag [value]="strategy.status" [severity]="getStatusSeverity(strategy.status)"></p-tag>
-              </td>
-              <td>
-                <span [ngClass]="getPerformanceClass(strategy.performance)">
-                  {{ strategy.performance > 0 ? '+' : '' }}{{ strategy.performance }}%
-                </span>
-              </td>
-              <td>{{ strategy.lastUpdated | date:'short' }}</td>
-              <td>
-                <div class="strategy-actions">
-                  <button 
-                    pButton 
-                    [icon]="strategy.status === 'Active' ? 'pi pi-pause' : 'pi pi-play'" 
-                    class="p-button-rounded p-button-sm" 
-                    [ngClass]="{'p-button-warning': strategy.status === 'Active', 'p-button-success': strategy.status !== 'Active'}"
-                    (click)="toggleStrategyStatus(strategy)" 
-                    [title]="strategy.status === 'Active' ? 'Pause Strategy' : 'Activate Strategy'"
-                  ></button>
-                  <button pButton icon="pi pi-eye" class="p-button-rounded p-button-sm p-button-info" (click)="selectStrategy(strategy)" title="View Details"></button>
-                  <button pButton icon="pi pi-pencil" class="p-button-rounded p-button-sm p-button-warning" (click)="editStrategy(strategy)" title="Edit Strategy"></button>
-                  <button pButton icon="pi pi-trash" class="p-button-rounded p-button-sm p-button-danger" (click)="deleteStrategy(strategy)" title="Delete Strategy"></button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="6">
-                <div class="empty-message">
-                  <p>No strategies found. Create your first strategy to get started.</p>
-                  <button pButton label="Create Strategy" icon="pi pi-plus" (click)="createStrategy()"></button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </p-card>
-
-      <!-- Performance Chart -->
-      <p-card styleClass="performance-chart-card">
-        <ng-template pTemplate="header">
-          <div class="card-header">
-            <h2>Performance Overview</h2>
-          </div>
-        </ng-template>
-        
-        <div class="chart-container">
-          <p-chart type="line" [data]="performanceData" [options]="performanceOptions"></p-chart>
+  <!-- Two-Panel Layout -->
+  <div class="two-panel-layout">
+    <!-- Left Sidebar -->
+    <div class="left-sidebar" role="navigation" aria-label="Strategy list">
+      <!-- Search Input -->
+      <div class="search-section">
+        <label for="strategy-search" class="sr-only">Search strategies</label>
+        <div class="search-controls">
+          <span class="p-input-icon-left search-input-wrapper">
+            <i class="pi pi-search" aria-hidden="true"></i>
+            <input 
+              id="strategy-search"
+              type="text" 
+              pInputText 
+              [(ngModel)]="searchText" 
+              (ngModelChange)="onSearchChange()"
+              placeholder="Search..." 
+              class="search-input"
+              aria-label="Search strategies by name or description" />
+          </span>
+          <p-select 
+            [(ngModel)]="sortField"
+            [options]="sortOptions"
+            (ngModelChange)="onSortFieldChange()"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+            class="sort-dropdown"
+            [pTooltip]="getSortLabel()"
+            tooltipPosition="top"
+            aria-label="Sort strategies">
+            <ng-template pTemplate="selectedItem">
+              <i class="pi pi-sort-alt"></i>
+            </ng-template>
+          </p-select>
         </div>
-        
-        <ng-template pTemplate="footer">
-          <div class="chart-footer">
-            <p>Showing performance over the last 7 months compared to market benchmark.</p>
+      </div>
+
+      <!-- Strategy List -->
+      <p-scrollpanel *ngIf="!loading" class="strategy-list-scroll" [style]="{ width: '100%', height: '100%' }">
+        <div class="strategy-list" role="list" aria-label="Available strategies">
+          <div 
+            *ngFor="let strategy of filteredStrategies; trackBy: trackStrategyById"
+            class="strategy-card"
+            [class.selected]="selectedStrategy?.id === strategy.id"
+            (click)="selectStrategy(strategy)"
+            (keydown.enter)="selectStrategy(strategy)"
+            (keydown.space)="selectStrategy(strategy); $event.preventDefault()"
+            role="listitem"
+            tabindex="0"
+            [attr.aria-label]="'Strategy: ' + strategy.name + ', Return: ' + formatReturn(strategy.totalReturn) + ', ' + (strategy.isActive ? 'Active' : 'Inactive')"
+            [attr.aria-selected]="selectedStrategy?.id === strategy.id">
+            
+            <div class="strategy-card-header">
+              <h3 class="strategy-name">{{ strategy.name }}</h3>
+              <p-tag 
+                [value]="strategy.status || 'Inactive'" 
+                [severity]="getStatusSeverity(strategy.status)"
+                [attr.aria-label]="'Status: ' + (strategy.status || 'Inactive')">
+              </p-tag>
+            </div>
+
+            <p class="strategy-description">{{ strategy.description }}</p>
+
+            <div class="strategy-metrics">
+              <div class="metric">
+                <span class="metric-label">CAGR</span>
+                <span 
+                  class="metric-value" 
+                  [style.color]="getPerformanceColor(strategy.cagr)">
+                  {{ formatReturn(strategy.cagr) }}
+                </span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Sharpe</span>
+                <span class="metric-value">{{ strategy.sharpeRatio?.toFixed(2) || 'N/A' }}</span>
+              </div>
+              <div class="metric">
+                <span class="metric-label">Trades</span>
+                <span class="metric-value">{{ strategy.totalTrades || 0 }}</span>
+              </div>
+            </div>
+
+            <div class="strategy-footer">
+              <span class="last-executed">
+                <i class="pi pi-clock"></i>
+                Last: {{ strategy.lastBacktestDate ? formatDate(strategy.lastBacktestDate) : 'N/A' }}
+              </span>
+              <span class="risk-profile">
+                <i [class]="getStrategyIcon(strategy.riskProfile)"></i>
+                {{ getRiskProfileLabel(strategy.riskProfile) }}
+              </span>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="strategy-actions">
+              <p-button
+                [icon]="strategy.isActive ? 'pi pi-pause' : 'pi pi-play'"
+                [label]="strategy.isActive ? 'Deactivate' : 'Activate'"
+                [severity]="strategy.isActive ? 'secondary' : 'success'"
+                [outlined]="true"
+                size="small"
+                (onClick)="toggleStrategyActive(strategy, $event)"
+                [pTooltip]="strategy.isActive ? 'Deactivate strategy' : 'Activate strategy'"
+                tooltipPosition="top"
+                [attr.aria-label]="(strategy.isActive ? 'Deactivate' : 'Activate') + ' strategy ' + strategy.name">
+              </p-button>
+              <p-button
+                icon="pi pi-trash"
+                severity="danger"
+                [outlined]="true"
+                size="small"
+                (onClick)="deleteStrategy(strategy, $event)"
+                pTooltip="Delete strategy"
+                tooltipPosition="top"
+                [attr.aria-label]="'Delete strategy ' + strategy.name">
+              </p-button>
+            </div>
           </div>
-        </ng-template>
-      </p-card>
+
+          <!-- Empty State -->
+          <div *ngIf="filteredStrategies.length === 0" class="empty-state" role="status" aria-live="polite">
+            <i class="pi pi-inbox" aria-hidden="true"></i>
+            <p>No strategies found</p>
+            <p-button 
+              label="Clear Filters" 
+              icon="pi pi-filter-slash" 
+              (onClick)="clearFilters()"
+              [text]="true"
+              aria-label="Clear all filters to show all strategies">
+            </p-button>
+          </div>
+        </div>
+      </p-scrollpanel>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state" role="status" aria-live="polite" aria-busy="true">
+        <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+        <p>Loading strategies...</p>
+        <p *ngIf="retryCount > 0" class="retry-info">Retrying... (Attempt {{ retryCount + 1 }} of {{ maxRetries + 1 }})</p>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error" class="error-state" role="alert" aria-live="assertive">
+        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+        <p>{{ error }}</p>
+        <p-button 
+          label="Retry" 
+          icon="pi pi-refresh" 
+          (onClick)="loadStrategies()"
+          [text]="true"
+          aria-label="Retry loading strategies">
+        </p-button>
+      </div>
     </div>
 
-    <!-- Strategy Details View (when a strategy is selected) -->
-    <p-card *ngIf="selectedStrategy" styleClass="strategy-details-card">
-      <ng-template pTemplate="header">
-        <div class="card-header">
-          <h2>{{ selectedStrategy.name }} Details</h2>
-          <button pButton icon="pi pi-times" class="p-button-rounded p-button-text" (click)="selectedStrategy = null"></button>
-        </div>
-      </ng-template>
-      
-      <div class="strategy-details">
-        <div class="detail-row">
-          <span class="label">Description:</span>
-          <span class="value">{{ selectedStrategy.description }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Type:</span>
-          <span class="value">{{ selectedStrategy.type }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Status:</span>
-          <p-tag [value]="selectedStrategy.status" [severity]="getStatusSeverity(selectedStrategy.status)"></p-tag>
-        </div>
-        <div class="detail-row">
-          <span class="label">Performance:</span>
-          <span class="value" [ngClass]="getPerformanceClass(selectedStrategy.performance)">
-            {{ selectedStrategy.performance > 0 ? '+' : '' }}{{ selectedStrategy.performance }}%
-          </span>
-        </div>
-        <div class="detail-row">
-          <span class="label">Last Updated:</span>
-          <span class="value">{{ selectedStrategy.lastUpdated | date:'medium' }}</span>
-        </div>
+    <!-- Right Detail Panel -->
+    <div class="right-panel" role="main" aria-label="Strategy details">
+      <!-- Show message when no strategy is selected -->
+      <div *ngIf="!selectedStrategy" class="no-selection-state" role="status">
+        <i class="pi pi-chart-line" aria-hidden="true"></i>
+        <h3>Select a Strategy</h3>
+        <p>Choose a strategy from the list to view details and manage settings</p>
       </div>
-      
-      <ng-template pTemplate="footer">
-        <div class="strategy-detail-actions">
-          <button 
-            pButton 
-            [label]="selectedStrategy.status === 'Active' ? 'Pause Strategy' : 'Activate Strategy'" 
-            [icon]="selectedStrategy.status === 'Active' ? 'pi pi-pause' : 'pi pi-play'" 
-            [ngClass]="{'p-button-warning': selectedStrategy.status === 'Active', 'p-button-success': selectedStrategy.status !== 'Active'}"
-            (click)="toggleStrategyStatus(selectedStrategy)"
-          ></button>
-          <button pButton label="Edit Strategy" icon="pi pi-pencil" class="p-button-outlined" (click)="editStrategy(selectedStrategy)"></button>
-          <button pButton label="Delete Strategy" icon="pi pi-trash" class="p-button-outlined p-button-danger" (click)="deleteStrategy(selectedStrategy)"></button>
-        </div>
-      </ng-template>
-    </p-card>
+
+      <!-- Show tabs when a strategy is selected -->
+      <div *ngIf="selectedStrategy" class="strategy-detail">
+        <p-tabs [(value)]="activeTab" (valueChange)="onTabChange($event)" role="tablist" [attr.aria-label]="'Strategy details for ' + selectedStrategy.name">
+          <p-tablist>
+            <p-tab value="overview" role="tab" [attr.aria-selected]="activeTab === 'overview'" [attr.aria-controls]="'overview-panel'">
+              <i class="pi pi-chart-line" aria-hidden="true"></i>
+              Overview
+            </p-tab>
+            <p-tab value="details" role="tab" [attr.aria-selected]="activeTab === 'details'" [attr.aria-controls]="'details-panel'">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              Details
+            </p-tab>
+            <p-tab value="configure" role="tab" [attr.aria-selected]="activeTab === 'configure'" [attr.aria-controls]="'configure-panel'">
+              <i class="pi pi-cog" aria-hidden="true"></i>
+              Configure
+            </p-tab>
+            <p-tab value="backtest-results" role="tab" [attr.aria-selected]="activeTab === 'backtest-results'" [attr.aria-controls]="'backtest-results-panel'">
+              <i class="pi pi-history" aria-hidden="true"></i>
+              Backtest Results
+            </p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <!-- Overview Tab -->
+            <p-tabpanel value="overview" role="tabpanel" id="overview-panel" [attr.aria-labelledby]="'Overview tab for ' + selectedStrategy.name">
+              <app-strategy-overview [strategy]="selectedStrategy"></app-strategy-overview>
+            </p-tabpanel>
+
+            <!-- Details Tab -->
+            <p-tabpanel value="details" role="tabpanel" id="details-panel" [attr.aria-labelledby]="'Details tab for ' + selectedStrategy.name">
+              <app-strategy-details 
+                [strategy]="selectedStrategy"
+                (strategySaved)="onStrategySaved($event)">
+              </app-strategy-details>
+            </p-tabpanel>
+
+            <!-- Configure Tab -->
+            <p-tabpanel value="configure" role="tabpanel" id="configure-panel" [attr.aria-labelledby]="'Configure tab for ' + selectedStrategy.name">
+              <app-strategy-configure 
+                [strategy]="selectedStrategy"
+                (configSaved)="onConfigSaved($event)"
+                (backtestTriggered)="onBacktestTriggered()">
+              </app-strategy-configure>
+            </p-tabpanel>
+
+            <!-- Backtest Results Tab -->
+            <p-tabpanel value="backtest-results" role="tabpanel" id="backtest-results-panel" [attr.aria-labelledby]="'Backtest Results tab for ' + selectedStrategy.name">
+              <app-backtest-results 
+                [strategy]="selectedStrategy"
+                (navigateToConfigure)="onNavigateToConfigureTab()">
+              </app-backtest-results>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      </div>
+    </div>
   </div>
 </div>

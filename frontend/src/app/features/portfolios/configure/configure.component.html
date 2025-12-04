@@ -1,182 +1,487 @@
 <div class="configure-tab-content">
-  @if (editingPortfolio) {
-    <!-- Configuration Form -->
-    <div class="configure-form">
-      <!-- Name and Description Row -->
-      <div class="form-row">
-        <div class="form-field">
-          <label for="portfolioName">Name</label>
-          <input pInputText 
-                 id="portfolioName"
-                 [(ngModel)]="editingPortfolio.name"
-                 (ngModelChange)="onFormChange()"
-                 placeholder="TestPortfolio"
-                 [disabled]="!isEditing || isSaving" />
-        </div>
-        <div class="form-field">
-          <label for="portfolioDescription">Description</label>
-          <textarea pTextarea
-                 id="portfolioDescription"
-                 [(ngModel)]="editingPortfolio.description"
-                 (ngModelChange)="onFormChange()"
-                 placeholder="Test"
-                 rows="2"
-                 [disabled]="!isEditing || isSaving">
-          </textarea>
-        </div>
+  @if (selectedPortfolio) {
+    @if (isLoading) {
+      <!-- Loading State -->
+      <div class="loading-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>Loading configuration...</p>
       </div>
-
-      <!-- Base Currency Row -->
-      <div class="form-row">
-        <div class="form-field">
-          <label for="baseCurrency">Base Currency</label>
-          <p-select id="baseCurrency"
-                   [options]="currencyOptions" 
-                   [(ngModel)]="editingPortfolio.baseCurrency"
-                   (ngModelChange)="onFormChange()"
-                   optionLabel="label"
-                   optionValue="value"
-                   placeholder="Select currency"
-                   [disabled]="!isEditing || isSaving">
-          </p-select>
-        </div>
-      </div>
-
-      <!-- Risk Profile and Initial Capital Row -->
-      <div class="form-row">
-        <div class="form-field">
-          <label for="riskProfile">Risk Profile</label>
-          <p-select id="riskProfile"
-                   [options]="riskProfileOptions" 
-                   [(ngModel)]="editingPortfolio.riskProfile"
-                   (ngModelChange)="onFormChange()"
-                   optionLabel="label"
-                   optionValue="value"
-                   placeholder="Select risk profile"
-                   [disabled]="!isEditing || isSaving">
-          </p-select>
-        </div>
-        <div class="form-field">
-          <label for="initialCapital">Initial Capital</label>
-          <input pInputText 
-                 id="initialCapital"
-                 type="number"
-                 [(ngModel)]="editingPortfolio.initialCapital"
-                 (ngModelChange)="onFormChange()"
-                 placeholder="100000"
-                 [disabled]="!isEditing || isSaving" />
-        </div>
-      </div>
-
-      <!-- Current Cash Row -->
-      <div class="form-row">
-        <div class="form-field">
-          <label for="currentCash">Current Cash</label>
-          <input pInputText 
-                 id="currentCash"
-                 type="number"
-                 [(ngModel)]="editingPortfolio.currentCash"
-                 (ngModelChange)="onFormChange()"
-                 placeholder="15000"
-                 [disabled]="!isEditing || isSaving" />
-        </div>
-      </div>
-
-      <!-- Strategy Name and Trading Mode Row -->
-      <div class="form-row">
-        <div class="form-field">
-          <label for="strategyName">Strategy Name</label>
-          <p-select id="strategyName"
-                   [options]="strategyOptions" 
-                   [(ngModel)]="editingPortfolio.strategyName"
-                   optionLabel="label"
-                   optionValue="value"
-                   placeholder="Momentum Investing"
-                   [disabled]="true">
-          </p-select>
-        </div>
-        <div class="form-field">
-          <label for="tradingMode">Trading Mode</label>
-          <p-select id="tradingMode"
-                   [options]="tradingModeOptions" 
-                   [(ngModel)]="editingPortfolio.tradingMode"
-                   (ngModelChange)="onFormChange()"
-                   optionLabel="label"
-                   optionValue="value"
-                   placeholder="paper"
-                   [disabled]="!isEditing || isSaving">
-          </p-select>
-        </div>
-      </div>
-
-      <!-- Demat Account and Is Active Row -->
-      <div class="form-row">
-        <div class="form-field">
-          <label for="dematAccount">Demat Account</label>
-          <p-select id="dematAccount"
-                   [options]="dematAccountOptions" 
-                   [(ngModel)]="editingPortfolio.dematAccount"
-                   optionLabel="label"
-                   optionValue="value"
-                   placeholder="AB1234567B"
-                   [disabled]="true">
-          </p-select>
-        </div>
-        <div class="form-field toggle-field">
-          <label for="isActive">Is Active</label>
-          <p-toggleSwitch id="isActive"
-                         [(ngModel)]="editingPortfolio.isActive"
-                         (ngModelChange)="onFormChange()"
-                         [disabled]="!isEditing || isSaving">
-          </p-toggleSwitch>
-        </div>
-      </div>
-
-      <!-- Portfolio Information Section -->
-      <div class="portfolio-info-section">
-        <h3>Portfolio Information</h3>
-        <div class="info-row">
-          <div class="info-item">
-            <span class="info-label">Last Signal Check</span>
-            <span class="info-value">{{ formatDate(editingPortfolio.lastSignalCheck) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Created At</span>
-            <span class="info-value">{{ formatDate(editingPortfolio.createdAt) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">Updated At</span>
-            <span class="info-value">{{ formatDate(editingPortfolio.updatedAt) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="form-actions">
+    } @else if (errorMessage) {
+      <!-- Error State -->
+      <div class="error-message">
+        <i class="pi pi-exclamation-triangle"></i>
+        <h3>Error Loading Configuration</h3>
+        <p>{{ errorMessage }}</p>
         <button pButton 
-                label="Reset" 
+                label="Retry" 
+                icon="pi pi-refresh" 
                 class="p-button-outlined"
-                (click)="cancelEdit()"
-                [disabled]="!isFormDirty || isSaving">
-        </button>
-        <button pButton 
-                label="Save Configuration" 
-                class="p-button-success"
-                (click)="saveEditAll()"
-                [disabled]="!isFormDirty || isSaving">
-          @if (isSaving) {
-            <i class="pi pi-spin pi-spinner"></i>
-          }
+                (click)="loadConfig(selectedPortfolio.id)">
         </button>
       </div>
-    </div>
+    } @else if (portfolioConfig) {
+      <!-- Configuration Form -->
+      <div class="configure-form">
+        <div class="configure-header">
+          <h2 class="form-title">Portfolio Configuration</h2>
+        </div>
+
+        <!-- Configuration Accordion -->
+        <p-accordion [multiple]="false" [(value)]="activeAccordionValue" styleClass="config-accordion">
+          
+          <!-- Trading Configuration Section -->
+          <p-accordionpanel [value]="0">
+            <p-accordionheader>
+              <div class="section-header">
+                <i class="pi pi-chart-line section-icon"></i>
+                <span class="section-title">Trading Configuration - <span class="section-description">Trading mode, signal intervals, and lookback settings</span></span>
+              </div>
+            </p-accordionheader>
+            <p-accordioncontent>
+              <div class="section-content">
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="tradingMode">Trading Mode <span class="required">*</span></label>
+                    <p-select 
+                      id="tradingMode"
+                      [(ngModel)]="portfolioConfig.tradingMode"
+                      (ngModelChange)="onFormChange()"
+                      [options]="tradingModeOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select trading mode"
+                      [disabled]="isSaving"
+                      [class.invalid]="hasValidationError('tradingMode')">
+                    </p-select>
+                    @if (hasValidationError('tradingMode')) {
+                      <small class="validation-error">{{ getValidationError('tradingMode') }}</small>
+                    }
+                  </div>
+                  <div class="form-field">
+                    <label for="signalCheckInterval">Signal Check Interval (seconds) <span class="required">*</span></label>
+                    <input pInputText 
+                           id="signalCheckInterval"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.signalCheckInterval"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="300"
+                           [disabled]="isSaving"
+                           [class.invalid]="hasValidationError('signalCheckInterval')" />
+                    @if (hasValidationError('signalCheckInterval')) {
+                      <small class="validation-error">{{ getValidationError('signalCheckInterval') }}</small>
+                    }
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="lookbackDays">Lookback Days <span class="required">*</span></label>
+                    <input pInputText 
+                           id="lookbackDays"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.lookbackDays"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="30"
+                           [disabled]="isSaving"
+                           [class.invalid]="hasValidationError('lookbackDays')" />
+                    @if (hasValidationError('lookbackDays')) {
+                      <small class="validation-error">{{ getValidationError('lookbackDays') }}</small>
+                    }
+                  </div>
+                  <div class="form-field toggle-field">
+                    <label for="enableConditionalLogging">Enable Conditional Logging</label>
+                    <p-toggleswitch 
+                      id="enableConditionalLogging"
+                      [(ngModel)]="portfolioConfig.enableConditionalLogging"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="cacheDurationSeconds">Cache Duration (seconds)</label>
+                    <input pInputText 
+                           id="cacheDurationSeconds"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.cacheDurationSeconds"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="300"
+                           [disabled]="isSaving" />
+                  </div>
+                  <div class="form-field">
+                    <label for="exchange">Exchange</label>
+                    <p-select 
+                      id="exchange"
+                      [(ngModel)]="portfolioConfig.exchange"
+                      (ngModelChange)="onFormChange()"
+                      [options]="exchangeOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select exchange"
+                      [disabled]="isSaving">
+                    </p-select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="candleInterval">Candle Interval</label>
+                    <p-select 
+                      id="candleInterval"
+                      [(ngModel)]="portfolioConfig.candleInterval"
+                      (ngModelChange)="onFormChange()"
+                      [options]="candleIntervalOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select candle interval"
+                      [disabled]="isSaving">
+                    </p-select>
+                  </div>
+                </div>
+              </div>
+            </p-accordioncontent>
+          </p-accordionpanel>
+
+          <!-- Historical Cache Configuration Section -->
+          <p-accordionpanel [value]="1">
+            <p-accordionheader>
+              <div class="section-header">
+                <i class="pi pi-database section-icon"></i>
+                <span class="section-title">Historical Cache Configuration - <span class="section-description">Cache settings for historical market data</span></span>
+              </div>
+            </p-accordionheader>
+            <p-accordioncontent>
+              <div class="section-content">
+                <div class="form-row">
+                  <div class="form-field toggle-field">
+                    <label for="historicalCacheEnabled">Enable Historical Cache</label>
+                    <p-toggleswitch 
+                      id="historicalCacheEnabled"
+                      [(ngModel)]="portfolioConfig.historicalCacheEnabled"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                  <div class="form-field">
+                    <label for="historicalCacheLookbackDays">Lookback Days</label>
+                    <input pInputText 
+                           id="historicalCacheLookbackDays"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.historicalCacheLookbackDays"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="365"
+                           [disabled]="isSaving" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="historicalCacheExchange">Exchange</label>
+                    <p-select 
+                      id="historicalCacheExchange"
+                      [(ngModel)]="portfolioConfig.historicalCacheExchange"
+                      (ngModelChange)="onFormChange()"
+                      [options]="exchangeOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select exchange"
+                      [disabled]="isSaving">
+                    </p-select>
+                  </div>
+                  <div class="form-field">
+                    <label for="historicalCacheInstrumentType">Instrument Type</label>
+                    <p-select 
+                      id="historicalCacheInstrumentType"
+                      [(ngModel)]="portfolioConfig.historicalCacheInstrumentType"
+                      (ngModelChange)="onFormChange()"
+                      [options]="instrumentTypeOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select instrument type"
+                      [disabled]="isSaving">
+                    </p-select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="historicalCacheCandleInterval">Candle Interval</label>
+                    <p-select 
+                      id="historicalCacheCandleInterval"
+                      [(ngModel)]="portfolioConfig.historicalCacheCandleInterval"
+                      (ngModelChange)="onFormChange()"
+                      [options]="candleIntervalOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select candle interval"
+                      [disabled]="isSaving">
+                    </p-select>
+                  </div>
+                  <div class="form-field">
+                    <label for="historicalCacheTtlSeconds">TTL (seconds)</label>
+                    <input pInputText 
+                           id="historicalCacheTtlSeconds"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.historicalCacheTtlSeconds"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="86400"
+                           [disabled]="isSaving" />
+                  </div>
+                </div>
+              </div>
+            </p-accordioncontent>
+          </p-accordionpanel>
 
 
+          <!-- Redis Configuration Section -->
+          <p-accordionpanel [value]="2">
+            <p-accordionheader>
+              <div class="section-header">
+                <i class="pi pi-server section-icon"></i>
+                <span class="section-title">Redis Configuration - <span class="section-description">Redis connection and caching settings</span></span>
+              </div>
+            </p-accordionheader>
+            <p-accordioncontent>
+              <div class="section-content">
+                <div class="form-row">
+                  <div class="form-field toggle-field">
+                    <label for="redisEnabled">Enable Redis</label>
+                    <p-toggleswitch 
+                      id="redisEnabled"
+                      [(ngModel)]="portfolioConfig.redisEnabled"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                  <div class="form-field">
+                    <label for="redisHost">Host @if (portfolioConfig.redisEnabled) {<span class="required">*</span>}</label>
+                    <input pInputText 
+                           id="redisHost"
+                           [(ngModel)]="portfolioConfig.redisHost"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="localhost"
+                           [disabled]="isSaving"
+                           [class.invalid]="hasValidationError('redisHost')" />
+                    @if (hasValidationError('redisHost')) {
+                      <small class="validation-error">{{ getValidationError('redisHost') }}</small>
+                    }
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="redisPort">Port @if (portfolioConfig.redisEnabled) {<span class="required">*</span>}</label>
+                    <input pInputText 
+                           id="redisPort"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.redisPort"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="6379"
+                           [disabled]="isSaving"
+                           [class.invalid]="hasValidationError('redisPort')" />
+                    @if (hasValidationError('redisPort')) {
+                      <small class="validation-error">{{ getValidationError('redisPort') }}</small>
+                    }
+                  </div>
+                  <div class="form-field">
+                    <label for="redisPassword">Password</label>
+                    <input pInputText 
+                           id="redisPassword"
+                           type="password"
+                           [(ngModel)]="portfolioConfig.redisPassword"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="Optional"
+                           [disabled]="isSaving" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="redisDb">Database</label>
+                    <input pInputText 
+                           id="redisDb"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.redisDb"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="0"
+                           [disabled]="isSaving" />
+                  </div>
+                  <div class="form-field">
+                    <label for="redisKeyPrefix">Key Prefix</label>
+                    <input pInputText 
+                           id="redisKeyPrefix"
+                           [(ngModel)]="portfolioConfig.redisKeyPrefix"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="portfolio:"
+                           [disabled]="isSaving" />
+                  </div>
+                </div>
+              </div>
+            </p-accordioncontent>
+          </p-accordionpanel>
+
+
+          <!-- Entry Conditions Section -->
+          <p-accordionpanel [value]="3">
+            <p-accordionheader>
+              <div class="section-header">
+                <i class="pi pi-sign-in section-icon"></i>
+                <span class="section-title">Entry Conditions - <span class="section-description">Technical indicators for trade entry signals</span></span>
+              </div>
+            </p-accordionheader>
+            <p-accordioncontent>
+              <div class="section-content">
+                <div class="form-row">
+                  <div class="form-field toggle-field">
+                    <label for="entryBbLower">BB Lower</label>
+                    <p-toggleswitch 
+                      id="entryBbLower"
+                      [(ngModel)]="portfolioConfig.entryBbLower"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                  <div class="form-field">
+                    <label for="entryRsiThreshold">RSI Threshold (0-100)</label>
+                    <input pInputText 
+                           id="entryRsiThreshold"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.entryRsiThreshold"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="30"
+                           [disabled]="isSaving"
+                           [class.invalid]="hasValidationError('entryRsiThreshold')" />
+                    @if (hasValidationError('entryRsiThreshold')) {
+                      <small class="validation-error">{{ getValidationError('entryRsiThreshold') }}</small>
+                    }
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field toggle-field">
+                    <label for="entryMacdTurnPositive">MACD Turn Positive</label>
+                    <p-toggleswitch 
+                      id="entryMacdTurnPositive"
+                      [(ngModel)]="portfolioConfig.entryMacdTurnPositive"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                  <div class="form-field toggle-field">
+                    <label for="entryVolumeAboveAvg">Volume Above Average</label>
+                    <p-toggleswitch 
+                      id="entryVolumeAboveAvg"
+                      [(ngModel)]="portfolioConfig.entryVolumeAboveAvg"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="entryFallbackSmaPeriod">Fallback SMA Period</label>
+                    <input pInputText 
+                           id="entryFallbackSmaPeriod"
+                           type="number"
+                           [(ngModel)]="portfolioConfig.entryFallbackSmaPeriod"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="20"
+                           [disabled]="isSaving" />
+                  </div>
+                  <div class="form-field">
+                    <label for="entryFallbackAtrMultiplier">Fallback ATR Multiplier</label>
+                    <input pInputText 
+                           id="entryFallbackAtrMultiplier"
+                           type="number"
+                           step="0.1"
+                           [(ngModel)]="portfolioConfig.entryFallbackAtrMultiplier"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="2.0"
+                           [disabled]="isSaving" />
+                  </div>
+                </div>
+              </div>
+            </p-accordioncontent>
+          </p-accordionpanel>
+
+          <!-- Exit Conditions Section -->
+          <p-accordionpanel [value]="4">
+            <p-accordionheader>
+              <div class="section-header">
+                <i class="pi pi-sign-out section-icon"></i>
+                <span class="section-title">Exit Conditions - <span class="section-description">Take profit and stop loss settings</span></span>
+              </div>
+            </p-accordionheader>
+            <p-accordioncontent>
+              <div class="section-content">
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="exitTakeProfitPct">Take Profit (%)</label>
+                    <input pInputText 
+                           id="exitTakeProfitPct"
+                           type="number"
+                           step="0.1"
+                           [(ngModel)]="portfolioConfig.exitTakeProfitPct"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="5.0"
+                           [disabled]="isSaving" />
+                  </div>
+                  <div class="form-field">
+                    <label for="exitStopLossAtrMult">Stop Loss ATR Multiplier</label>
+                    <input pInputText 
+                           id="exitStopLossAtrMult"
+                           type="number"
+                           step="0.1"
+                           [(ngModel)]="portfolioConfig.exitStopLossAtrMult"
+                           (ngModelChange)="onFormChange()"
+                           placeholder="2.0"
+                           [disabled]="isSaving" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field toggle-field">
+                    <label for="exitAllowTpExitsOnly">Allow TP Exits Only</label>
+                    <p-toggleswitch 
+                      id="exitAllowTpExitsOnly"
+                      [(ngModel)]="portfolioConfig.exitAllowTpExitsOnly"
+                      (ngModelChange)="onFormChange()"
+                      [disabled]="isSaving">
+                    </p-toggleswitch>
+                  </div>
+                </div>
+              </div>
+            </p-accordioncontent>
+          </p-accordionpanel>
+
+        </p-accordion>
+
+        <!-- Action Buttons -->
+        <div class="form-actions">
+          <button pButton 
+                  label="Reset" 
+                  icon="pi pi-refresh"
+                  class="p-button-outlined"
+                  (click)="cancelEdit()"
+                  [disabled]="!isFormDirty || isSaving">
+          </button>
+          <button pButton 
+                  label="Save Configuration" 
+                  icon="pi pi-check"
+                  class="p-button-success"
+                  (click)="saveConfiguration()"
+                  [disabled]="!isFormDirty || isSaving || !isFormValid()">
+            @if (isSaving) {
+              <i class="pi pi-spin pi-spinner"></i>
+            }
+          </button>
+        </div>
+      </div>
+    } @else {
+      <!-- Fallback State - Config not loaded yet -->
+      <div class="loading-message">
+        <i class="pi pi-spin pi-spinner"></i>
+        <p>Initializing configuration...</p>
+      </div>
+    }
   } @else {
     <div class="no-selection-message">
       <i class="pi pi-info-circle"></i>
       <h3>No Portfolio Selected</h3>
-      <p>Please select a portfolio from the Overview tab to configure it, or click "Create Portfolio" to create a new one.</p>
+      <p>Please select a portfolio from the Overview tab to configure it.</p>
       <button pButton 
               label="Back to Overview" 
               icon="pi pi-arrow-left" 
