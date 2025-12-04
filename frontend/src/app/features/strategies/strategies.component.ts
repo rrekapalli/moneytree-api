@@ -12,11 +12,12 @@ import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { Subject, takeUntil, finalize, retry, timer, catchError, throwError, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { StrategyApiService } from '../../services/apis/strategy.api';
-import { StrategyWithMetrics } from './strategy.types';
+import { StrategyWithMetrics, StrategyConfig } from './strategy.types';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
 import { OverviewComponent } from './overview/overview.component';
 import { DetailsComponent } from './details/details.component';
+import { ConfigureComponent } from './configure/configure.component';
 
 @Component({
   selector: 'app-strategies',
@@ -34,7 +35,8 @@ import { DetailsComponent } from './details/details.component';
     ScrollPanelModule,
     PageHeaderComponent,
     OverviewComponent,
-    DetailsComponent
+    DetailsComponent,
+    ConfigureComponent
   ],
   templateUrl: './strategies.component.html',
   styleUrls: ['./strategies.component.scss'],
@@ -506,6 +508,28 @@ export class StrategiesComponent implements OnInit, OnDestroy {
     // Reapply filters to update the sidebar display
     this.applyFilters();
 
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Handles the configSaved event from the ConfigureComponent
+   * Updates the configuration state
+   */
+  onConfigSaved(config: StrategyConfig): void {
+    console.log('Configuration saved:', config);
+    // Configuration is saved, no need to update strategy list
+    // But we could invalidate cache if needed
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Handles the backtestTriggered event from the ConfigureComponent
+   * Switches to the Backtest Results tab
+   */
+  onBacktestTriggered(): void {
+    console.log('Backtest triggered');
+    // TODO: Implement backtest execution in task 12.7
+    // For now, just log the event
     this.cdr.markForCheck();
   }
 }

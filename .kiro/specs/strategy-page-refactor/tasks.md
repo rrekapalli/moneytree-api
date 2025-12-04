@@ -246,8 +246,8 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Update sidebar on successful save
     - _Requirements: 4.3, 4.4, 4.5_
 
-- [ ] 12. Frontend - Configure tab component
-  - [ ] 12.1 Create ConfigureComponent structure
+- [-] 12. Frontend - Configure tab component
+  - [x] 12.1 Create ConfigureComponent structure
     - Generate component with Angular CLI
     - Set up accordion structure with 4 sections
     - Add component inputs and outputs

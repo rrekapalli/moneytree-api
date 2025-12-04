@@ -186,10 +186,11 @@
 
             <!-- Configure Tab -->
             <p-tabpanel value="configure" role="tabpanel" id="configure-panel" [attr.aria-labelledby]="'Configure tab for ' + selectedStrategy.name">
-              <div class="tab-content">
-                <h3>Configure - {{ selectedStrategy.name }}</h3>
-                <p>Configure content will be implemented in future tasks</p>
-              </div>
+              <app-strategy-configure 
+                [strategy]="selectedStrategy"
+                (configSaved)="onConfigSaved($event)"
+                (backtestTriggered)="onBacktestTriggered()">
+              </app-strategy-configure>
             </p-tabpanel>
 
             <!-- Backtest Results Tab -->
