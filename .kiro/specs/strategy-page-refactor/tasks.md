@@ -376,15 +376,15 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
   - Check for console errors and warnings
   - Commit: `git commit -m "feat: complete frontend implementation with all tabs and styling"`
 
-- [ ] 16. Integration and testing
-  - [ ] 16.1 Connect frontend to backend APIs
+- [-] 16. Integration and testing
+  - [x] 16.1 Connect frontend to backend APIs
     - Test all API endpoints with frontend
     - Verify data flow for all operations
     - Test error handling
     - Run `npm run build` and `mvn clean compile` - ensure no errors
     - Commit: `git commit -m "feat: integrate frontend with backend APIs"`
   
-  - [ ] 16.2 Test complete user flows
+  - [-] 16.2 Test complete user flows
     - Test create → configure → backtest → view results flow
     - Test strategy activation/deactivation
     - Test strategy deletion
