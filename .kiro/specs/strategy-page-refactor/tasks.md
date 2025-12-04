@@ -92,15 +92,15 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
   - Verify database schema is correct
   - Commit: `git commit -m "feat: complete backend API implementation for strategies"`
 
-- [ ] 6. Frontend - Core types and interfaces
+- [x] 6. Frontend - Core types and interfaces
   - Create strategy.types.ts with all TypeScript interfaces
   - Define StrategyDto, StrategyWithMetrics, StrategyConfig interfaces
   - Define UniverseDefinition, AllocationRules, TradingCondition interfaces
   - Define BacktestRun and BacktestTrade interfaces
   - _Requirements: All (foundational)_
 
-- [ ] 7. Frontend - API service layer
-  - [ ] 7.1 Create StrategyApiService
+- [-] 7. Frontend - API service layer
+  - [x] 7.1 Create StrategyApiService
     - Implement getStrategies() method
     - Implement getStrategy(id) method
     - Implement createStrategy(strategy) method
@@ -109,18 +109,18 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Add error handling and retry logic
     - _Requirements: 1.1, 2.1, 2.3, 4.3, 10.1, 10.4_
   
-  - [ ] 7.2 Create StrategyConfigApiService
+  - [x] 7.2 Create StrategyConfigApiService
     - Implement getConfig(strategyId) method
     - Implement updateConfig(strategyId, config) method
     - Implement validateConfig(strategyId, config) method
     - _Requirements: 5.1, 5.6_
   
-  - [ ] 7.3 Create StrategyMetricsApiService
+  - [x] 7.3 Create StrategyMetricsApiService
     - Implement getMetrics(strategyId) method
     - Implement getMetricsHistory(strategyId) method
     - _Requirements: 3.2, 3.3_
   
-  - [ ] 7.4 Create BacktestApiService
+  - [x] 7.4 Create BacktestApiService
     - Implement triggerBacktest(strategyId, params) method
     - Implement getBacktests(strategyId) method
     - Implement getBacktestRun(runId) method
