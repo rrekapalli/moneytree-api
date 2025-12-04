@@ -13,7 +13,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
   - Test migration on development database
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
-- [-] 2. Backend API - Strategy CRUD operations
+- [x] 2. Backend API - Strategy CRUD operations
   - [x] 2.1 Create Strategy entity and repository
     - Implement Strategy JPA entity with UUID primary key
     - Create StrategyRepository interface extending JpaRepository

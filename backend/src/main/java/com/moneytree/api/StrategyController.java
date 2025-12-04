@@ -1,7 +1,9 @@
 package com.moneytree.api;
 
+import com.moneytree.strategy.StrategyConfigService;
 import com.moneytree.strategy.StrategyService;
 import com.moneytree.strategy.entity.Strategy;
+import com.moneytree.strategy.entity.StrategyConfig;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -19,9 +21,11 @@ import java.util.UUID;
 public class StrategyController {
 
     private final StrategyService strategyService;
+    private final StrategyConfigService strategyConfigService;
 
-    public StrategyController(StrategyService strategyService) {
+    public StrategyController(StrategyService strategyService, StrategyConfigService strategyConfigService) {
         this.strategyService = strategyService;
+        this.strategyConfigService = strategyConfigService;
     }
 
     @GetMapping
@@ -102,5 +106,57 @@ public class StrategyController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    // ========== Strategy Configuration Endpoints ==========
+
+    @GetMapping("/{id}/config")
+    @Operation(summary = "Get strategy configuration", description = "Retrieve the configuration for a specific strategy")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Configuration found"),
+        @ApiResponse(responseCode = "404", description = "Configuration not found")
+    })
+    public ResponseEntity<StrategyConfig> getStrategyConfig(
+            @Parameter(description = "Strategy ID", required = true) @PathVariable UUID id) {
+        return strategyConfigService.getConfig(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/config")
+    @Operation(summary = "Update strategy configuration", description = "Create or update the configuration for a strategy")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Configuration updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid configuration or validation error"),
+        @ApiResponse(responseCode = "404", description = "Strategy not found")
+    })
+    public ResponseEntity<?> updateStrategyConfig(
+            @Parameter(description = "Strategy ID", required = true) @PathVariable UUID id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Strategy configuration", required = true)
+            @RequestBody StrategyConfig config) {
+        try {
+            StrategyConfig saved = strategyConfigService.saveConfig(id, config);
+            return ResponseEntity.ok(saved);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/validate-config")
+    @Operation(summary = "Validate strategy configuration", description = "Validate a strategy configuration without saving it")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Configuration is valid"),
+        @ApiResponse(responseCode = "400", description = "Configuration validation failed")
+    })
+    public ResponseEntity<?> validateStrategyConfig(
+            @Parameter(description = "Strategy ID", required = true) @PathVariable UUID id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Strategy configuration to validate", required = true)
+            @RequestBody StrategyConfig config) {
+        try {
+            strategyConfigService.validateConfiguration(config);
+            return ResponseEntity.ok().body("{\"valid\": true, \"message\": \"Configuration is valid\"}");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("{\"valid\": false, \"message\": \"" + e.getMessage() + "\"}");
+        }
     }
 }
