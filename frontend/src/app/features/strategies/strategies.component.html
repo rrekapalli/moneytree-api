@@ -178,10 +178,10 @@
 
             <!-- Details Tab -->
             <p-tabpanel value="details" role="tabpanel" id="details-panel" [attr.aria-labelledby]="'Details tab for ' + selectedStrategy.name">
-              <div class="tab-content">
-                <h3>Details - {{ selectedStrategy.name }}</h3>
-                <p>Details content will be implemented in future tasks</p>
-              </div>
+              <app-strategy-details 
+                [strategy]="selectedStrategy"
+                (strategySaved)="onStrategySaved($event)">
+              </app-strategy-details>
             </p-tabpanel>
 
             <!-- Configure Tab -->

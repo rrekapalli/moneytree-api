@@ -16,6 +16,7 @@ import { StrategyWithMetrics } from './strategy.types';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../services/toast.service';
 import { OverviewComponent } from './overview/overview.component';
+import { DetailsComponent } from './details/details.component';
 
 @Component({
   selector: 'app-strategies',
@@ -32,7 +33,8 @@ import { OverviewComponent } from './overview/overview.component';
     FormsModule,
     ScrollPanelModule,
     PageHeaderComponent,
-    OverviewComponent
+    OverviewComponent,
+    DetailsComponent
   ],
   templateUrl: './strategies.component.html',
   styleUrls: ['./strategies.component.scss'],
@@ -475,5 +477,35 @@ export class StrategiesComponent implements OnInit, OnDestroy {
       default:
         return 'secondary';
     }
+  }
+
+  /**
+   * Handles the strategySaved event from the DetailsComponent
+   * Updates the strategy in the list and refreshes the display
+   */
+  onStrategySaved(updatedStrategy: StrategyWithMetrics): void {
+    // Find and update the strategy in the strategies array
+    const index = this.strategies.findIndex(s => s.id === updatedStrategy.id);
+    if (index !== -1) {
+      this.strategies[index] = {
+        ...this.strategies[index],
+        ...updatedStrategy
+      };
+    }
+
+    // Update the selected strategy
+    this.selectedStrategy = {
+      ...this.selectedStrategy!,
+      ...updatedStrategy
+    };
+
+    // Invalidate cache to force refresh on next load
+    this.strategyCache.clear();
+    this.strategyCacheTimestamp = 0;
+
+    // Reapply filters to update the sidebar display
+    this.applyFilters();
+
+    this.cdr.markForCheck();
   }
 }
