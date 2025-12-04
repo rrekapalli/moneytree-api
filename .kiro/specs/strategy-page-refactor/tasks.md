@@ -13,20 +13,20 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
   - Test migration on development database
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5_
 
-- [ ] 2. Backend API - Strategy CRUD operations
-  - [ ] 2.1 Create Strategy entity and repository
+- [-] 2. Backend API - Strategy CRUD operations
+  - [x] 2.1 Create Strategy entity and repository
     - Implement Strategy JPA entity with UUID primary key
     - Create StrategyRepository interface extending JpaRepository
     - Add custom query methods for filtering by user and status
     - _Requirements: 12.1_
   
-  - [ ] 2.2 Implement Strategy service layer
+  - [x] 2.2 Implement Strategy service layer
     - Create StrategyService with CRUD operations
     - Add validation logic for strategy creation/updates
     - Implement soft delete or cascade delete logic
     - _Requirements: 2.1, 2.2, 2.3, 10.2, 10.3_
   
-  - [ ] 2.3 Create Strategy REST API endpoints
+  - [x] 2.3 Create Strategy REST API endpoints
     - GET /api/strategies - List all strategies for user
     - GET /api/strategies/{id} - Get strategy by ID
     - POST /api/strategies - Create new strategy
