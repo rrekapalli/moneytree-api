@@ -99,7 +99,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
   - Define BacktestRun and BacktestTrade interfaces
   - _Requirements: All (foundational)_
 
-- [-] 7. Frontend - API service layer
+- [x] 7. Frontend - API service layer
   - [x] 7.1 Create StrategyApiService
     - Implement getStrategies() method
     - Implement getStrategy(id) method
@@ -127,7 +127,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Implement getBacktestTrades(runId) method
     - _Requirements: 6.1, 6.3, 7.1, 7.3, 7.4_
 
-- [ ] 8. Frontend - Main StrategiesComponent
+- [-] 8. Frontend - Main StrategiesComponent
   - [ ] 8.1 Create component structure and basic layout
     - Generate StrategiesComponent with Angular CLI
     - Set up two-panel layout HTML structure
