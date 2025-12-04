@@ -7,7 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
 
-import { StrategyWithMetrics, StrategyUpdateRequest } from '../strategy.types';
+import { StrategyWithMetrics, StrategyUpdateRequest, StrategyCreateRequest } from '../strategy.types';
 import { StrategyApiService } from '../../../services/apis/strategy.api';
 import { ToastService } from '../../../services/toast.service';
 
@@ -144,6 +144,8 @@ export class DetailsComponent implements OnInit, OnDestroy {
   /**
    * Saves the strategy details
    * Validates the form, calls the API, and emits success event
+   * For new strategies (empty ID), calls createStrategy (POST)
+   * For existing strategies, calls updateStrategy (PUT)
    */
   onSave(): void {
     // Mark all fields as touched to show validation errors
@@ -156,17 +158,35 @@ export class DetailsComponent implements OnInit, OnDestroy {
     }
 
     const formValue = this.detailsForm.value;
-    const updateRequest: StrategyUpdateRequest = {
-      name: formValue.name,
-      description: formValue.description,
-      riskProfile: formValue.riskProfile
-    };
-
+    
     this.saving = true;
     this.error = null;
     this.cdr.markForCheck();
 
-    this.strategyApiService.updateStrategy(this.strategy.id, updateRequest)
+    // Check if this is a new strategy (empty ID) or an existing one
+    const isNewStrategy = !this.strategy.id || this.strategy.id === '';
+    
+    let apiCall;
+    if (isNewStrategy) {
+      // Create request for new strategy (name is required)
+      const createRequest: StrategyCreateRequest = {
+        name: formValue.name,
+        description: formValue.description,
+        riskProfile: formValue.riskProfile,
+        isActive: false
+      };
+      apiCall = this.strategyApiService.createStrategy(createRequest);
+    } else {
+      // Update request for existing strategy (all fields optional)
+      const updateRequest: StrategyUpdateRequest = {
+        name: formValue.name,
+        description: formValue.description,
+        riskProfile: formValue.riskProfile
+      };
+      apiCall = this.strategyApiService.updateStrategy(this.strategy.id, updateRequest);
+    }
+
+    apiCall
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => {
@@ -179,18 +199,20 @@ export class DetailsComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: (updatedStrategy) => {
+        next: (savedStrategy) => {
           // Update the local strategy object with the response
           this.strategy = {
             ...this.strategy,
-            ...updatedStrategy
+            ...savedStrategy
           };
 
           // Mark form as pristine after successful save
           this.detailsForm.markAsPristine();
 
           // Show success notification
-          this.toastService.show('success', 'Strategy Updated', 'Strategy details have been saved successfully.');
+          const message = isNewStrategy ? 'Strategy created successfully.' : 'Strategy details have been saved successfully.';
+          const summary = isNewStrategy ? 'Strategy Created' : 'Strategy Updated';
+          this.toastService.show('success', summary, message);
 
           // Emit event to parent component to refresh the sidebar
           this.strategySaved.emit(this.strategy);
