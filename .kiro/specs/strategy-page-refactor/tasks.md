@@ -127,15 +127,15 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Implement getBacktestTrades(runId) method
     - _Requirements: 6.1, 6.3, 7.1, 7.3, 7.4_
 
-- [-] 8. Frontend - Main StrategiesComponent
-  - [ ] 8.1 Create component structure and basic layout
+- [x] 8. Frontend - Main StrategiesComponent
+  - [x] 8.1 Create component structure and basic layout
     - Generate StrategiesComponent with Angular CLI
     - Set up two-panel layout HTML structure
     - Import required PrimeNG modules
     - Set up ChangeDetectionStrategy.OnPush
     - _Requirements: 11.1_
   
-  - [ ] 8.2 Implement strategy list sidebar
+  - [x] 8.2 Implement strategy list sidebar
     - Add search input with debounced filtering
     - Add sort dropdown with multiple sort options
     - Implement strategy card display with metrics
@@ -143,48 +143,48 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Implement loading and error states
     - _Requirements: 1.1, 1.2, 1.4, 1.5_
   
-  - [ ] 8.3 Implement strategy selection and state management
+  - [x] 8.3 Implement strategy selection and state management
     - Add click handler for strategy selection
     - Implement selected state highlighting
     - Add keyboard navigation support
     - Update URL with deep linking
     - _Requirements: 1.3_
   
-  - [ ] 8.4 Implement filtering and sorting logic
+  - [x] 8.4 Implement filtering and sorting logic
     - Add search text filtering
     - Add sort field and order logic
     - Implement applyFilters() method
     - Add clear filters functionality
     - _Requirements: 1.5_
   
-  - [ ] 8.5 Implement caching and performance optimization
+  - [x] 8.5 Implement caching and performance optimization
     - Add strategy cache with timestamp
     - Implement cache invalidation logic
     - Add lazy loading flags for tabs
     - Optimize change detection
     - _Requirements: Performance (design doc)_
   
-  - [ ] 8.6 Add Create Strategy functionality
+  - [x] 8.6 Add Create Strategy functionality
     - Implement createStrategy() method
     - Create empty strategy object for new creation
     - Switch to Details tab on create
     - _Requirements: 2.1_
 
-- [ ] 9. Frontend - Tab navigation and routing
-  - [ ] 9.1 Implement tab structure with PrimeNG Tabs
+- [-] 9. Frontend - Tab navigation and routing
+  - [x] 9.1 Implement tab structure with PrimeNG Tabs
     - Add p-tabs component with 4 tabs
     - Set up tab change handler
     - Implement deep linking for tabs
     - Add ARIA labels for accessibility
     - _Requirements: 11.3_
   
-  - [ ] 9.2 Implement lazy loading for tab content
+  - [x] 9.2 Implement lazy loading for tab content
     - Add flags for each tab (holdingsLoaded, etc.)
     - Load data only when tab is activated
     - Prevent duplicate loads
     - _Requirements: Performance (design doc)_
 
-- [ ] 9.3 Main component checkpoint - Verify core functionality
+- [-] 9.3 Main component checkpoint - Verify core functionality
   - Run `npm run build` - ensure no TypeScript errors
   - Test strategy list loading and display
   - Test search and filtering

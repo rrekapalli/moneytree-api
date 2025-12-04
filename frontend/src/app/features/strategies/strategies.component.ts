@@ -75,9 +75,10 @@ export class StrategiesComponent implements OnInit, OnDestroy {
   private readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
   // Lazy loading flags for tabs
-  private holdingsLoaded = false;
-  private tradesLoaded = false;
-  private configLoaded = false;
+  private overviewLoaded = false;
+  private detailsLoaded = false;
+  private configureLoaded = false;
+  private backtestResultsLoaded = false;
 
   constructor(
     private strategyApiService: StrategyApiService,
@@ -118,13 +119,16 @@ export class StrategiesComponent implements OnInit, OnDestroy {
             if (strategy) {
               if (!this.selectedStrategy || this.selectedStrategy.id !== strategyId) {
                 this.selectedStrategy = strategy;
-                this.holdingsLoaded = false;
-                this.tradesLoaded = false;
+                // Reset lazy loading flags when selecting a new strategy
+                this.overviewLoaded = false;
+                this.detailsLoaded = false;
+                this.configureLoaded = false;
+                this.backtestResultsLoaded = false;
               }
               this.activeTab = tab as any;
 
               // Lazy load data for the active tab
-              // TODO: Implement lazy loading for specific tabs
+              this.loadTabData(tab as any);
             }
           });
         } else {
@@ -336,12 +340,16 @@ export class StrategiesComponent implements OnInit, OnDestroy {
     this.activeTab = 'overview';
 
     // Reset lazy loading flags when selecting a new strategy
-    this.holdingsLoaded = false;
-    this.tradesLoaded = false;
-    this.configLoaded = false;
+    this.overviewLoaded = false;
+    this.detailsLoaded = false;
+    this.configureLoaded = false;
+    this.backtestResultsLoaded = false;
 
     // Update URL with deep link
     this.router.navigate(['/strategies', strategy.id, this.activeTab]);
+
+    // Load data for the overview tab (default tab)
+    this.loadTabData('overview');
   }
 
   // Method to handle tab changes
@@ -357,8 +365,54 @@ export class StrategiesComponent implements OnInit, OnDestroy {
           window.history.replaceState({}, '', url);
         }
 
-        // TODO: Lazy load data when switching to specific tabs
+        // Lazy load data when switching to specific tabs
+        this.loadTabData(tabValue);
       }
+    }
+  }
+
+  // Lazy load data for specific tabs
+  private loadTabData(tab: 'overview' | 'details' | 'configure' | 'backtest-results'): void {
+    if (!this.selectedStrategy) {
+      return;
+    }
+
+    switch (tab) {
+      case 'overview':
+        if (!this.overviewLoaded) {
+          // Load overview data (metrics, performance chart, recent trades)
+          // TODO: Implement in future tasks when OverviewComponent is created
+          console.log('Loading overview data for strategy:', this.selectedStrategy.id);
+          this.overviewLoaded = true;
+        }
+        break;
+
+      case 'details':
+        if (!this.detailsLoaded) {
+          // Load strategy details
+          // TODO: Implement in future tasks when DetailsComponent is created
+          console.log('Loading details data for strategy:', this.selectedStrategy.id);
+          this.detailsLoaded = true;
+        }
+        break;
+
+      case 'configure':
+        if (!this.configureLoaded) {
+          // Load strategy configuration
+          // TODO: Implement in future tasks when ConfigureComponent is created
+          console.log('Loading configuration data for strategy:', this.selectedStrategy.id);
+          this.configureLoaded = true;
+        }
+        break;
+
+      case 'backtest-results':
+        if (!this.backtestResultsLoaded) {
+          // Load backtest results
+          // TODO: Implement in future tasks when BacktestResultsComponent is created
+          console.log('Loading backtest results for strategy:', this.selectedStrategy.id);
+          this.backtestResultsLoaded = true;
+        }
+        break;
     }
   }
 
