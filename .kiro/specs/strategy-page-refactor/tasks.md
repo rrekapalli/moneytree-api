@@ -393,7 +393,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Fix all issues before proceeding
     - Commit: `git commit -m "test: verify all user flows work correctly"`
   
-  - [-] 16.3 Perform accessibility audit
+  - [x] 16.3 Perform accessibility audit
     - Test keyboard navigation
     - Verify ARIA labels
     - Test with screen reader
@@ -401,7 +401,7 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - Run `npm run build` - ensure no errors
     - Commit: `git commit -m "a11y: fix accessibility issues"`
   
-  - [ ] 16.4 Performance testing
+  - [-] 16.4 Performance testing
     - Test with large number of strategies (50+)
     - Verify caching works correctly
     - Test lazy loading behavior
