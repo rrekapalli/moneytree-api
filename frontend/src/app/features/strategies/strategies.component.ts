@@ -18,6 +18,7 @@ import { ToastService } from '../../services/toast.service';
 import { OverviewComponent } from './overview/overview.component';
 import { DetailsComponent } from './details/details.component';
 import { ConfigureComponent } from './configure/configure.component';
+import { BacktestResultsComponent } from './backtest-results/backtest-results.component';
 
 @Component({
   selector: 'app-strategies',
@@ -36,7 +37,8 @@ import { ConfigureComponent } from './configure/configure.component';
     PageHeaderComponent,
     OverviewComponent,
     DetailsComponent,
-    ConfigureComponent
+    ConfigureComponent,
+    BacktestResultsComponent
   ],
   templateUrl: './strategies.component.html',
   styleUrls: ['./strategies.component.scss'],
@@ -530,6 +532,24 @@ export class StrategiesComponent implements OnInit, OnDestroy {
     console.log('Backtest triggered');
     // TODO: Implement backtest execution in task 12.7
     // For now, just log the event
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Handles the navigateToConfigure event from the BacktestResultsComponent
+   * Switches to the Configure tab
+   */
+  onNavigateToConfigureTab(): void {
+    this.activeTab = 'configure';
+    
+    // Update URL with deep link
+    if (this.selectedStrategy) {
+      const url = `/strategies/${this.selectedStrategy.id}/configure`;
+      window.history.replaceState({}, '', url);
+    }
+    
+    // Load configure tab data
+    this.loadTabData('configure');
     this.cdr.markForCheck();
   }
 }

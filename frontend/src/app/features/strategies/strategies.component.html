@@ -195,10 +195,10 @@
 
             <!-- Backtest Results Tab -->
             <p-tabpanel value="backtest-results" role="tabpanel" id="backtest-results-panel" [attr.aria-labelledby]="'Backtest Results tab for ' + selectedStrategy.name">
-              <div class="tab-content">
-                <h3>Backtest Results - {{ selectedStrategy.name }}</h3>
-                <p>Backtest results content will be implemented in future tasks</p>
-              </div>
+              <app-backtest-results 
+                [strategy]="selectedStrategy"
+                (navigateToConfigure)="onNavigateToConfigureTab()">
+              </app-backtest-results>
             </p-tabpanel>
           </p-tabpanels>
         </p-tabs>
