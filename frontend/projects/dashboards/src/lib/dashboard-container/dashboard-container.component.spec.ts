@@ -4,6 +4,7 @@ import {BrowserAnimationsModule} from "@angular/platform-browser/animations";
 import {DashboardContainerComponent} from "./dashboard-container.component";
 import {GridsterComponent, GridsterItemComponent} from "angular-gridster2";
 import {NgxPrintModule} from "ngx-print";
+import {MessageService} from "primeng/api";
 
 describe('Dashboard: DashboardContainerComponent', () => {
   let fixture: ComponentFixture<DashboardContainerComponent>;
@@ -19,6 +20,7 @@ describe('Dashboard: DashboardContainerComponent', () => {
         GridsterComponent,
         GridsterItemComponent,
         NgxPrintModule,
+        MessageService,
         {provide: 'environment', useValue: {}},
       ]
     });

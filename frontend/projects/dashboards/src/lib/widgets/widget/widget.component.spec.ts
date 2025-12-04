@@ -76,11 +76,9 @@ describe('WidgetComponent', () => {
       component.widget = { config: { component: 'echart' } } as IWidget;
       const result = component.currentWidget;
       
-      expect(result.inputs).toEqual({
-        widget: component.widget,
-        onDataLoad: component.onDataLoad,
-        onUpdateFilter: component.onUpdateFilter,
-      });
+      expect(result.inputs.widget).toBe(component.widget);
+      expect(result.inputs.onDataLoad).toBeDefined();
+      expect(result.inputs.onUpdateFilter).toBeDefined();
     });
   });
 

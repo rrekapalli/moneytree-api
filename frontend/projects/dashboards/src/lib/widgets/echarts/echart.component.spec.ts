@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EchartComponent } from './echart.component';
 import { NgxEchartsDirective, provideEchartsCore } from 'ngx-echarts';
 import { IWidget } from '../../entities/IWidget';
+import { EventEmitter } from '@angular/core';
 
 describe('EchartComponent', () => {
   let component: EchartComponent;
@@ -45,17 +46,23 @@ describe('EchartComponent', () => {
     expect(mockWidget.chartInstance).toBe(mockChart);
   });
 
-  it('should handle chart click events', () => {
+  it('should handle chart click events', (done) => {
     const mockEvent = {
       data: { name: 'test', value: 100 },
       seriesType: 'pie'
     };
     
+    // Create a mock EventEmitter
+    component.onUpdateFilter = new EventEmitter();
     const spy = spyOn(component.onUpdateFilter, 'emit');
     
     component.onClick(mockEvent);
     
-    expect(spy).toHaveBeenCalled();
+    // onClick has a setTimeout of 250ms
+    setTimeout(() => {
+      expect(spy).toHaveBeenCalled();
+      done();
+    }, 300);
   });
 
   it('should handle double click events', () => {
