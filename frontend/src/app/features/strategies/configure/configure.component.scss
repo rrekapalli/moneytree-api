@@ -147,6 +147,71 @@
   }
 }
 
+// Backtest dialog styles
+::ng-deep .backtest-dialog {
+  width: 90%;
+  max-width: 600px;
+
+  .dialog-content {
+    padding: 0;
+
+    .dialog-description {
+      margin-bottom: 1.5rem;
+      color: var(--text-color-secondary);
+      font-size: 0.95rem;
+    }
+
+    .field {
+      margin-bottom: 1.5rem;
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-color);
+      }
+
+      .field-help {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--text-color-secondary);
+        font-size: 0.875rem;
+      }
+
+      .field-error {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--red-500);
+        font-size: 0.875rem;
+      }
+    }
+
+    .dialog-error {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background-color: var(--red-50);
+      border: 1px solid var(--red-200);
+      border-radius: var(--border-radius);
+      color: var(--red-700);
+
+      i {
+        font-size: 1.25rem;
+      }
+    }
+  }
+
+  .p-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--surface-border);
+  }
+}
+
 // Responsive design
 @media (max-width: 768px) {
   .configure-container {
@@ -159,6 +224,18 @@
     }
 
     .action-buttons {
+      flex-direction: column;
+
+      p-button {
+        width: 100%;
+      }
+    }
+  }
+
+  ::ng-deep .backtest-dialog {
+    width: 95%;
+
+    .p-dialog-footer {
       flex-direction: column;
 
       p-button {

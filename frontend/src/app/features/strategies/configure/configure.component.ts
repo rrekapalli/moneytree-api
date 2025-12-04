@@ -11,6 +11,8 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { AutoCompleteModule } from 'primeng/autocomplete';
 import { ChipModule } from 'primeng/chip';
 import { TooltipModule } from 'primeng/tooltip';
+import { DialogModule } from 'primeng/dialog';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { 
   StrategyWithMetrics, 
@@ -19,9 +21,11 @@ import {
   AllocationRules, 
   TradingCondition, 
   RiskParameters,
-  StrategyConfigUpdateRequest
+  StrategyConfigUpdateRequest,
+  BacktestParameters
 } from '../strategy.types';
 import { StrategyConfigApiService } from '../../../services/apis/strategy-config.api';
+import { BacktestApiService, BacktestExecutionResponse } from '../../../services/apis/backtest.api';
 import { ToastService } from '../../../services/toast.service';
 
 /**
@@ -61,7 +65,9 @@ import { ToastService } from '../../../services/toast.service';
     MultiSelectModule,
     AutoCompleteModule,
     ChipModule,
-    TooltipModule
+    TooltipModule,
+    DialogModule,
+    DatePickerModule
   ],
   templateUrl: './configure.component.html',
   styleUrls: ['./configure.component.scss'],
@@ -92,6 +98,12 @@ export class ConfigureComponent implements OnInit, OnDestroy {
   saving = false;
   error: string | null = null;
   config: StrategyConfig | null = null;
+
+  // Backtest dialog state
+  showBacktestDialog = false;
+  backtestForm!: FormGroup;
+  runningBacktest = false;
+  backtestError: string | null = null;
 
   // Options for dropdowns
   universeTypeOptions = [
@@ -171,12 +183,14 @@ export class ConfigureComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private strategyConfigApiService: StrategyConfigApiService,
+    private backtestApiService: BacktestApiService,
     private toastService: ToastService,
     private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.initializeForm();
+    this.initializeBacktestForm();
     this.loadConfiguration();
   }
 
@@ -563,13 +577,170 @@ export class ConfigureComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Triggers a backtest run
-   * This will be implemented in task 12.7
+   * Initializes the backtest parameters form
+   */
+  private initializeBacktestForm(): void {
+    // Set default date range: last 1 year
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - 1);
+
+    this.backtestForm = this.fb.group({
+      startDate: [startDate, Validators.required],
+      endDate: [endDate, Validators.required],
+      initialCapital: [100000, [Validators.required, Validators.min(1000)]],
+      symbol: [''] // Optional
+    });
+  }
+
+  /**
+   * Opens the backtest parameters dialog
    */
   onRunBacktest(): void {
-    // TODO: Implement in task 12.7
-    console.log('Run backtest clicked');
-    this.backtestTriggered.emit();
+    // Validate that configuration is saved
+    if (this.isDirty) {
+      this.toastService.showError({
+        summary: 'Unsaved Changes',
+        detail: 'Please save your configuration before running a backtest.'
+      });
+      return;
+    }
+
+    // Validate that configuration is complete
+    if (!this.isValid) {
+      this.toastService.showError({
+        summary: 'Incomplete Configuration',
+        detail: 'Please complete the strategy configuration before running a backtest.'
+      });
+      return;
+    }
+
+    // Reset form and show dialog
+    this.backtestError = null;
+    this.showBacktestDialog = true;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Closes the backtest parameters dialog
+   */
+  onCancelBacktest(): void {
+    this.showBacktestDialog = false;
+    this.backtestError = null;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Executes the backtest with the specified parameters
+   */
+  onExecuteBacktest(): void {
+    // Mark all fields as touched to show validation errors
+    this.backtestForm.markAllAsTouched();
+
+    if (!this.backtestForm.valid) {
+      this.backtestError = 'Please fix the validation errors before running the backtest.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const formValue = this.backtestForm.value;
+    
+    // Validate date range
+    if (formValue.startDate >= formValue.endDate) {
+      this.backtestError = 'End date must be after start date.';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    // Format dates to ISO 8601 format (YYYY-MM-DD)
+    const params: BacktestParameters = {
+      startDate: this.formatDate(formValue.startDate),
+      endDate: this.formatDate(formValue.endDate),
+      initialCapital: formValue.initialCapital
+    };
+
+    // Add optional symbol if provided
+    if (formValue.symbol && formValue.symbol.trim()) {
+      params.symbol = formValue.symbol.trim().toUpperCase();
+    }
+
+    this.runningBacktest = true;
+    this.backtestError = null;
+    this.cdr.markForCheck();
+
+    this.backtestApiService.triggerBacktest(this.strategy.id, params)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.runningBacktest = false;
+          this.cdr.markForCheck();
+        }),
+        catchError((error) => {
+          this.handleBacktestError(error);
+          return throwError(() => error);
+        })
+      )
+      .subscribe({
+        next: (response: BacktestExecutionResponse) => {
+          // Close dialog
+          this.showBacktestDialog = false;
+
+          // Show success notification
+          this.toastService.show('success', 'Backtest Started', 
+            `Backtest has been queued for execution. Run ID: ${response.runId}`);
+
+          // Emit event to parent component
+          this.backtestTriggered.emit();
+
+          this.backtestError = null;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Error already handled in catchError
+        }
+      });
+  }
+
+  /**
+   * Formats a Date object to ISO 8601 date string (YYYY-MM-DD)
+   */
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Handles errors when triggering backtest
+   */
+  private handleBacktestError(error: any): void {
+    console.error('Error triggering backtest:', error);
+
+    if (error.status === 0) {
+      this.backtestError = 'Unable to connect to the server. Please check your internet connection.';
+    } else if (error.status === 400) {
+      this.backtestError = error.error?.message || 'Invalid backtest parameters or incomplete strategy configuration.';
+    } else if (error.status === 401) {
+      this.backtestError = 'Your session has expired. Please log in again.';
+    } else if (error.status === 403) {
+      this.backtestError = 'You do not have permission to run backtests for this strategy.';
+    } else if (error.status === 404) {
+      this.backtestError = 'Strategy not found. It may have been deleted.';
+    } else if (error.status === 409) {
+      this.backtestError = 'A backtest is already running for this strategy. Please wait for it to complete.';
+    } else if (error.status >= 500) {
+      this.backtestError = 'Server error occurred. Please try again later.';
+    } else {
+      this.backtestError = error.error?.message || 'Failed to start backtest. Please try again.';
+    }
+
+    this.toastService.showError({
+      summary: 'Backtest Failed',
+      detail: this.backtestError || 'An error occurred while starting the backtest.'
+    });
+
+    this.cdr.markForCheck();
   }
 
   /**

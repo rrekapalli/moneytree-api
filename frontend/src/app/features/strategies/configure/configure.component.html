@@ -1,0 +1,570 @@
+<div class="configure-container">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+    <p>Loading configuration...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <i class="pi pi-exclamation-triangle" style="font-size: 2rem; color: var(--red-500)"></i>
+    <p>{{ error }}</p>
+    <p-button 
+      label="Retry" 
+      icon="pi pi-refresh" 
+      (onClick)="reloadConfiguration()"
+      severity="secondary">
+    </p-button>
+  </div>
+
+  <!-- Configuration Form -->
+  <div *ngIf="!loading && !error" class="config-form">
+    <form [formGroup]="configForm">
+      <!-- Universe Section -->
+      <p-card header="Universe" styleClass="config-section">
+        <div class="card-content" formGroupName="universe">
+          <p class="section-description">
+            Define which stocks or instruments this strategy will consider for trading.
+          </p>
+
+          <!-- Universe Type Selection -->
+          <div class="field">
+            <label for="universeType">Universe Type *</label>
+            <p-select
+              id="universeType"
+              formControlName="type"
+              [options]="universeTypeOptions"
+              placeholder="Select universe type"
+              styleClass="w-full">
+            </p-select>
+          </div>
+
+          <!-- Index Selection (shown when type is INDEX) -->
+          <div class="field" *ngIf="configForm.get('universe.type')?.value === 'INDEX'">
+            <label for="indices">Indices *</label>
+            <p-multiSelect
+              id="indices"
+              formControlName="indices"
+              [options]="indexOptions"
+              placeholder="Select indices"
+              [showClear]="true"
+              styleClass="w-full">
+            </p-multiSelect>
+            <small class="field-help">Select one or more indices (e.g., Nifty 500, Nifty Midcap)</small>
+          </div>
+
+          <!-- Sector Selection (shown when type is SECTOR) -->
+          <div class="field" *ngIf="configForm.get('universe.type')?.value === 'SECTOR'">
+            <label for="sectors">Sectors *</label>
+            <p-multiSelect
+              id="sectors"
+              formControlName="sectors"
+              [options]="sectorOptions"
+              placeholder="Select sectors"
+              [showClear]="true"
+              styleClass="w-full">
+            </p-multiSelect>
+            <small class="field-help">Select one or more sectors (e.g., Technology, Finance)</small>
+          </div>
+
+          <!-- Custom Symbols (shown when type is CUSTOM) -->
+          <div class="field" *ngIf="configForm.get('universe.type')?.value === 'CUSTOM'">
+            <label for="symbols">Symbols *</label>
+            <p-autoComplete
+              id="symbols"
+              formControlName="symbols"
+              [suggestions]="symbolSuggestions"
+              (completeMethod)="searchSymbols($event)"
+              [multiple]="true"
+              placeholder="Search and add symbols"
+              styleClass="w-full">
+            </p-autoComplete>
+            <small class="field-help">Search and add individual stock symbols (e.g., RELIANCE, TCS, INFY)</small>
+          </div>
+
+          <!-- Universe Summary -->
+          <div class="universe-summary" *ngIf="getUniverseSummary()">
+            <strong>Selected Universe:</strong>
+            <p>{{ getUniverseSummary() }}</p>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Allocations Section -->
+      <p-card header="Allocations" styleClass="config-section">
+        <div class="card-content" formGroupName="allocations">
+          <p class="section-description">
+            Define how capital will be allocated across positions in this strategy.
+          </p>
+
+          <!-- Position Sizing Method -->
+          <div class="field">
+            <label for="positionSizingMethod">Position Sizing Method *</label>
+            <p-select
+              id="positionSizingMethod"
+              formControlName="positionSizingMethod"
+              [options]="positionSizingOptions"
+              placeholder="Select position sizing method"
+              styleClass="w-full">
+            </p-select>
+            <small class="field-help">How to determine the size of each position</small>
+          </div>
+
+          <!-- Max Position Size -->
+          <div class="field">
+            <label for="maxPositionSize">Max Position Size (%) *</label>
+            <p-inputNumber
+              id="maxPositionSize"
+              formControlName="maxPositionSize"
+              [min]="1"
+              [max]="100"
+              suffix="%"
+              [showButtons]="true"
+              [step]="1"
+              styleClass="w-full">
+            </p-inputNumber>
+            <small class="field-help">Maximum percentage of portfolio for a single position (1-100%)</small>
+            <small class="field-error" *ngIf="configForm.get('allocations.maxPositionSize')?.invalid && configForm.get('allocations.maxPositionSize')?.touched">
+              Must be between 1% and 100%
+            </small>
+          </div>
+
+          <!-- Max Portfolio Allocation -->
+          <div class="field">
+            <label for="maxPortfolioAllocation">Max Portfolio Allocation (%) *</label>
+            <p-inputNumber
+              id="maxPortfolioAllocation"
+              formControlName="maxPortfolioAllocation"
+              [min]="1"
+              [max]="100"
+              suffix="%"
+              [showButtons]="true"
+              [step]="1"
+              styleClass="w-full">
+            </p-inputNumber>
+            <small class="field-help">Maximum percentage of portfolio to allocate to this strategy (1-100%)</small>
+            <small class="field-error" *ngIf="configForm.get('allocations.maxPortfolioAllocation')?.invalid && configForm.get('allocations.maxPortfolioAllocation')?.touched">
+              Must be between 1% and 100%
+            </small>
+          </div>
+
+          <!-- Cash Reserve -->
+          <div class="field">
+            <label for="cashReserve">Cash Reserve (%) *</label>
+            <p-inputNumber
+              id="cashReserve"
+              formControlName="cashReserve"
+              [min]="0"
+              [max]="100"
+              suffix="%"
+              [showButtons]="true"
+              [step]="1"
+              styleClass="w-full">
+            </p-inputNumber>
+            <small class="field-help">Minimum cash reserve to maintain (0-100%)</small>
+            <small class="field-error" *ngIf="configForm.get('allocations.cashReserve')?.invalid && configForm.get('allocations.cashReserve')?.touched">
+              Must be between 0% and 100%
+            </small>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Entry Conditions Section -->
+      <p-card header="Entry Conditions" styleClass="config-section">
+        <div class="card-content">
+          <p class="section-description">
+            Define the conditions that trigger a buy signal (opening a position).
+          </p>
+
+          <!-- Entry Conditions List -->
+          <div formArrayName="entryConditions">
+            <div *ngFor="let condition of entryConditions.controls; let i = index" 
+                 [formGroupName]="i" 
+                 class="condition-item">
+              <div class="condition-header">
+                <h4>Entry Condition {{ i + 1 }}</h4>
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  (onClick)="removeEntryCondition(i)"
+                  pTooltip="Remove condition">
+                </p-button>
+              </div>
+
+              <!-- Condition Builder -->
+              <div class="condition-builder">
+                <!-- Condition Type -->
+                <div class="field">
+                  <label>Type *</label>
+                  <p-select
+                    formControlName="type"
+                    [options]="conditionTypeOptions"
+                    placeholder="Select type"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <!-- Indicator (shown for TECHNICAL type) -->
+                <div class="field" *ngIf="condition.get('type')?.value === 'TECHNICAL'">
+                  <label>Indicator *</label>
+                  <p-select
+                    formControlName="indicator"
+                    [options]="indicatorOptions"
+                    placeholder="Select indicator"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <!-- Operator -->
+                <div class="field">
+                  <label>Operator *</label>
+                  <p-select
+                    formControlName="operator"
+                    [options]="operatorOptions"
+                    placeholder="Select operator"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <!-- Value -->
+                <div class="field">
+                  <label>Value *</label>
+                  <input
+                    pInputText
+                    formControlName="value"
+                    placeholder="Enter value"
+                    class="w-full" />
+                </div>
+
+                <!-- Timeframe -->
+                <div class="field">
+                  <label>Timeframe</label>
+                  <p-select
+                    formControlName="timeframe"
+                    [options]="timeframeOptions"
+                    placeholder="Select timeframe"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <!-- Logical Operator (for combining conditions) -->
+                <div class="field" *ngIf="i < entryConditions.length - 1">
+                  <label>Combine with next condition using</label>
+                  <p-select
+                    formControlName="logicalOperator"
+                    [options]="logicalOperatorOptions"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Entry Condition Button -->
+          <p-button
+            label="Add Entry Condition"
+            icon="pi pi-plus"
+            (onClick)="addEntryCondition()"
+            severity="secondary"
+            [outlined]="true"
+            styleClass="mt-3">
+          </p-button>
+
+          <!-- Validation Message -->
+          <small class="field-error" *ngIf="entryConditions.length === 0 && configForm.touched">
+            At least one entry condition is required
+          </small>
+        </div>
+      </p-card>
+
+      <!-- Exit Conditions Section -->
+      <p-card header="Exit Conditions" styleClass="config-section">
+        <div class="card-content">
+          <p class="section-description">
+            Define the conditions that trigger a sell signal (closing a position).
+          </p>
+
+          <!-- Risk Parameters -->
+          <div formGroupName="riskParameters" class="risk-parameters">
+            <h4>Risk Management</h4>
+            
+            <div class="field">
+              <label for="stopLossPercent">Stop Loss (%)</label>
+              <p-inputNumber
+                id="stopLossPercent"
+                formControlName="stopLossPercent"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                [step]="0.5"
+                styleClass="w-full">
+              </p-inputNumber>
+              <small class="field-help">Percentage below entry price to trigger stop loss</small>
+            </div>
+
+            <div class="field">
+              <label for="takeProfitPercent">Take Profit (%)</label>
+              <p-inputNumber
+                id="takeProfitPercent"
+                formControlName="takeProfitPercent"
+                [min]="0"
+                suffix="%"
+                [showButtons]="true"
+                [step]="0.5"
+                styleClass="w-full">
+              </p-inputNumber>
+              <small class="field-help">Percentage above entry price to trigger take profit</small>
+            </div>
+
+            <div class="field">
+              <label for="trailingStopPercent">Trailing Stop (%)</label>
+              <p-inputNumber
+                id="trailingStopPercent"
+                formControlName="trailingStopPercent"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                [step]="0.5"
+                styleClass="w-full">
+              </p-inputNumber>
+              <small class="field-help">Percentage below highest price to trigger trailing stop</small>
+            </div>
+          </div>
+
+          <!-- Exit Conditions List -->
+          <div formArrayName="exitConditions" class="mt-4">
+            <h4>Exit Conditions</h4>
+            
+            <div *ngFor="let condition of exitConditions.controls; let i = index" 
+                 [formGroupName]="i" 
+                 class="condition-item">
+              <div class="condition-header">
+                <h4>Exit Condition {{ i + 1 }}</h4>
+                <p-button
+                  icon="pi pi-trash"
+                  severity="danger"
+                  [text]="true"
+                  (onClick)="removeExitCondition(i)"
+                  pTooltip="Remove condition">
+                </p-button>
+              </div>
+
+              <!-- Condition Builder (reuse same structure as entry conditions) -->
+              <div class="condition-builder">
+                <div class="field">
+                  <label>Type *</label>
+                  <p-select
+                    formControlName="type"
+                    [options]="conditionTypeOptions"
+                    placeholder="Select type"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <div class="field" *ngIf="condition.get('type')?.value === 'TECHNICAL'">
+                  <label>Indicator *</label>
+                  <p-select
+                    formControlName="indicator"
+                    [options]="indicatorOptions"
+                    placeholder="Select indicator"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <div class="field">
+                  <label>Operator *</label>
+                  <p-select
+                    formControlName="operator"
+                    [options]="operatorOptions"
+                    placeholder="Select operator"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <div class="field">
+                  <label>Value *</label>
+                  <input
+                    pInputText
+                    formControlName="value"
+                    placeholder="Enter value"
+                    class="w-full" />
+                </div>
+
+                <div class="field">
+                  <label>Timeframe</label>
+                  <p-select
+                    formControlName="timeframe"
+                    [options]="timeframeOptions"
+                    placeholder="Select timeframe"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+
+                <div class="field" *ngIf="i < exitConditions.length - 1">
+                  <label>Combine with next condition using</label>
+                  <p-select
+                    formControlName="logicalOperator"
+                    [options]="logicalOperatorOptions"
+                    styleClass="w-full">
+                  </p-select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Exit Condition Button -->
+          <p-button
+            label="Add Exit Condition"
+            icon="pi pi-plus"
+            (onClick)="addExitCondition()"
+            severity="secondary"
+            [outlined]="true"
+            styleClass="mt-3">
+          </p-button>
+
+          <!-- Validation Message -->
+          <small class="field-error" *ngIf="exitConditions.length === 0 && configForm.touched">
+            At least one exit condition is required
+          </small>
+        </div>
+      </p-card>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <p-button
+          label="Save Configuration"
+          icon="pi pi-save"
+          (onClick)="onSave()"
+          [disabled]="!isDirty || saving"
+          [loading]="saving">
+        </p-button>
+
+        <p-button
+          label="Run Backtest"
+          icon="pi pi-play"
+          (onClick)="onRunBacktest()"
+          [disabled]="!isValid || isDirty"
+          severity="secondary"
+          [outlined]="true">
+        </p-button>
+      </div>
+
+      <!-- Validation Error Message -->
+      <div *ngIf="error" class="validation-error">
+        <i class="pi pi-exclamation-circle"></i>
+        <span>{{ error }}</span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Backtest Parameters Dialog -->
+  <p-dialog
+    [(visible)]="showBacktestDialog"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="backtest-dialog"
+    header="Run Backtest">
+    
+    <div class="dialog-content">
+      <p class="dialog-description">
+        Configure the parameters for your backtest. The backtest will simulate your strategy's performance over the specified date range.
+      </p>
+
+      <form [formGroup]="backtestForm">
+        <!-- Date Range -->
+        <div class="field">
+          <label for="startDate">Start Date *</label>
+          <p-datepicker
+            id="startDate"
+            formControlName="startDate"
+            [showIcon]="true"
+            dateFormat="yy-mm-dd"
+            placeholder="Select start date"
+            styleClass="w-full">
+          </p-datepicker>
+          <small class="field-help">Beginning of the backtest period</small>
+          <small class="field-error" *ngIf="backtestForm.get('startDate')?.invalid && backtestForm.get('startDate')?.touched">
+            Start date is required
+          </small>
+        </div>
+
+        <div class="field">
+          <label for="endDate">End Date *</label>
+          <p-datepicker
+            id="endDate"
+            formControlName="endDate"
+            [showIcon]="true"
+            dateFormat="yy-mm-dd"
+            placeholder="Select end date"
+            styleClass="w-full">
+          </p-datepicker>
+          <small class="field-help">End of the backtest period</small>
+          <small class="field-error" *ngIf="backtestForm.get('endDate')?.invalid && backtestForm.get('endDate')?.touched">
+            End date is required
+          </small>
+        </div>
+
+        <!-- Initial Capital -->
+        <div class="field">
+          <label for="initialCapital">Initial Capital *</label>
+          <p-inputNumber
+            id="initialCapital"
+            formControlName="initialCapital"
+            [min]="1000"
+            mode="currency"
+            currency="INR"
+            locale="en-IN"
+            [showButtons]="true"
+            [step]="10000"
+            styleClass="w-full">
+          </p-inputNumber>
+          <small class="field-help">Starting capital for the backtest (minimum ₹1,000)</small>
+          <small class="field-error" *ngIf="backtestForm.get('initialCapital')?.invalid && backtestForm.get('initialCapital')?.touched">
+            Initial capital must be at least ₹1,000
+          </small>
+        </div>
+
+        <!-- Optional Symbol -->
+        <div class="field">
+          <label for="symbol">Symbol (Optional)</label>
+          <input
+            pInputText
+            id="symbol"
+            formControlName="symbol"
+            placeholder="e.g., RELIANCE"
+            class="w-full" />
+          <small class="field-help">Leave empty to use the configured universe, or specify a single symbol to test</small>
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="backtestError" class="dialog-error">
+          <i class="pi pi-exclamation-circle"></i>
+          <span>{{ backtestError }}</span>
+        </div>
+      </form>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Cancel"
+        icon="pi pi-times"
+        (onClick)="onCancelBacktest()"
+        [disabled]="runningBacktest"
+        severity="secondary"
+        [text]="true">
+      </p-button>
+      <p-button
+        label="Run Backtest"
+        icon="pi pi-play"
+        (onClick)="onExecuteBacktest()"
+        [disabled]="runningBacktest"
+        [loading]="runningBacktest">
+      </p-button>
+    </ng-template>
+  </p-dialog>
+</div>
