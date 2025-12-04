@@ -34,20 +34,20 @@ This implementation plan breaks down the Strategy page refactor into discrete, m
     - DELETE /api/strategies/{id} - Delete strategy
     - _Requirements: 1.1, 2.1, 2.3, 4.3, 10.1, 10.4_
 
-- [ ] 3. Backend API - Strategy Configuration
-  - [ ] 3.1 Create StrategyConfig entity and repository
+- [x] 3. Backend API - Strategy Configuration
+  - [x] 3.1 Create StrategyConfig entity and repository
     - Implement StrategyConfig JPA entity with JSONB fields
     - Create StrategyConfigRepository interface
     - Add validation for JSONB structure
     - _Requirements: 12.2_
   
-  - [ ] 3.2 Implement StrategyConfig service layer
+  - [x] 3.2 Implement StrategyConfig service layer
     - Create StrategyConfigService for configuration management
     - Add validation for universe, allocations, entry/exit conditions
     - Implement configuration versioning if needed
     - _Requirements: 5.2, 5.3, 5.4, 5.5, 5.6_
   
-  - [ ] 3.3 Create StrategyConfig REST API endpoints
+  - [x] 3.3 Create StrategyConfig REST API endpoints
     - GET /api/strategies/{id}/config - Get strategy configuration
     - PUT /api/strategies/{id}/config - Update strategy configuration
     - POST /api/strategies/{id}/validate-config - Validate configuration
