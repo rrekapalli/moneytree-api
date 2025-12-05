@@ -1,7 +1,9 @@
 package com.moneytree.marketdata.kite;
 
+import com.moneytree.config.CacheConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -527,6 +529,7 @@ public class KiteMarketDataRepository {
      * Get distinct exchange values from kite_instrument_master.
      * Excludes NULL and empty strings, returns results sorted alphabetically.
      */
+    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_EXCHANGES, unless = "#result == null || #result.isEmpty()")
     public List<String> getDistinctExchanges() {
         long startTime = System.currentTimeMillis();
         log.debug("Getting distinct exchanges from kite_instrument_master");
@@ -544,6 +547,7 @@ public class KiteMarketDataRepository {
      * Get distinct index tradingsymbols where segment = 'INDICES'.
      * Excludes NULL and empty strings, returns results sorted alphabetically.
      */
+    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_INDICES, unless = "#result == null || #result.isEmpty()")
     public List<String> getDistinctIndices() {
         long startTime = System.currentTimeMillis();
         log.debug("Getting distinct indices from kite_instrument_master");
@@ -563,6 +567,7 @@ public class KiteMarketDataRepository {
      * Get distinct segment values from kite_instrument_master.
      * Excludes NULL and empty strings, returns results sorted alphabetically.
      */
+    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_SEGMENTS, unless = "#result == null || #result.isEmpty()")
     public List<String> getDistinctSegments() {
         long startTime = System.currentTimeMillis();
         log.debug("Getting distinct segments from kite_instrument_master");

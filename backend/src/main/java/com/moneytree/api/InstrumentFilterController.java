@@ -47,7 +47,6 @@ public class InstrumentFilterController {
      * Results are cached for 7 days as exchange values rarely change.
      */
     @GetMapping("/filters/exchanges")
-    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_EXCHANGES, unless = "#result == null || #result.body == null || #result.body.isEmpty()")
     @Operation(
         summary = "Get distinct exchanges",
         description = "Retrieve all distinct exchange values from kite_instrument_master table. " +
@@ -83,7 +82,6 @@ public class InstrumentFilterController {
      * Results are cached for 7 days as index values rarely change.
      */
     @GetMapping("/filters/indices")
-    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_INDICES, unless = "#result == null || #result.body == null || #result.body.isEmpty()")
     @Operation(
         summary = "Get distinct indices",
         description = "Retrieve all distinct tradingsymbols from kite_instrument_master where segment = 'INDICES'. " +
@@ -119,7 +117,6 @@ public class InstrumentFilterController {
      * Results are cached for 7 days as segment values rarely change.
      */
     @GetMapping("/filters/segments")
-    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_SEGMENTS, unless = "#result == null || #result.body == null || #result.body.isEmpty()")
     @Operation(
         summary = "Get distinct segments",
         description = "Retrieve all distinct segment values from kite_instrument_master table. " +
