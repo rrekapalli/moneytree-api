@@ -1,6 +1,45 @@
 <div class="dashboard-header">
   <div class="dashboard-header-left">
-    <h2 class="dashboard-title">{{ title }}</h2>
+    <h2 class="dashboard-title" *ngIf="!showInstrumentFilters">{{ title }}</h2>
+    
+    <!-- Instrument Filters Section -->
+    <div *ngIf="showInstrumentFilters" class="instrument-filters">
+      <div class="filter-group">
+        <label class="filter-label">Exchange</label>
+        <p-select 
+          [options]="filterOptions.exchanges" 
+          [(ngModel)]="selectedFilters.exchange"
+          (onChange)="onExchangeChange($event.value)"
+          [loading]="isLoadingFilters"
+          placeholder="Select Exchange"
+          [style]="{'width': '150px'}">
+        </p-select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Index</label>
+        <p-select 
+          [options]="filterOptions.indices" 
+          [(ngModel)]="selectedFilters.index"
+          (onChange)="onIndexChange($event.value)"
+          [loading]="isLoadingFilters"
+          placeholder="Select Index"
+          [style]="{'width': '200px'}">
+        </p-select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Segment</label>
+        <p-select 
+          [options]="filterOptions.segments" 
+          [(ngModel)]="selectedFilters.segment"
+          (onChange)="onSegmentChange($event.value)"
+          [loading]="isLoadingFilters"
+          placeholder="Select Segment"
+          [style]="{'width': '150px'}">
+        </p-select>
+      </div>
+    </div>
   </div>
   
   <div class="dashboard-header-right">

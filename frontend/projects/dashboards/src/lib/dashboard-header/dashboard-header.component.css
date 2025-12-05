@@ -32,6 +32,28 @@
   padding: 0;
 }
 
+/* Instrument Filters */
+.instrument-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6c757d;
+  margin: 0;
+  padding: 0;
+}
+
 .dashboard-header-right {
   display: flex;
   align-items: center;
@@ -238,6 +260,14 @@
   
   .header-search-input {
     min-width: 200px;
+  }
+  
+  .instrument-filters {
+    justify-content: center;
+  }
+  
+  .filter-group {
+    min-width: 140px;
   }
 }
 

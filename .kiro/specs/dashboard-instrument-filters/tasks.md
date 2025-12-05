@@ -116,7 +116,7 @@
   - Commit changes: "test: add unit tests for InstrumentFilterService"
   - _Requirements: 4.1, 7.4_
 
-- [ ] 6. Create TypeScript interfaces for filter data models
+- [x] 6. Create TypeScript interfaces for filter data models
   - Create FilterOptions interface (exchanges, indices, segments arrays)
   - Create InstrumentFilter interface (exchange, index, segment optional fields)
   - Create InstrumentDto interface matching backend DTO
@@ -126,7 +126,7 @@
   - Commit changes: "feat: add TypeScript interfaces for instrument filter data models"
   - _Requirements: 8.5_
 
-- [ ] 7. Update DashboardHeaderComponent to support filter dropdowns
+- [x] 7. Update DashboardHeaderComponent to support filter dropdowns
   - Add @Input() showInstrumentFilters: boolean property
   - Add @Input() filterOptions: FilterOptions property
   - Add @Input() selectedFilters: InstrumentFilter property
@@ -141,14 +141,14 @@
   - Commit changes: "feat: add instrument filter dropdowns to DashboardHeaderComponent"
   - _Requirements: 1.1, 5.1, 5.2, 5.3, 5.4, 5.5, 8.4_
 
-- [ ] 7.1 Write property test for dropdown event emission
+- [x] 7.1 Write property test for dropdown event emission
   - **Property 9: Dropdown selection emits event**
   - **Validates: Requirements 5.4**
   - Verify test compiles without errors using getDiagnostics
   - Run test to ensure it passes: `npm test -- --include='**/dashboard-header.component.spec.ts'`
   - Commit changes: "test: add property test for dropdown event emission"
 
-- [ ] 7.2 Write unit tests for DashboardHeaderComponent filter functionality
+- [x] 7.2 Write unit tests for DashboardHeaderComponent filter functionality
   - Test component initializes with provided filter options
   - Test filter change handlers emit correct events
   - Test loading state displays loading indicators
