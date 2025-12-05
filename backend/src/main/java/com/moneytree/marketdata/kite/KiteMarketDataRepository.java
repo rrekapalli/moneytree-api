@@ -521,6 +521,53 @@ public class KiteMarketDataRepository {
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, tradingsymbol);
         return results.isEmpty() ? null : results.get(0);
     }
+
+    /**
+     * Get distinct exchange values from kite_instrument_master.
+     * Excludes NULL and empty strings, returns results sorted alphabetically.
+     */
+    public List<String> getDistinctExchanges() {
+        log.debug("Getting distinct exchanges from kite_instrument_master");
+        String sql = """
+                SELECT DISTINCT exchange 
+                FROM kite_instrument_master 
+                WHERE exchange IS NOT NULL AND exchange != ''
+                ORDER BY exchange
+                """;
+        return jdbcTemplate.queryForList(sql, String.class);
+    }
+
+    /**
+     * Get distinct index tradingsymbols where segment = 'INDICES'.
+     * Excludes NULL and empty strings, returns results sorted alphabetically.
+     */
+    public List<String> getDistinctIndices() {
+        log.debug("Getting distinct indices from kite_instrument_master");
+        String sql = """
+                SELECT DISTINCT tradingsymbol 
+                FROM kite_instrument_master 
+                WHERE segment = 'INDICES' 
+                  AND tradingsymbol IS NOT NULL 
+                  AND tradingsymbol != ''
+                ORDER BY tradingsymbol
+                """;
+        return jdbcTemplate.queryForList(sql, String.class);
+    }
+
+    /**
+     * Get distinct segment values from kite_instrument_master.
+     * Excludes NULL and empty strings, returns results sorted alphabetically.
+     */
+    public List<String> getDistinctSegments() {
+        log.debug("Getting distinct segments from kite_instrument_master");
+        String sql = """
+                SELECT DISTINCT segment 
+                FROM kite_instrument_master 
+                WHERE segment IS NOT NULL AND segment != ''
+                ORDER BY segment
+                """;
+        return jdbcTemplate.queryForList(sql, String.class);
+    }
 }
 
 

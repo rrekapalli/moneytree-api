@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Set up backend infrastructure for instrument filtering
+- [x] 1. Set up backend infrastructure for instrument filtering
   - Create InstrumentDto class for data transfer
   - Update CacheConfig to include new cache names with 7-day TTL
   - Add cache name constants for exchanges, indices, and segments
@@ -9,7 +9,7 @@
   - Commit changes: "feat: add InstrumentDto and cache config for instrument filters"
   - _Requirements: 3.1, 3.2, 3.3, 8.2_
 
-- [ ] 2. Implement backend repository methods for distinct filter values
+- [x] 2. Implement backend repository methods for distinct filter values
   - Add getDistinctExchanges() method to KiteMarketDataRepository
   - Add getDistinctIndices() method to KiteMarketDataRepository (query tradingsymbol where segment='INDICES')
   - Add getDistinctSegments() method to KiteMarketDataRepository
@@ -19,14 +19,14 @@
   - Commit changes: "feat: add repository methods for distinct filter values"
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-- [ ] 2.1 Write property test for distinct values
+- [x] 2.1 Write property test for distinct values
   - **Property 4: Distinct values exclude nulls and empty strings**
   - **Validates: Requirements 2.4**
   - Verify test compiles without errors using getDiagnostics
   - Run test to ensure it passes: `mvn test -Dtest=<TestClassName>#<testMethod>`
   - Commit changes: "test: add property test for distinct values excluding nulls"
 
-- [ ] 2.2 Write property test for alphabetical sorting
+- [x] 2.2 Write property test for alphabetical sorting
   - **Property 5: Distinct values are sorted alphabetically**
   - **Validates: Requirements 2.5**
   - Verify test compiles without errors using getDiagnostics
