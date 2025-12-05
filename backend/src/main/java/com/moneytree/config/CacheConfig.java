@@ -28,18 +28,21 @@ public class CacheConfig {
 
     /**
      * Cache name for distinct exchange values from instrument master
+     * v2: Changed to cache List instead of ResponseEntity
      */
-    public static final String INSTRUMENT_FILTERS_EXCHANGES = "instrumentFilters:exchanges";
+    public static final String INSTRUMENT_FILTERS_EXCHANGES = "instrumentFilters:v2:exchanges";
 
     /**
      * Cache name for distinct index values from instrument master
+     * v2: Changed to cache List instead of ResponseEntity
      */
-    public static final String INSTRUMENT_FILTERS_INDICES = "instrumentFilters:indices";
+    public static final String INSTRUMENT_FILTERS_INDICES = "instrumentFilters:v2:indices";
 
     /**
      * Cache name for distinct segment values from instrument master
+     * v2: Changed to cache List instead of ResponseEntity
      */
-    public static final String INSTRUMENT_FILTERS_SEGMENTS = "instrumentFilters:segments";
+    public static final String INSTRUMENT_FILTERS_SEGMENTS = "instrumentFilters:v2:segments";
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
