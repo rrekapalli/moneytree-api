@@ -33,7 +33,7 @@
   - Run test to ensure it passes: `mvn test -Dtest=<TestClassName>#<testMethod>`
   - Commit changes: "test: add property test for alphabetical sorting of distinct values"
 
-- [ ] 3. Implement backend repository method for filtered instruments
+- [x] 3. Implement backend repository method for filtered instruments
   - Add getFilteredInstruments(exchange, index, segment) method to KiteMarketDataRepository
   - Implement dynamic SQL query building with WHERE clauses for provided filters
   - Apply AND logic when multiple filters are provided
@@ -44,21 +44,21 @@
   - Commit changes: "feat: add getFilteredInstruments method with dynamic query building"
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-- [ ] 3.1 Write property test for query filter inclusion
+- [x] 3.1 Write property test for query filter inclusion
   - **Property 7: Query includes all provided filters**
   - **Validates: Requirements 4.2**
   - Verify test compiles without errors using getDiagnostics
   - Run test to ensure it passes: `mvn test -Dtest=<TestClassName>#<testMethod>`
   - Commit changes: "test: add property test for query filter inclusion"
 
-- [ ] 3.2 Write property test for AND logic
+- [x] 3.2 Write property test for AND logic
   - **Property 3: AND logic for multiple filters**
   - **Validates: Requirements 4.3**
   - Verify test compiles without errors using getDiagnostics
   - Run test to ensure it passes: `mvn test -Dtest=<TestClassName>#<testMethod>`
   - Commit changes: "test: add property test for AND logic in multiple filters"
 
-- [ ] 3.3 Write property test for response fields
+- [x] 3.3 Write property test for response fields
   - **Property 8: Response includes required fields**
   - **Validates: Requirements 4.4**
   - Verify test compiles without errors using getDiagnostics
