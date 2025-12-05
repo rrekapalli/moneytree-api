@@ -13,7 +13,7 @@ import { InstrumentDto, InstrumentFilter } from '../entities/instrument-filter';
   providedIn: 'root'
 })
 export class InstrumentFilterService {
-  private readonly baseEndpoint = '/api/v1/instruments';
+  private readonly baseEndpoint = '/v1/instruments';
   private readonly exchangesEndpoint = `${this.baseEndpoint}/filters/exchanges`;
   private readonly indicesEndpoint = `${this.baseEndpoint}/filters/indices`;
   private readonly segmentsEndpoint = `${this.baseEndpoint}/filters/segments`;

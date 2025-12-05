@@ -93,7 +93,7 @@
   - Run test to ensure it passes: `mvn test -Dtest=<TestClassName>#<testMethod>`
   - Commit changes: "test: add property test for cache hit behavior"
 
-- [ ] 5. Create frontend service for instrument filtering
+- [x] 5. Create frontend service for instrument filtering
   - Create InstrumentFilterService with HttpClient injection
   - Implement getDistinctExchanges() method
   - Implement getDistinctIndices() method
@@ -106,7 +106,7 @@
   - Commit changes: "feat: add InstrumentFilterService with retry and error handling"
   - _Requirements: 4.1, 7.4, 8.3_
 
-- [ ] 5.1 Write unit tests for InstrumentFilterService
+- [x] 5.1 Write unit tests for InstrumentFilterService
   - Test each method calls correct endpoint
   - Test getFilteredInstruments builds correct query parameters
   - Test retry logic on network errors
