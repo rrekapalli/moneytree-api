@@ -9,24 +9,30 @@
   <div *ngIf="error && !loading" class="error-state">
     <i class="pi pi-exclamation-triangle" style="font-size: 2rem; color: var(--red-500)"></i>
     <p>{{ error }}</p>
-    <p-button 
-      label="Retry" 
-      icon="pi pi-refresh" 
-      (onClick)="reloadConfiguration()"
-      severity="secondary">
-    </p-button>
+    <button pButton 
+            label="Retry" 
+            icon="pi pi-refresh" 
+            class="p-button-outlined"
+            (click)="reloadConfiguration()">
+    </button>
   </div>
 
   <!-- Configuration Form -->
   <div *ngIf="!loading && !error" class="config-form">
     <form [formGroup]="configForm">
-      <!-- Universe Section -->
-      <p-card header="Universe" styleClass="config-section">
-        <div class="card-content" formGroupName="universe">
-          <p class="section-description">
-            Define which stocks or instruments this strategy will consider for trading.
-          </p>
-
+      <!-- Configuration Accordion -->
+      <p-accordion [multiple]="false" [(value)]="activeAccordionValue" styleClass="config-accordion">
+        
+        <!-- Universe Section -->
+        <p-accordionpanel [value]="0">
+          <p-accordionheader>
+            <div class="section-header">
+              <i class="pi pi-globe section-icon"></i>
+              <span class="section-title">Universe - <span class="section-description">Define which stocks or instruments this strategy will consider</span></span>
+            </div>
+          </p-accordionheader>
+          <p-accordioncontent>
+            <div class="section-content" formGroupName="universe">
           <!-- Universe Type Selection -->
           <div class="field">
             <label for="universeType">Universe Type *</label>
@@ -87,15 +93,20 @@
             <strong>Selected Universe:</strong>
             <p>{{ getUniverseSummary() }}</p>
           </div>
-        </div>
-      </p-card>
+            </div>
+          </p-accordioncontent>
+        </p-accordionpanel>
 
-      <!-- Allocations Section -->
-      <p-card header="Allocations" styleClass="config-section">
-        <div class="card-content" formGroupName="allocations">
-          <p class="section-description">
-            Define how capital will be allocated across positions in this strategy.
-          </p>
+        <!-- Allocations Section -->
+        <p-accordionpanel [value]="1">
+          <p-accordionheader>
+            <div class="section-header">
+              <i class="pi pi-wallet section-icon"></i>
+              <span class="section-title">Allocations - <span class="section-description">Capital allocation and position sizing rules</span></span>
+            </div>
+          </p-accordionheader>
+          <p-accordioncontent>
+            <div class="section-content" formGroupName="allocations">
 
           <!-- Position Sizing Method -->
           <div class="field">
@@ -166,15 +177,20 @@
               Must be between 0% and 100%
             </small>
           </div>
-        </div>
-      </p-card>
+            </div>
+          </p-accordioncontent>
+        </p-accordionpanel>
 
-      <!-- Entry Conditions Section -->
-      <p-card header="Entry Conditions" styleClass="config-section">
-        <div class="card-content">
-          <p class="section-description">
-            Define the conditions that trigger a buy signal (opening a position).
-          </p>
+        <!-- Entry Conditions Section -->
+        <p-accordionpanel [value]="2">
+          <p-accordionheader>
+            <div class="section-header">
+              <i class="pi pi-sign-in section-icon"></i>
+              <span class="section-title">Entry Conditions - <span class="section-description">Rules for opening positions (buy signals)</span></span>
+            </div>
+          </p-accordionheader>
+          <p-accordioncontent>
+            <div class="section-content">
 
           <!-- Entry Conditions List -->
           <div formArrayName="entryConditions">
@@ -275,68 +291,23 @@
           <small class="field-error" *ngIf="entryConditions.length === 0 && configForm.touched">
             At least one entry condition is required
           </small>
-        </div>
-      </p-card>
-
-      <!-- Exit Conditions Section -->
-      <p-card header="Exit Conditions" styleClass="config-section">
-        <div class="card-content">
-          <p class="section-description">
-            Define the conditions that trigger a sell signal (closing a position).
-          </p>
-
-          <!-- Risk Parameters -->
-          <div formGroupName="riskParameters" class="risk-parameters">
-            <h4>Risk Management</h4>
-            
-            <div class="field">
-              <label for="stopLossPercent">Stop Loss (%)</label>
-              <p-inputNumber
-                id="stopLossPercent"
-                formControlName="stopLossPercent"
-                [min]="0"
-                [max]="100"
-                suffix="%"
-                [showButtons]="true"
-                [step]="0.5"
-                styleClass="w-full">
-              </p-inputNumber>
-              <small class="field-help">Percentage below entry price to trigger stop loss</small>
             </div>
+          </p-accordioncontent>
+        </p-accordionpanel>
 
-            <div class="field">
-              <label for="takeProfitPercent">Take Profit (%)</label>
-              <p-inputNumber
-                id="takeProfitPercent"
-                formControlName="takeProfitPercent"
-                [min]="0"
-                suffix="%"
-                [showButtons]="true"
-                [step]="0.5"
-                styleClass="w-full">
-              </p-inputNumber>
-              <small class="field-help">Percentage above entry price to trigger take profit</small>
+        <!-- Exit Conditions Section -->
+        <p-accordionpanel [value]="3">
+          <p-accordionheader>
+            <div class="section-header">
+              <i class="pi pi-sign-out section-icon"></i>
+              <span class="section-title">Exit Conditions - <span class="section-description">Rules for closing positions (sell signals)</span></span>
             </div>
-
-            <div class="field">
-              <label for="trailingStopPercent">Trailing Stop (%)</label>
-              <p-inputNumber
-                id="trailingStopPercent"
-                formControlName="trailingStopPercent"
-                [min]="0"
-                [max]="100"
-                suffix="%"
-                [showButtons]="true"
-                [step]="0.5"
-                styleClass="w-full">
-              </p-inputNumber>
-              <small class="field-help">Percentage below highest price to trigger trailing stop</small>
-            </div>
-          </div>
+          </p-accordionheader>
+          <p-accordioncontent>
+            <div class="section-content">
 
           <!-- Exit Conditions List -->
-          <div formArrayName="exitConditions" class="mt-4">
-            <h4>Exit Conditions</h4>
+          <div formArrayName="exitConditions">
             
             <div *ngFor="let condition of exitConditions.controls; let i = index" 
                  [formGroupName]="i" 
@@ -429,27 +400,99 @@
           <small class="field-error" *ngIf="exitConditions.length === 0 && configForm.touched">
             At least one exit condition is required
           </small>
-        </div>
-      </p-card>
+            </div>
+          </p-accordioncontent>
+        </p-accordionpanel>
+
+        <!-- Risk Management Section -->
+        <p-accordionpanel [value]="4">
+          <p-accordionheader>
+            <div class="section-header">
+              <i class="pi pi-shield section-icon"></i>
+              <span class="section-title">Risk Management - <span class="section-description">Stop loss, take profit, and trailing stop settings</span></span>
+            </div>
+          </p-accordionheader>
+          <p-accordioncontent>
+            <div class="section-content" formGroupName="riskParameters">
+            
+            <div class="field">
+              <label for="stopLossPercent">Stop Loss (%)</label>
+              <p-inputNumber
+                id="stopLossPercent"
+                formControlName="stopLossPercent"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                [step]="0.5"
+                styleClass="w-full">
+              </p-inputNumber>
+              <small class="field-help">Percentage below entry price to trigger stop loss</small>
+            </div>
+
+            <div class="field">
+              <label for="takeProfitPercent">Take Profit (%)</label>
+              <p-inputNumber
+                id="takeProfitPercent"
+                formControlName="takeProfitPercent"
+                [min]="0"
+                suffix="%"
+                [showButtons]="true"
+                [step]="0.5"
+                styleClass="w-full">
+              </p-inputNumber>
+              <small class="field-help">Percentage above entry price to trigger take profit</small>
+            </div>
+
+            <div class="field">
+              <label for="trailingStopPercent">Trailing Stop (%)</label>
+              <p-inputNumber
+                id="trailingStopPercent"
+                formControlName="trailingStopPercent"
+                [min]="0"
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                [step]="0.5"
+                styleClass="w-full">
+              </p-inputNumber>
+              <small class="field-help">Percentage below highest price to trigger trailing stop</small>
+            </div>
+            </div>
+          </p-accordioncontent>
+        </p-accordionpanel>
+
+      </p-accordion>
 
       <!-- Action Buttons -->
       <div class="action-buttons">
-        <p-button
-          label="Save Configuration"
-          icon="pi pi-save"
-          (onClick)="onSave()"
-          [disabled]="!isDirty || saving"
-          [loading]="saving">
-        </p-button>
+        <button pButton 
+                label="Reset" 
+                icon="pi pi-refresh"
+                class="p-button-outlined"
+                (click)="reloadConfiguration()"
+                [disabled]="!isDirty || saving">
+        </button>
+        <button pButton 
+                label="Save Configuration" 
+                icon="pi pi-check"
+                class="p-button-success"
+                (click)="onSave()"
+                [disabled]="!isDirty || saving || !isValid">
+          @if (saving) {
+            <i class="pi pi-spin pi-spinner"></i>
+          }
+        </button>
+      </div>
 
-        <p-button
-          label="Run Backtest"
-          icon="pi pi-play"
-          (onClick)="onRunBacktest()"
-          [disabled]="!isValid || isDirty"
-          severity="secondary"
-          [outlined]="true">
-        </p-button>
+      <!-- Backtest Button -->
+      <div class="backtest-section" *ngIf="!isDirty && isValid">
+        <button pButton 
+                label="Run Backtest" 
+                icon="pi pi-play"
+                class="p-button-outlined p-button-secondary"
+                (click)="onRunBacktest()">
+        </button>
       </div>
 
       <!-- Validation Error Message -->
@@ -550,21 +593,23 @@
     </div>
 
     <ng-template pTemplate="footer">
-      <p-button
-        label="Cancel"
-        icon="pi pi-times"
-        (onClick)="onCancelBacktest()"
-        [disabled]="runningBacktest"
-        severity="secondary"
-        [text]="true">
-      </p-button>
-      <p-button
-        label="Run Backtest"
-        icon="pi pi-play"
-        (onClick)="onExecuteBacktest()"
-        [disabled]="runningBacktest"
-        [loading]="runningBacktest">
-      </p-button>
+      <button pButton 
+              label="Cancel" 
+              icon="pi pi-times"
+              class="p-button-outlined"
+              (click)="onCancelBacktest()"
+              [disabled]="runningBacktest">
+      </button>
+      <button pButton 
+              label="Run Backtest" 
+              icon="pi pi-play"
+              class="p-button-success"
+              (click)="onExecuteBacktest()"
+              [disabled]="runningBacktest || !backtestForm.valid">
+        @if (runningBacktest) {
+          <i class="pi pi-spin pi-spinner"></i>
+        }
+      </button>
     </ng-template>
   </p-dialog>
 </div>

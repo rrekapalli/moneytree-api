@@ -1,8 +1,12 @@
 import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 import { Subscription } from 'rxjs';
 import { filter, distinctUntilChanged } from 'rxjs/operators';
 
@@ -103,10 +107,14 @@ import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/we
   selector: 'app-stock-insights',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
+    FormsModule,
     ButtonModule,
     MessageModule,
     ScrollPanelModule,
+    InputTextModule,
+    SelectModule,
+    TooltipModule,
     // Dashboard components
     DashboardContainerComponent,
     DashboardHeaderComponent

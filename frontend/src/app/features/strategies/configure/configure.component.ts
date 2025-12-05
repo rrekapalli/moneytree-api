@@ -13,6 +13,7 @@ import { ChipModule } from 'primeng/chip';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { DatePickerModule } from 'primeng/datepicker';
+import { AccordionModule } from 'primeng/accordion';
 
 import { 
   StrategyWithMetrics, 
@@ -67,7 +68,8 @@ import { ToastService } from '../../../services/toast.service';
     ChipModule,
     TooltipModule,
     DialogModule,
-    DatePickerModule
+    DatePickerModule,
+    AccordionModule
   ],
   templateUrl: './configure.component.html',
   styleUrls: ['./configure.component.scss'],
@@ -104,6 +106,9 @@ export class ConfigureComponent implements OnInit, OnDestroy {
   backtestForm!: FormGroup;
   runningBacktest = false;
   backtestError: string | null = null;
+
+  // Accordion state
+  activeAccordionValue: number | number[] = 0;
 
   // Options for dropdowns
   universeTypeOptions = [
