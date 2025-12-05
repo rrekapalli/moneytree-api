@@ -26,6 +26,21 @@ public class CacheConfig {
      */
     public static final String INDICES_BY_EXCHANGE_SEGMENT_CACHE = "indicesByExchangeSegment";
 
+    /**
+     * Cache name for distinct exchange values from instrument master
+     */
+    public static final String INSTRUMENT_FILTERS_EXCHANGES = "instrumentFilters:exchanges";
+
+    /**
+     * Cache name for distinct index values from instrument master
+     */
+    public static final String INSTRUMENT_FILTERS_INDICES = "instrumentFilters:indices";
+
+    /**
+     * Cache name for distinct segment values from instrument master
+     */
+    public static final String INSTRUMENT_FILTERS_SEGMENTS = "instrumentFilters:segments";
+
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         // Default cache configuration: 9 hours TTL
@@ -42,9 +57,20 @@ public class CacheConfig {
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
                 .disableCachingNullValues();
 
+        // Specific configuration for instrument filters cache (7 days TTL)
+        // Filter metadata rarely changes, so we cache for a week
+        RedisCacheConfiguration filtersCacheConfig = RedisCacheConfiguration.defaultCacheConfig()
+                .entryTtl(Duration.ofDays(7))
+                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
+                .disableCachingNullValues();
+
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withCacheConfiguration(INDICES_BY_EXCHANGE_SEGMENT_CACHE, indicesCacheConfig)
+                .withCacheConfiguration(INSTRUMENT_FILTERS_EXCHANGES, filtersCacheConfig)
+                .withCacheConfiguration(INSTRUMENT_FILTERS_INDICES, filtersCacheConfig)
+                .withCacheConfiguration(INSTRUMENT_FILTERS_SEGMENTS, filtersCacheConfig)
                 .build();
     }
 }
