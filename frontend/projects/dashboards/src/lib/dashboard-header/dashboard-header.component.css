@@ -35,23 +35,98 @@
 /* Instrument Filters */
 .instrument-filters {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 20px;
   flex-wrap: wrap;
+  padding: 4px 0;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-width: 140px;
 }
 
 .filter-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #6c757d;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
   margin: 0;
   padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+}
+
+/* PrimeNG Select Component Styling */
+:host ::ng-deep .instrument-filters .p-select {
+  width: 100%;
+  min-width: 140px;
+}
+
+:host ::ng-deep .instrument-filters .p-select .p-select-label {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #495057;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+:host ::ng-deep .instrument-filters .p-select:not(.p-disabled):hover {
+  border-color: #007bff;
+}
+
+:host ::ng-deep .instrument-filters .p-select:not(.p-disabled).p-focus {
+  outline: 0 none;
+  outline-offset: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+  border-color: #007bff;
+}
+
+:host ::ng-deep .instrument-filters .p-select .p-select-dropdown {
+  width: 2.5rem;
+  color: #6c757d;
+}
+
+/* Loading state for dropdowns */
+:host ::ng-deep .instrument-filters .p-select.p-disabled {
+  opacity: 0.6;
+  background-color: #f8f9fa;
+}
+
+:host ::ng-deep .instrument-filters .p-select.p-disabled .p-select-label {
+  color: #6c757d;
+}
+
+/* Dropdown panel styling */
+:host ::ng-deep .p-select-overlay {
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #dee2e6;
+}
+
+:host ::ng-deep .p-select-overlay .p-select-option {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  transition: background-color 0.2s ease;
+}
+
+:host ::ng-deep .p-select-overlay .p-select-option:hover {
+  background-color: #f8f9fa;
+}
+
+:host ::ng-deep .p-select-overlay .p-select-option.p-select-option-selected {
+  background-color: #e7f3ff;
+  color: #007bff;
+}
+
+/* Empty state message */
+:host ::ng-deep .p-select-overlay .p-select-empty-message {
+  padding: 0.5rem 0.75rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+  text-align: center;
 }
 
 .dashboard-header-right {
@@ -244,17 +319,20 @@
   .dashboard-header {
     flex-direction: column;
     gap: 12px;
+    padding: 12px 16px;
   }
 
   .dashboard-header-left {
-    text-align: center;
+    width: 100%;
   }
 
   .dashboard-title {
     font-size: 1.1rem;
+    text-align: center;
   }
 
   .dashboard-header-right {
+    width: 100%;
     justify-content: center;
   }
   
@@ -263,11 +341,43 @@
   }
   
   .instrument-filters {
-    justify-content: center;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 16px;
   }
   
   .filter-group {
-    min-width: 140px;
+    flex: 1;
+    min-width: 120px;
+    max-width: 180px;
+  }
+}
+
+/* Extra small screens - stack filters vertically */
+@media (max-width: 480px) {
+  .instrument-filters {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .filter-group {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  :host ::ng-deep .instrument-filters .p-select {
+    width: 100%;
+  }
+}
+
+/* Tablet and medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .instrument-filters {
+    gap: 16px;
+  }
+  
+  .filter-group {
+    min-width: 130px;
   }
 }
 
