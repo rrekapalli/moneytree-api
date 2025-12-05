@@ -157,7 +157,7 @@
   - Commit changes: "test: add unit tests for DashboardHeaderComponent filter functionality"
   - _Requirements: 5.2, 5.4, 5.5_
 
-- [ ] 8. Update StockInsightsComponent to manage filter state
+- [x] 8. Update StockInsightsComponent to manage filter state
   - Add showInstrumentFilters property (set to true)
   - Add filterOptions property with empty arrays
   - Add selectedFilters property with defaults (NSE, NIFTY 50, EQ)
@@ -174,21 +174,21 @@
   - Commit changes: "feat: add filter state management to StockInsightsComponent"
   - _Requirements: 1.2, 1.3, 1.4, 5.2, 6.1, 6.4_
 
-- [ ] 8.1 Write property test for filter change triggering update
+- [x] 8.1 Write property test for filter change triggering update
   - **Property 1: Filter change triggers widget update**
   - **Validates: Requirements 1.3**
   - Verify test compiles without errors using getDiagnostics
   - Run test to ensure it passes: `npm test -- --include='**/stock-insights.component.spec.ts'`
   - Commit changes: "test: add property test for filter change triggering widget update"
 
-- [ ] 8.2 Write property test for filter state persistence
+- [x] 8.2 Write property test for filter state persistence
   - **Property 2: Filter state persistence**
   - **Validates: Requirements 1.4**
   - Verify test compiles without errors using getDiagnostics
   - Run test to ensure it passes: `npm test -- --include='**/stock-insights.component.spec.ts'`
   - Commit changes: "test: add property test for filter state persistence"
 
-- [ ] 8.3 Write unit tests for StockInsightsComponent filter management
+- [x] 8.3 Write unit tests for StockInsightsComponent filter management
   - Test loadFilterOptions() calls service and populates filterOptions
   - Test onFilterChange() updates selectedFilters
   - Test debouncing prevents excessive API calls

@@ -7,8 +7,8 @@ import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
-import { Subscription } from 'rxjs';
-import { filter, distinctUntilChanged } from 'rxjs/operators';
+import { Subscription, of } from 'rxjs';
+import { filter, distinctUntilChanged, retry, catchError } from 'rxjs/operators';
 
 // Import echarts core module and components
 import * as echarts from 'echarts/core';
@@ -102,6 +102,10 @@ import { IndexResponseDto } from '../../../services/entities/indices';
 // Import consolidated WebSocket service and entities
 import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
 
+// Import instrument filter service and interfaces
+import { InstrumentFilterService, FilterOptions, InstrumentFilter, InstrumentDto } from '../../../services/apis/instrument-filter.service';
+import { forkJoin } from 'rxjs';
+
 
 @Component({
   selector: 'app-stock-insights',
@@ -136,6 +140,20 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   
   // Dashboard title - dynamic based on a selected index
   public dashboardTitle: string = 'Financial Dashboard';
+  
+  // Filter state management
+  public showInstrumentFilters: boolean = true;
+  public filterOptions: FilterOptions = { exchanges: [], indices: [], segments: [] };
+  public selectedFilters: InstrumentFilter = {
+    exchange: 'NSE',
+    index: 'NIFTY 50',
+    segment: 'EQ'
+  };
+  public isLoadingFilters: boolean = false;
+  public isLoadingInstruments: boolean = false;
+  
+  // Debounce timer for filter changes
+  private filterChangeTimer: any = null;
   
   // Subscription management
   private selectedIndexSubscription: Subscription | null = null;
@@ -183,8 +201,8 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     private componentCommunicationService: ComponentCommunicationService,
     private indicesService: IndicesService,
     private webSocketService: WebSocketService,
-    private ngZone: NgZone
-
+    private ngZone: NgZone,
+    private instrumentFilterService: InstrumentFilterService
   ) {
     super(cdr, excelExportService, filterService);
   }
@@ -236,6 +254,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
     // Wait for widget header to be fully rendered
     setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
+    
+    // Load filter options
+    this.loadFilterOptions();
   }
 
   protected onChildDestroy(): void {
@@ -243,6 +264,12 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     if (this.chartUpdateTimer) {
       clearTimeout(this.chartUpdateTimer);
       this.chartUpdateTimer = null;
+    }
+    
+    // Clean up filter change timer
+    if (this.filterChangeTimer) {
+      clearTimeout(this.filterChangeTimer);
+      this.filterChangeTimer = null;
     }
     
     // Dispose of all chart instances to prevent reinitialization errors
@@ -291,6 +318,102 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     this.currentSubscribedIndex = null;
     this.isSubscribing = false;
     this.subscribedTopics.clear();
+  }
+  
+  /**
+   * Load filter options from the backend API
+   */
+  private loadFilterOptions(): void {
+    this.isLoadingFilters = true;
+    
+    forkJoin({
+      exchanges: this.instrumentFilterService.getDistinctExchanges(),
+      indices: this.instrumentFilterService.getDistinctIndices(),
+      segments: this.instrumentFilterService.getDistinctSegments()
+    }).subscribe({
+      next: (options) => {
+        this.filterOptions = options;
+        this.isLoadingFilters = false;
+        this.cdr.detectChanges();
+        
+        // Load initial data with default filters
+        this.loadFilteredInstruments();
+      },
+      error: (error) => {
+        console.error('Failed to load filter options:', error);
+        this.isLoadingFilters = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+  
+  /**
+   * Handle filter change events from the dashboard header
+   * @param filters The updated filter values
+   */
+  public onFilterChange(filters: InstrumentFilter): void {
+    this.selectedFilters = { ...filters };
+    
+    // Debounce filter changes to prevent excessive API calls
+    if (this.filterChangeTimer) {
+      clearTimeout(this.filterChangeTimer);
+    }
+    
+    this.filterChangeTimer = setTimeout(() => {
+      this.loadFilteredInstruments();
+    }, 300);
+  }
+  
+  /**
+   * Load filtered instruments from the backend API
+   */
+  private loadFilteredInstruments(): void {
+    this.isLoadingInstruments = true;
+    
+    this.instrumentFilterService.getFilteredInstruments(this.selectedFilters)
+      .pipe(
+        retry(2),
+        catchError((error) => {
+          console.error('Failed to load filtered instruments:', error);
+          this.isLoadingInstruments = false;
+          this.cdr.detectChanges();
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (instruments) => {
+          // Map instruments to StockDataDto format
+          const mappedData = this.mapInstrumentsToStockData(instruments);
+          
+          // Update dashboard data
+          this.dashboardData = mappedData;
+          this.filteredDashboardData = mappedData;
+          
+          // Update Stock List widget
+          this.updateStockListWithFilteredData();
+          
+          this.isLoadingInstruments = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+  
+  /**
+   * Map InstrumentDto array to StockDataDto array
+   * @param instruments Array of InstrumentDto from the API
+   * @returns Array of StockDataDto for the dashboard
+   */
+  private mapInstrumentsToStockData(instruments: InstrumentDto[]): StockDataDto[] {
+    return instruments.map(inst => ({
+      tradingsymbol: inst.tradingsymbol,
+      symbol: inst.tradingsymbol,
+      companyName: inst.name || inst.tradingsymbol,
+      lastPrice: inst.lastPrice || 0,
+      percentChange: 0,
+      totalTradedValue: 0,
+      sector: inst.segment || '',
+      industry: inst.instrumentType || ''
+    }));
   }
 
   private indicesLoaded = false;
