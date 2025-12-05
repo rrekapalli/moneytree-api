@@ -249,7 +249,7 @@
   - Commit changes: "style: add CSS styling for instrument filter dropdowns"
   - _Requirements: 5.1, 8.4_
 
-- [-] 12. Update dashboard header template to remove dynamic title
+- [x] 12. Update dashboard header template to remove dynamic title
   - Remove or hide the dynamic title display that shows selected index symbol
   - Ensure filter dropdowns are prominently displayed in header
   - Maintain other header functionality (export, highlighting, search)
@@ -258,7 +258,7 @@
   - Commit changes: "refactor: replace dynamic title with filter dropdowns in dashboard header"
   - _Requirements: 1.1_
 
-- [ ] 13. Checkpoint - Ensure all tests pass
+- [x] 13. Checkpoint - Ensure all tests pass
   - Run all backend tests: `mvn test`
   - Run all frontend tests: `npm test`
   - Verify no compilation errors in backend: `mvn clean compile`
@@ -266,7 +266,7 @@
   - Ensure all tests pass, ask the user if questions arise
   - Commit changes if any fixes were made: "fix: resolve test failures and compilation errors"
 
-- [ ] 14. Test end-to-end filter functionality
+- [x] 14. Test end-to-end filter functionality
   - Manually test loading dashboard with default filters
   - Manually test changing each filter individually
   - Manually test changing all three filters together
