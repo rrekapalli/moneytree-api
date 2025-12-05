@@ -7,8 +7,8 @@ import { ScrollPanelModule } from 'primeng/scrollpanel';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
-import { Subscription, of } from 'rxjs';
-import { filter, distinctUntilChanged, retry, catchError } from 'rxjs/operators';
+import { Subscription, of, Subject } from 'rxjs';
+import { filter, distinctUntilChanged, retry, catchError, takeUntil } from 'rxjs/operators';
 
 // Import echarts core module and components
 import * as echarts from 'echarts/core';
@@ -158,6 +158,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   // Debounce timer for filter changes
   private filterChangeTimer: any = null;
   
+  // Request cancellation for filter changes
+  private cancelPendingRequest$ = new Subject<void>();
+  
   // Subscription management
   private selectedIndexSubscription: Subscription | null = null;
   
@@ -276,6 +279,10 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       this.filterChangeTimer = null;
     }
     
+    // Complete the cancellation subject to prevent memory leaks
+    this.cancelPendingRequest$.next();
+    this.cancelPendingRequest$.complete();
+    
     // Dispose of all chart instances to prevent reinitialization errors
     if (this.dashboardConfig?.widgets) {
       this.dashboardConfig.widgets.forEach(widget => {
@@ -367,7 +374,10 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   public onFilterChange(filters: InstrumentFilter): void {
     this.selectedFilters = { ...filters };
     
-    // Debounce filter changes to prevent excessive API calls
+    // Cancel any pending requests
+    this.cancelPendingRequest$.next();
+    
+    // Debounce filter changes to prevent excessive API calls (300ms)
     if (this.filterChangeTimer) {
       clearTimeout(this.filterChangeTimer);
     }
@@ -379,6 +389,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   
   /**
    * Load filtered instruments from the backend API
+   * Implements request cancellation to prevent race conditions on rapid filter changes
    */
   private loadFilteredInstruments(): void {
     this.isLoadingInstruments = true;
@@ -389,6 +400,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     
     this.instrumentFilterService.getFilteredInstruments(this.selectedFilters)
       .pipe(
+        takeUntil(this.cancelPendingRequest$), // Cancel request if new filter change occurs
         retry(2),
         catchError((error) => {
           console.error('Failed to load filtered instruments:', error);

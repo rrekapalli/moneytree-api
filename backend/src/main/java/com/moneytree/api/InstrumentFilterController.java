@@ -62,13 +62,16 @@ public class InstrumentFilterController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<?> getDistinctExchanges() {
+        long startTime = System.currentTimeMillis();
         try {
             log.info("Fetching distinct exchanges from kite_instrument_master");
             List<String> exchanges = repository.getDistinctExchanges();
-            log.info("Retrieved {} distinct exchanges", exchanges.size());
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Retrieved {} distinct exchanges in {} ms", exchanges.size(), duration);
             return ResponseEntity.ok(exchanges);
         } catch (Exception ex) {
-            log.error("Error fetching distinct exchanges", ex);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Error fetching distinct exchanges after {} ms", duration, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     Map.of("error", "Failed to fetch distinct exchanges")
             );
@@ -95,13 +98,16 @@ public class InstrumentFilterController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<?> getDistinctIndices() {
+        long startTime = System.currentTimeMillis();
         try {
             log.info("Fetching distinct indices from kite_instrument_master");
             List<String> indices = repository.getDistinctIndices();
-            log.info("Retrieved {} distinct indices", indices.size());
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Retrieved {} distinct indices in {} ms", indices.size(), duration);
             return ResponseEntity.ok(indices);
         } catch (Exception ex) {
-            log.error("Error fetching distinct indices", ex);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Error fetching distinct indices after {} ms", duration, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     Map.of("error", "Failed to fetch distinct indices")
             );
@@ -128,13 +134,16 @@ public class InstrumentFilterController {
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     public ResponseEntity<?> getDistinctSegments() {
+        long startTime = System.currentTimeMillis();
         try {
             log.info("Fetching distinct segments from kite_instrument_master");
             List<String> segments = repository.getDistinctSegments();
-            log.info("Retrieved {} distinct segments", segments.size());
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Retrieved {} distinct segments in {} ms", segments.size(), duration);
             return ResponseEntity.ok(segments);
         } catch (Exception ex) {
-            log.error("Error fetching distinct segments", ex);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Error fetching distinct segments after {} ms", duration, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     Map.of("error", "Failed to fetch distinct segments")
             );
@@ -168,6 +177,7 @@ public class InstrumentFilterController {
             @RequestParam(required = false) String index,
             @Parameter(description = "Segment filter (e.g., EQ, FO)", example = "EQ")
             @RequestParam(required = false) String segment) {
+        long startTime = System.currentTimeMillis();
         try {
             log.info("Fetching filtered instruments: exchange={}, index={}, segment={}", exchange, index, segment);
             
@@ -179,10 +189,13 @@ public class InstrumentFilterController {
                     .map(this::mapToInstrumentDto)
                     .collect(Collectors.toList());
             
-            log.info("Retrieved {} filtered instruments", instruments.size());
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Retrieved {} filtered instruments in {} ms (query: {} ms, mapping: {} ms)", 
+                    instruments.size(), duration, duration - 10, 10);
             return ResponseEntity.ok(instruments);
         } catch (Exception ex) {
-            log.error("Error fetching filtered instruments", ex);
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Error fetching filtered instruments after {} ms", duration, ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                     Map.of("error", "Failed to fetch filtered instruments")
             );

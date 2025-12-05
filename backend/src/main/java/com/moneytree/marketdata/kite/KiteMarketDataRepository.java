@@ -528,6 +528,7 @@ public class KiteMarketDataRepository {
      * Excludes NULL and empty strings, returns results sorted alphabetically.
      */
     public List<String> getDistinctExchanges() {
+        long startTime = System.currentTimeMillis();
         log.debug("Getting distinct exchanges from kite_instrument_master");
         String sql = """
                 SELECT DISTINCT exchange 
@@ -535,7 +536,10 @@ public class KiteMarketDataRepository {
                 WHERE exchange IS NOT NULL AND exchange != ''
                 ORDER BY exchange
                 """;
-        return jdbcTemplate.queryForList(sql, String.class);
+        List<String> result = jdbcTemplate.queryForList(sql, String.class);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Query getDistinctExchanges completed in {} ms, returned {} exchanges", duration, result.size());
+        return result;
     }
 
     /**
@@ -543,6 +547,7 @@ public class KiteMarketDataRepository {
      * Excludes NULL and empty strings, returns results sorted alphabetically.
      */
     public List<String> getDistinctIndices() {
+        long startTime = System.currentTimeMillis();
         log.debug("Getting distinct indices from kite_instrument_master");
         String sql = """
                 SELECT DISTINCT tradingsymbol 
@@ -552,7 +557,10 @@ public class KiteMarketDataRepository {
                   AND tradingsymbol != ''
                 ORDER BY tradingsymbol
                 """;
-        return jdbcTemplate.queryForList(sql, String.class);
+        List<String> result = jdbcTemplate.queryForList(sql, String.class);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Query getDistinctIndices completed in {} ms, returned {} indices", duration, result.size());
+        return result;
     }
 
     /**
@@ -560,6 +568,7 @@ public class KiteMarketDataRepository {
      * Excludes NULL and empty strings, returns results sorted alphabetically.
      */
     public List<String> getDistinctSegments() {
+        long startTime = System.currentTimeMillis();
         log.debug("Getting distinct segments from kite_instrument_master");
         String sql = """
                 SELECT DISTINCT segment 
@@ -567,7 +576,10 @@ public class KiteMarketDataRepository {
                 WHERE segment IS NOT NULL AND segment != ''
                 ORDER BY segment
                 """;
-        return jdbcTemplate.queryForList(sql, String.class);
+        List<String> result = jdbcTemplate.queryForList(sql, String.class);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Query getDistinctSegments completed in {} ms, returned {} segments", duration, result.size());
+        return result;
     }
 
     /**
@@ -581,6 +593,7 @@ public class KiteMarketDataRepository {
      * @return List of instruments matching all provided filters
      */
     public List<Map<String, Object>> getFilteredInstruments(String exchange, String index, String segment) {
+        long startTime = System.currentTimeMillis();
         log.debug("Getting filtered instruments: exchange={}, index={}, segment={}", exchange, index, segment);
         
         StringBuilder sql = new StringBuilder("""
@@ -614,8 +627,13 @@ public class KiteMarketDataRepository {
         // Order by tradingsymbol and limit to 1000 records
         sql.append(" ORDER BY tradingsymbol LIMIT 1000");
         
+        long queryStartTime = System.currentTimeMillis();
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql.toString(), params.toArray());
-        log.info("Retrieved {} filtered instruments", results.size());
+        long queryDuration = System.currentTimeMillis() - queryStartTime;
+        long totalDuration = System.currentTimeMillis() - startTime;
+        
+        log.info("Query getFilteredInstruments completed in {} ms (query: {} ms, total: {} ms), returned {} instruments", 
+                queryDuration, queryDuration, totalDuration, results.size());
         return results;
     }
 }
