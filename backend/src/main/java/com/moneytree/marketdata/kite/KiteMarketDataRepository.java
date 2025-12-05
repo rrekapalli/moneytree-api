@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -567,6 +568,55 @@ public class KiteMarketDataRepository {
                 ORDER BY segment
                 """;
         return jdbcTemplate.queryForList(sql, String.class);
+    }
+
+    /**
+     * Get filtered instruments based on exchange, index, and segment.
+     * Applies AND logic when multiple filters are provided.
+     * Returns all required fields with a limit of 1000 to prevent excessive data transfer.
+     * 
+     * @param exchange Optional exchange filter (e.g., "NSE", "BSE")
+     * @param index Optional index filter (tradingsymbol from INDICES segment)
+     * @param segment Optional segment filter (e.g., "EQ", "FO")
+     * @return List of instruments matching all provided filters
+     */
+    public List<Map<String, Object>> getFilteredInstruments(String exchange, String index, String segment) {
+        log.debug("Getting filtered instruments: exchange={}, index={}, segment={}", exchange, index, segment);
+        
+        StringBuilder sql = new StringBuilder("""
+                SELECT instrument_token, tradingsymbol, name, segment, 
+                       exchange, instrument_type, last_price, lot_size, tick_size
+                FROM kite_instrument_master
+                WHERE 1=1
+                """);
+        
+        List<Object> params = new ArrayList<>();
+        
+        // Apply exchange filter if provided
+        if (exchange != null && !exchange.trim().isEmpty()) {
+            sql.append(" AND UPPER(exchange) = UPPER(?)");
+            params.add(exchange.trim());
+        }
+        
+        // Apply index filter if provided
+        // When index is selected, filter by tradingsymbol matching the index name
+        if (index != null && !index.trim().isEmpty()) {
+            sql.append(" AND UPPER(tradingsymbol) LIKE UPPER(?)");
+            params.add("%" + index.trim() + "%");
+        }
+        
+        // Apply segment filter if provided
+        if (segment != null && !segment.trim().isEmpty()) {
+            sql.append(" AND UPPER(segment) = UPPER(?)");
+            params.add(segment.trim());
+        }
+        
+        // Order by tradingsymbol and limit to 1000 records
+        sql.append(" ORDER BY tradingsymbol LIMIT 1000");
+        
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        log.info("Retrieved {} filtered instruments", results.size());
+        return results;
     }
 }
 
