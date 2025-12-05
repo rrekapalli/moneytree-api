@@ -106,6 +106,9 @@ import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/we
 import { InstrumentFilterService, FilterOptions, InstrumentFilter, InstrumentDto } from '../../../services/apis/instrument-filter.service';
 import { forkJoin } from 'rxjs';
 
+// Import toast service for error notifications
+import { ToastService } from '../../../services/toast.service';
+
 
 @Component({
   selector: 'app-stock-insights',
@@ -202,7 +205,8 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     private indicesService: IndicesService,
     private webSocketService: WebSocketService,
     private ngZone: NgZone,
-    private instrumentFilterService: InstrumentFilterService
+    private instrumentFilterService: InstrumentFilterService,
+    private toastService: ToastService
   ) {
     super(cdr, excelExportService, filterService);
   }
@@ -342,6 +346,15 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       error: (error) => {
         console.error('Failed to load filter options:', error);
         this.isLoadingFilters = false;
+        
+        // Show user-friendly error notification
+        this.toastService.showError({
+          summary: 'Filter Options Error',
+          detail: 'Unable to load filter options. Please refresh the page or try again later.',
+          life: 5000
+        });
+        
+        // Maintain previous filter options state (don't clear existing data)
         this.cdr.detectChanges();
       }
     });
@@ -370,27 +383,52 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   private loadFilteredInstruments(): void {
     this.isLoadingInstruments = true;
     
+    // Store previous data state to maintain on error
+    const previousDashboardData = [...this.dashboardData];
+    const previousFilteredData = this.filteredDashboardData ? [...this.filteredDashboardData] : null;
+    
     this.instrumentFilterService.getFilteredInstruments(this.selectedFilters)
       .pipe(
         retry(2),
         catchError((error) => {
           console.error('Failed to load filtered instruments:', error);
           this.isLoadingInstruments = false;
+          
+          // Show user-friendly error notification
+          this.toastService.showError({
+            summary: 'Data Load Error',
+            detail: 'Unable to load filtered instruments. Displaying previous data. Please try again.',
+            life: 5000
+          });
+          
+          // Restore previous data state on error
+          this.dashboardData = previousDashboardData;
+          this.filteredDashboardData = previousFilteredData;
+          
           this.cdr.detectChanges();
           return of([]);
         })
       )
       .subscribe({
         next: (instruments) => {
-          // Map instruments to StockDataDto format
-          const mappedData = this.mapInstrumentsToStockData(instruments);
-          
-          // Update dashboard data
-          this.dashboardData = mappedData;
-          this.filteredDashboardData = mappedData;
-          
-          // Update Stock List widget
-          this.updateStockListWithFilteredData();
+          // Only update if we received data (not from error handler)
+          if (instruments && instruments.length > 0) {
+            // Map instruments to StockDataDto format
+            const mappedData = this.mapInstrumentsToStockData(instruments);
+            
+            // Update dashboard data
+            this.dashboardData = mappedData;
+            this.filteredDashboardData = mappedData;
+            
+            // Update Stock List widget
+            this.updateStockListWithFilteredData();
+          } else if (instruments && instruments.length === 0) {
+            // Empty result set - clear data but don't show error
+            this.dashboardData = [];
+            this.filteredDashboardData = [];
+            this.updateStockListWithFilteredData();
+          }
+          // If instruments is empty array from error handler, previous data is already restored
           
           this.isLoadingInstruments = false;
           this.cdr.detectChanges();
