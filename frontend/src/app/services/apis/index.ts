@@ -16,3 +16,4 @@ export * from './screener.api';
 export * from './strategy.api';
 export * from './strategy-config.api';
 export * from './strategy-metrics.api';
+export * from './instrument-filter.api';

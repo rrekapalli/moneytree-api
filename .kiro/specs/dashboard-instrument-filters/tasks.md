@@ -65,7 +65,7 @@
   - Run test to ensure it passes: `mvn test -Dtest=<TestClassName>#<testMethod>`
   - Commit changes: "test: add property test for response field validation"
 
-- [ ] 4. Create InstrumentFilterController with REST endpoints
+- [x] 4. Create InstrumentFilterController with REST endpoints
   - Create GET /api/v1/instruments/filters/exchanges endpoint with @Cacheable annotation
   - Create GET /api/v1/instruments/filters/indices endpoint with @Cacheable annotation
   - Create GET /api/v1/instruments/filters/segments endpoint with @Cacheable annotation
@@ -77,7 +77,7 @@
   - Commit changes: "feat: add InstrumentFilterController with cached filter endpoints"
   - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 4.1, 7.1, 7.2, 8.1_
 
-- [ ] 4.1 Write unit tests for controller endpoints
+- [x] 4.1 Write unit tests for controller endpoints
   - Test each distinct value endpoint returns non-empty list
   - Test filtered instruments endpoint with various parameter combinations
   - Test error handling returns HTTP 500 on database failure
@@ -86,7 +86,7 @@
   - Commit changes: "test: add unit tests for InstrumentFilterController endpoints"
   - _Requirements: 2.1, 2.2, 2.3, 4.1, 7.1, 7.2_
 
-- [ ] 4.2 Write property test for cache hit behavior
+- [x] 4.2 Write property test for cache hit behavior
   - **Property 6: Cache hit avoids database access**
   - **Validates: Requirements 3.2**
   - Verify test compiles without errors using getDiagnostics
