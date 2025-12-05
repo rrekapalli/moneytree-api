@@ -141,7 +141,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   // Filtered stock data for cross-chart filtering
   protected filteredDashboardData: StockDataDto[] | null = this.dashboardData || [];
   
-  // Dashboard title - dynamic based on a selected index
+  // Dashboard title - kept for backward compatibility but hidden when filters are shown
   public dashboardTitle: string = 'Financial Dashboard';
   
   // Filter state management
@@ -227,7 +227,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       this.selectedIndexSubscription = null;
     }
 
-    // Reset title
+    // Reset title (not displayed when filters are shown, but kept for backward compatibility)
     this.dashboardTitle = 'Financial Dashboard';
     this.componentCommunicationService.clearSelectedIndex();
 
@@ -522,6 +522,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   }
 
   private setDefaultIndexFromData(data: StockDataDto[]): void {
+    // Title not displayed when filters are shown, but kept for backward compatibility
     this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
 
     const targetIndex = data.find(
@@ -741,7 +742,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     // Update selected index symbol for highlighting in Index List widget
     this.selectedIndexSymbol = selectedIndex.symbol || selectedIndex.name || '';
     
-    // Update dashboard title with selected index name or symbol
+    // Update dashboard title (not displayed when filters are shown, but kept for backward compatibility)
     this.dashboardTitle = selectedIndex.name || selectedIndex.symbol || 'Financial Dashboard';
 
     // Transform the selected index data to dashboard data format

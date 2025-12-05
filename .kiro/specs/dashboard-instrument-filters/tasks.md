@@ -218,7 +218,7 @@
   - Commit changes: "test: add unit tests for Stock List widget updates"
   - _Requirements: 6.2, 6.5_
 
-- [ ] 10. Implement error handling and user feedback
+- [x] 10. Implement error handling and user feedback
   - Add error notification display in StockInsightsComponent
   - Implement error handling in loadFilterOptions() with user-friendly messages
   - Implement error handling in loadFilteredInstruments() with user-friendly messages
@@ -229,7 +229,7 @@
   - Commit changes: "feat: add error handling and user feedback for filter operations"
   - _Requirements: 7.1, 7.2, 7.3, 7.5_
 
-- [ ] 10.1 Write unit tests for error handling
+- [x] 10.1 Write unit tests for error handling
   - Test error notification displays on API failure
   - Test previous data state is maintained on error
   - Test retry logic attempts 2 retries before failing
@@ -238,7 +238,7 @@
   - Commit changes: "test: add unit tests for error handling"
   - _Requirements: 7.3, 7.4, 7.5_
 
-- [ ] 11. Add CSS styling for filter dropdowns in dashboard header
+- [x] 11. Add CSS styling for filter dropdowns in dashboard header
   - Style filter dropdowns to display horizontally
   - Add appropriate spacing between dropdowns
   - Ensure dropdowns are responsive on smaller screens
@@ -249,7 +249,7 @@
   - Commit changes: "style: add CSS styling for instrument filter dropdowns"
   - _Requirements: 5.1, 8.4_
 
-- [ ] 12. Update dashboard header template to remove dynamic title
+- [-] 12. Update dashboard header template to remove dynamic title
   - Remove or hide the dynamic title display that shows selected index symbol
   - Ensure filter dropdowns are prominently displayed in header
   - Maintain other header functionality (export, highlighting, search)
