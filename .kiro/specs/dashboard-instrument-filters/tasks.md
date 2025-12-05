@@ -199,7 +199,7 @@
   - Commit changes: "test: add unit tests for StockInsightsComponent filter management"
   - _Requirements: 1.2, 1.3, 1.4, 6.1_
 
-- [-] 9. Update Stock List widget to display filtered instruments
+- [x] 9. Update Stock List widget to display filtered instruments
   - Ensure Stock List widget receives updated data when filters change
   - Update widget to show loading indicator during data fetch
   - Add empty state message when no instruments match filters
@@ -209,7 +209,7 @@
   - Commit changes: "feat: update Stock List widget to display filtered instruments"
   - _Requirements: 1.3, 4.5, 6.2, 6.5_
 
-- [-] 9.1 Write unit tests for Stock List widget updates
+- [x] 9.1 Write unit tests for Stock List widget updates
   - Test widget displays loading indicator when isLoadingInstruments is true
   - Test widget displays empty state message when data is empty
   - Test widget displays instruments when data is provided
