@@ -32,8 +32,17 @@
   </div>
 </div>
 
+<!-- Loading indicator -->
+<div *ngIf="isLoadingStocks" class="loading-container">
+  <div class="loading-content">
+    <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+    <span class="text-lg text-600 mt-3">Loading instruments...</span>
+  </div>
+</div>
+
 <!-- Main stock table -->
 <p-table
+            *ngIf="!isLoadingStocks"
             [value]="filteredStocks"
             [globalFilterFields]="['symbol', 'companyName', 'industry', 'sector']"
             [scrollable]="true"
@@ -101,14 +110,9 @@
             <tr>
                 <td colspan="9" class="text-center p-4">
                     <div class="flex flex-column align-items-center gap-3">
-                        <i class="pi pi-chart-line text-4xl text-400"></i>
-                        <span class="text-lg text-600">No stock data available</span>
-                        <p-button
-                                label="Load Sample Data"
-                                icon="pi pi-plus"
-                                (onClick)="loadSampleData()"
-                                size="small">
-                        </p-button>
+                        <i class="pi pi-filter-slash text-4xl text-400"></i>
+                        <span class="text-lg text-600">No instruments match the selected filters</span>
+                        <p class="text-sm text-500 mt-2">Try adjusting your filter criteria</p>
                     </div>
                 </td>
             </tr>
