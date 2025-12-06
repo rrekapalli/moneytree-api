@@ -1,11 +1,14 @@
 package com.moneytree.marketdata.kite;
 
+import com.moneytree.config.CacheConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -520,6 +523,116 @@ public class KiteMarketDataRepository {
                 """;
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, tradingsymbol);
         return results.isEmpty() ? null : results.get(0);
+    }
+
+    /**
+     * Get distinct exchange values from kite_instrument_master.
+     * Excludes NULL and empty strings, returns results sorted alphabetically.
+     */
+    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_EXCHANGES, unless = "#result == null || #result.isEmpty()")
+    public List<String> getDistinctExchanges() {
+        long startTime = System.currentTimeMillis();
+        log.debug("Getting distinct exchanges from kite_instrument_master");
+        String sql = "SELECT DISTINCT exchange " +
+                     "FROM kite_instrument_master " +
+                     "WHERE exchange IS NOT NULL AND TRIM(exchange) != '' " +
+                     "ORDER BY exchange";
+        List<String> result = jdbcTemplate.queryForList(sql, String.class);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Query getDistinctExchanges completed in {} ms, returned {} exchanges", duration, result.size());
+        return result;
+    }
+
+    /**
+     * Get distinct index tradingsymbols where segment = 'INDICES'.
+     * Excludes NULL and empty strings, returns results sorted alphabetically.
+     */
+    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_INDICES, unless = "#result == null || #result.isEmpty()")
+    public List<String> getDistinctIndices() {
+        long startTime = System.currentTimeMillis();
+        log.debug("Getting distinct indices from kite_instrument_master");
+        String sql = "SELECT DISTINCT tradingsymbol " +
+                     "FROM kite_instrument_master " +
+                     "WHERE segment = 'INDICES' " +
+                     "  AND tradingsymbol IS NOT NULL " +
+                     "  AND TRIM(tradingsymbol) != '' " +
+                     "ORDER BY tradingsymbol";
+        List<String> result = jdbcTemplate.queryForList(sql, String.class);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Query getDistinctIndices completed in {} ms, returned {} indices", duration, result.size());
+        return result;
+    }
+
+    /**
+     * Get distinct segment values from kite_instrument_master.
+     * Excludes NULL and empty strings, returns results sorted alphabetically.
+     */
+    @Cacheable(value = CacheConfig.INSTRUMENT_FILTERS_SEGMENTS, unless = "#result == null || #result.isEmpty()")
+    public List<String> getDistinctSegments() {
+        long startTime = System.currentTimeMillis();
+        log.debug("Getting distinct segments from kite_instrument_master");
+        String sql = "SELECT DISTINCT segment " +
+                     "FROM kite_instrument_master " +
+                     "WHERE segment IS NOT NULL AND TRIM(segment) != '' " +
+                     "ORDER BY segment";
+        List<String> result = jdbcTemplate.queryForList(sql, String.class);
+        long duration = System.currentTimeMillis() - startTime;
+        log.info("Query getDistinctSegments completed in {} ms, returned {} segments", duration, result.size());
+        return result;
+    }
+
+    /**
+     * Get filtered instruments based on exchange, index, and segment.
+     * Applies AND logic when multiple filters are provided.
+     * Returns all required fields with a limit of 1000 to prevent excessive data transfer.
+     * 
+     * @param exchange Optional exchange filter (e.g., "NSE", "BSE")
+     * @param index Optional index filter (tradingsymbol from INDICES segment)
+     * @param segment Optional segment filter (e.g., "EQ", "FO")
+     * @return List of instruments matching all provided filters
+     */
+    public List<Map<String, Object>> getFilteredInstruments(String exchange, String index, String segment) {
+        long startTime = System.currentTimeMillis();
+        log.debug("Getting filtered instruments: exchange={}, index={}, segment={}", exchange, index, segment);
+        
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT instrument_token, tradingsymbol, name, segment, ");
+        sql.append("       exchange, instrument_type, last_price, lot_size, tick_size ");
+        sql.append("FROM kite_instrument_master ");
+        sql.append("WHERE 1=1 ");
+        
+        List<Object> params = new ArrayList<>();
+        
+        // Apply exchange filter if provided
+        if (exchange != null && !exchange.trim().isEmpty()) {
+            sql.append("AND UPPER(exchange) = UPPER(?) ");
+            params.add(exchange.trim());
+        }
+        
+        // Apply index filter if provided
+        // When index is selected, filter by tradingsymbol matching the index name
+        if (index != null && !index.trim().isEmpty()) {
+            sql.append("AND UPPER(tradingsymbol) LIKE UPPER(?) ");
+            params.add("%" + index.trim() + "%");
+        }
+        
+        // Apply segment filter if provided
+        if (segment != null && !segment.trim().isEmpty()) {
+            sql.append("AND UPPER(segment) = UPPER(?) ");
+            params.add(segment.trim());
+        }
+        
+        // Order by tradingsymbol and limit to 1000 records
+        sql.append("ORDER BY tradingsymbol LIMIT 1000");
+        
+        long queryStartTime = System.currentTimeMillis();
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        long queryDuration = System.currentTimeMillis() - queryStartTime;
+        long totalDuration = System.currentTimeMillis() - startTime;
+        
+        log.info("Query getFilteredInstruments completed in {} ms (query: {} ms, total: {} ms), returned {} instruments", 
+                queryDuration, queryDuration, totalDuration, results.size());
+        return results;
     }
 }
 

@@ -8,6 +8,19 @@ import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { FormsModule } from '@angular/forms';
 
+// Import filter interfaces
+export interface FilterOptions {
+  exchanges: string[];
+  indices: string[];
+  segments: string[];
+}
+
+export interface InstrumentFilter {
+  exchange?: string;
+  index?: string;
+  segment?: string;
+}
+
 @Component({
   selector: 'vis-dashboard-header',
   standalone: true,
@@ -30,12 +43,19 @@ export class DashboardHeaderComponent implements OnInit, OnChanges {
   // Enable/disable stock search box and provide options
   @Input() enableStockSearch: boolean = false;
   @Input() stockSearchList: Array<{ symbol: string; name?: string }> = [];
+  
+  // Instrument filter inputs
+  @Input() showInstrumentFilters: boolean = false;
+  @Input() filterOptions: FilterOptions = { exchanges: [], indices: [], segments: [] };
+  @Input() selectedFilters: InstrumentFilter = {};
+  @Input() isLoadingFilters: boolean = false;
 
   @Output() onExportToExcel = new EventEmitter<void>();
   @Output() onToggleHighlighting = new EventEmitter<void>();
   @Output() onSetHighlightingPreset = new EventEmitter<'subtle' | 'medium' | 'strong'>();
   @Output() onForceTileRefresh = new EventEmitter<void>();
   @Output() onSearchStock = new EventEmitter<string>();
+  @Output() onFilterChange = new EventEmitter<InstrumentFilter>();
 
   // Convert getter to property for better change detection
   menuItems: MenuItem[] = [];
@@ -263,5 +283,30 @@ export class DashboardHeaderComponent implements OnInit, OnChanges {
         this.showSearchResults = false;
       }
     }
+  }
+
+  // Instrument filter change handlers
+  onExchangeChange(value: string) {
+    const updatedFilters: InstrumentFilter = {
+      ...this.selectedFilters,
+      exchange: value
+    };
+    this.onFilterChange.emit(updatedFilters);
+  }
+
+  onIndexChange(value: string) {
+    const updatedFilters: InstrumentFilter = {
+      ...this.selectedFilters,
+      index: value
+    };
+    this.onFilterChange.emit(updatedFilters);
+  }
+
+  onSegmentChange(value: string) {
+    const updatedFilters: InstrumentFilter = {
+      ...this.selectedFilters,
+      segment: value
+    };
+    this.onFilterChange.emit(updatedFilters);
   }
 } 

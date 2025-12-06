@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { DividerModule } from 'primeng/divider';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { DataViewModule } from 'primeng/dataview';
 import { ScrollerModule } from "primeng/scroller";
 import { ScrollPanelModule } from 'primeng/scrollpanel';
@@ -42,6 +43,7 @@ export interface SelectedStockData {
     TableModule,
     DividerModule,
     InputTextModule,
+    SelectModule,
     ScrollerModule,
     DataViewModule,
     ScrollPanelModule,
@@ -73,6 +75,21 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
   // Tooltip functionality
   hoveredStock: StockListData | null = null;
 
+  // Search and sort properties
+  searchText: string = '';
+  sortField: string = 'lastPrice';
+  sortOrder: number = -1; // -1 for descending (highest first)
+  
+  sortOptions = [
+    { label: 'Price (High)', value: 'lastPrice' },
+    { label: 'Name (A-Z)', value: 'companyName' },
+    { label: 'Change (%)', value: 'percentChange' },
+    { label: 'Symbol (A-Z)', value: 'symbol' }
+  ];
+
+  // Filtered stocks for display
+  filteredStocks: StockListData[] = [];
+
   // Keep track of previous widget data for change detection
   private previousStocksLength: number = 0;
   private previousIsLoading: boolean = false;
@@ -85,6 +102,7 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
   ngOnInit(): void {
     this.updateStocksFromWidget();
     this.calculateScrollHeight();
+    this.applyFilters();
   }
 
   ngAfterViewInit(): void {
@@ -162,10 +180,78 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
       if (this.widget.data.selectedStockSymbol !== undefined) {
         this.selectedStockSymbol = this.widget.data.selectedStockSymbol;
       }
+      
+      // Apply filters when stocks are updated
+      this.applyFilters();
     } else if (!this.stocks || this.stocks.length === 0) {
       // Ensure stocks is initialized as empty array if no data
       this.stocks = [];
+      this.filteredStocks = [];
     }
+  }
+
+  /**
+   * Handle search text change
+   */
+  onSearchChange(): void {
+    this.applyFilters();
+  }
+
+  /**
+   * Handle sort field change
+   */
+  onSortFieldChange(): void {
+    // Set appropriate sort order based on field
+    if (this.sortField === 'companyName' || this.sortField === 'symbol') {
+      this.sortOrder = 1; // Ascending for names (A-Z)
+    } else if (this.sortField === 'lastPrice' || this.sortField === 'percentChange') {
+      this.sortOrder = -1; // Descending for numbers (highest first)
+    }
+    this.applyFilters();
+  }
+
+  /**
+   * Get sort label for display
+   */
+  getSortLabel(): string {
+    const option = this.sortOptions.find(opt => opt.value === this.sortField);
+    return option ? `Sort by: ${option.label}` : 'Sort by';
+  }
+
+  /**
+   * Apply search and sort filters
+   */
+  private applyFilters(): void {
+    let filtered = [...(this.stocks || [])];
+
+    // Apply search filter - only on tradingsymbol (symbol) and companyName
+    if (this.searchText.trim()) {
+      const searchLower = this.searchText.toLowerCase();
+      filtered = filtered.filter(stock =>
+        stock.symbol?.toLowerCase().includes(searchLower) ||
+        stock.companyName?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aValue: any = a[this.sortField as keyof StockListData];
+      let bValue: any = b[this.sortField as keyof StockListData];
+
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue?.toLowerCase() || '';
+      } else if (typeof aValue === 'number') {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      }
+
+      if (aValue < bValue) return -1 * this.sortOrder;
+      if (aValue > bValue) return 1 * this.sortOrder;
+      return 0;
+    });
+
+    this.filteredStocks = filtered;
   }
 
   /**

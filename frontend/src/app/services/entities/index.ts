@@ -18,3 +18,4 @@ export * from './nse-quote-equity';
 export * from './indices';
 export * from './indices-websocket';
 export * from './portfolio.entities';
+export * from './instrument-filter';

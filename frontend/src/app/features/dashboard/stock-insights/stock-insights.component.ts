@@ -1,10 +1,14 @@
 import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
-import { Subscription } from 'rxjs';
-import { filter, distinctUntilChanged } from 'rxjs/operators';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
+import { Subscription, of, Subject } from 'rxjs';
+import { filter, distinctUntilChanged, retry, catchError, takeUntil } from 'rxjs/operators';
 
 // Import echarts core module and components
 import * as echarts from 'echarts/core';
@@ -98,15 +102,26 @@ import { IndexResponseDto } from '../../../services/entities/indices';
 // Import consolidated WebSocket service and entities
 import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
 
+// Import instrument filter service and interfaces
+import { InstrumentFilterService, FilterOptions, InstrumentFilter, InstrumentDto } from '../../../services/apis/instrument-filter.service';
+import { forkJoin } from 'rxjs';
+
+// Import toast service for error notifications
+import { ToastService } from '../../../services/toast.service';
+
 
 @Component({
   selector: 'app-stock-insights',
   standalone: true,
   imports: [
-    CommonModule, 
+    CommonModule,
+    FormsModule,
     ButtonModule,
     MessageModule,
     ScrollPanelModule,
+    InputTextModule,
+    SelectModule,
+    TooltipModule,
     // Dashboard components
     DashboardContainerComponent,
     DashboardHeaderComponent
@@ -126,8 +141,25 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   // Filtered stock data for cross-chart filtering
   protected filteredDashboardData: StockDataDto[] | null = this.dashboardData || [];
   
-  // Dashboard title - dynamic based on a selected index
+  // Dashboard title - kept for backward compatibility but hidden when filters are shown
   public dashboardTitle: string = 'Financial Dashboard';
+  
+  // Filter state management
+  public showInstrumentFilters: boolean = true;
+  public filterOptions: FilterOptions = { exchanges: [], indices: [], segments: [] };
+  public selectedFilters: InstrumentFilter = {
+    exchange: 'NSE',
+    index: 'NIFTY 50',
+    segment: 'EQ'
+  };
+  public isLoadingFilters: boolean = false;
+  public isLoadingInstruments: boolean = false;
+  
+  // Debounce timer for filter changes
+  private filterChangeTimer: any = null;
+  
+  // Request cancellation for filter changes
+  private cancelPendingRequest$ = new Subject<void>();
   
   // Subscription management
   private selectedIndexSubscription: Subscription | null = null;
@@ -175,8 +207,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     private componentCommunicationService: ComponentCommunicationService,
     private indicesService: IndicesService,
     private webSocketService: WebSocketService,
-    private ngZone: NgZone
-
+    private ngZone: NgZone,
+    private instrumentFilterService: InstrumentFilterService,
+    private toastService: ToastService
   ) {
     super(cdr, excelExportService, filterService);
   }
@@ -197,7 +230,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       this.selectedIndexSubscription = null;
     }
 
-    // Reset title
+    // Reset title (not displayed when filters are shown, but kept for backward compatibility)
     this.dashboardTitle = 'Financial Dashboard';
     this.componentCommunicationService.clearSelectedIndex();
 
@@ -228,6 +261,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
 
     // Wait for widget header to be fully rendered
     setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
+    
+    // Load filter options
+    this.loadFilterOptions();
   }
 
   protected onChildDestroy(): void {
@@ -236,6 +272,16 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       clearTimeout(this.chartUpdateTimer);
       this.chartUpdateTimer = null;
     }
+    
+    // Clean up filter change timer
+    if (this.filterChangeTimer) {
+      clearTimeout(this.filterChangeTimer);
+      this.filterChangeTimer = null;
+    }
+    
+    // Complete the cancellation subject to prevent memory leaks
+    this.cancelPendingRequest$.next();
+    this.cancelPendingRequest$.complete();
     
     // Dispose of all chart instances to prevent reinitialization errors
     if (this.dashboardConfig?.widgets) {
@@ -283,6 +329,141 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     this.currentSubscribedIndex = null;
     this.isSubscribing = false;
     this.subscribedTopics.clear();
+  }
+  
+  /**
+   * Load filter options from the backend API
+   */
+  private loadFilterOptions(): void {
+    this.isLoadingFilters = true;
+    
+    forkJoin({
+      exchanges: this.instrumentFilterService.getDistinctExchanges(),
+      indices: this.instrumentFilterService.getDistinctIndices(),
+      segments: this.instrumentFilterService.getDistinctSegments()
+    }).subscribe({
+      next: (options) => {
+        this.filterOptions = options;
+        this.isLoadingFilters = false;
+        this.cdr.detectChanges();
+        
+        // Load initial data with default filters
+        this.loadFilteredInstruments();
+      },
+      error: (error) => {
+        console.error('Failed to load filter options:', error);
+        this.isLoadingFilters = false;
+        
+        // Show user-friendly error notification
+        this.toastService.showError({
+          summary: 'Filter Options Error',
+          detail: 'Unable to load filter options. Please refresh the page or try again later.',
+          life: 5000
+        });
+        
+        // Maintain previous filter options state (don't clear existing data)
+        this.cdr.detectChanges();
+      }
+    });
+  }
+  
+  /**
+   * Handle filter change events from the dashboard header
+   * @param filters The updated filter values
+   */
+  public onFilterChange(filters: InstrumentFilter): void {
+    this.selectedFilters = { ...filters };
+    
+    // Cancel any pending requests
+    this.cancelPendingRequest$.next();
+    
+    // Debounce filter changes to prevent excessive API calls (300ms)
+    if (this.filterChangeTimer) {
+      clearTimeout(this.filterChangeTimer);
+    }
+    
+    this.filterChangeTimer = setTimeout(() => {
+      this.loadFilteredInstruments();
+    }, 300);
+  }
+  
+  /**
+   * Load filtered instruments from the backend API
+   * Implements request cancellation to prevent race conditions on rapid filter changes
+   */
+  private loadFilteredInstruments(): void {
+    this.isLoadingInstruments = true;
+    
+    // Store previous data state to maintain on error
+    const previousDashboardData = [...this.dashboardData];
+    const previousFilteredData = this.filteredDashboardData ? [...this.filteredDashboardData] : null;
+    
+    this.instrumentFilterService.getFilteredInstruments(this.selectedFilters)
+      .pipe(
+        takeUntil(this.cancelPendingRequest$), // Cancel request if new filter change occurs
+        retry(2),
+        catchError((error) => {
+          console.error('Failed to load filtered instruments:', error);
+          this.isLoadingInstruments = false;
+          
+          // Show user-friendly error notification
+          this.toastService.showError({
+            summary: 'Data Load Error',
+            detail: 'Unable to load filtered instruments. Displaying previous data. Please try again.',
+            life: 5000
+          });
+          
+          // Restore previous data state on error
+          this.dashboardData = previousDashboardData;
+          this.filteredDashboardData = previousFilteredData;
+          
+          this.cdr.detectChanges();
+          return of([]);
+        })
+      )
+      .subscribe({
+        next: (instruments) => {
+          // Only update if we received data (not from error handler)
+          if (instruments && instruments.length > 0) {
+            // Map instruments to StockDataDto format
+            const mappedData = this.mapInstrumentsToStockData(instruments);
+            
+            // Update dashboard data
+            this.dashboardData = mappedData;
+            this.filteredDashboardData = mappedData;
+            
+            // Update Stock List widget
+            this.updateStockListWithFilteredData();
+          } else if (instruments && instruments.length === 0) {
+            // Empty result set - clear data but don't show error
+            this.dashboardData = [];
+            this.filteredDashboardData = [];
+            this.updateStockListWithFilteredData();
+          }
+          // If instruments is empty array from error handler, previous data is already restored
+          
+          this.isLoadingInstruments = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+  
+  /**
+   * Map InstrumentDto array to StockDataDto array
+   * @param instruments Array of InstrumentDto from the API
+   * @returns Array of StockDataDto for the dashboard
+   */
+  private mapInstrumentsToStockData(instruments: InstrumentDto[]): StockDataDto[] {
+    return instruments.map(inst => ({
+      tradingsymbol: inst.tradingsymbol,
+      symbol: inst.tradingsymbol,
+      companyName: inst.name || inst.tradingsymbol,
+      lastPrice: inst.lastPrice || 0,
+      percentChange: 0,
+      totalTradedValue: 0,
+      sector: inst.segment || '',
+      industry: inst.instrumentType || ''
+    }));
   }
 
   private indicesLoaded = false;
@@ -353,6 +534,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   }
 
   private setDefaultIndexFromData(data: StockDataDto[]): void {
+    // Title not displayed when filters are shown, but kept for backward compatibility
     this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
 
     const targetIndex = data.find(
@@ -572,7 +754,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     // Update selected index symbol for highlighting in Index List widget
     this.selectedIndexSymbol = selectedIndex.symbol || selectedIndex.name || '';
     
-    // Update dashboard title with selected index name or symbol
+    // Update dashboard title (not displayed when filters are shown, but kept for backward compatibility)
     this.dashboardTitle = selectedIndex.name || selectedIndex.symbol || 'Financial Dashboard';
 
     // Transform the selected index data to dashboard data format

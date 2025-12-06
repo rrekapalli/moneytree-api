@@ -1,6 +1,49 @@
+<!-- Search and Sort Controls -->
+<div class="search-section">
+  <label for="stock-search" class="sr-only">Search stocks</label>
+  <div class="search-controls">
+    <span class="p-input-icon-left search-input-wrapper">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input 
+        id="stock-search"
+        type="text" 
+        pInputText 
+        [(ngModel)]="searchText" 
+        (ngModelChange)="onSearchChange()"
+        placeholder="Search..." 
+        class="search-input"
+        aria-label="Search stocks by name or symbol" />
+    </span>
+    <p-select 
+      [(ngModel)]="sortField"
+      [options]="sortOptions"
+      (ngModelChange)="onSortFieldChange()"
+      optionLabel="label"
+      optionValue="value"
+      appendTo="body"
+      class="sort-dropdown"
+      [pTooltip]="getSortLabel()"
+      tooltipPosition="top"
+      aria-label="Sort stocks">
+      <ng-template pTemplate="selectedItem">
+        <i class="pi pi-sort-alt"></i>
+      </ng-template>
+    </p-select>
+  </div>
+</div>
+
+<!-- Loading indicator -->
+<div *ngIf="isLoadingStocks" class="loading-container">
+  <div class="loading-content">
+    <i class="pi pi-spin pi-spinner text-4xl text-primary"></i>
+    <span class="text-lg text-600 mt-3">Loading instruments...</span>
+  </div>
+</div>
+
 <!-- Main stock table -->
 <p-table
-            [value]="stocks"
+            *ngIf="!isLoadingStocks"
+            [value]="filteredStocks"
             [globalFilterFields]="['symbol', 'companyName', 'industry', 'sector']"
             [scrollable]="true"
             [scrollHeight]="tableScrollHeight"
@@ -67,14 +110,9 @@
             <tr>
                 <td colspan="9" class="text-center p-4">
                     <div class="flex flex-column align-items-center gap-3">
-                        <i class="pi pi-chart-line text-4xl text-400"></i>
-                        <span class="text-lg text-600">No stock data available</span>
-                        <p-button
-                                label="Load Sample Data"
-                                icon="pi pi-plus"
-                                (onClick)="loadSampleData()"
-                                size="small">
-                        </p-button>
+                        <i class="pi pi-filter-slash text-4xl text-400"></i>
+                        <span class="text-lg text-600">No instruments match the selected filters</span>
+                        <p class="text-sm text-500 mt-2">Try adjusting your filter criteria</p>
                     </div>
                 </td>
             </tr>
