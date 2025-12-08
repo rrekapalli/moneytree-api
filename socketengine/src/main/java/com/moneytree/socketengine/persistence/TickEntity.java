@@ -55,7 +55,6 @@ public class TickEntity {
      * Stored as-is without parsing to minimize storage overhead.
      * Can be parsed on-demand when querying historical data.
      */
-    @Column(name = "raw_tick_data", nullable = false)
-    @Lob
+    @Column(name = "raw_tick_data", nullable = false, columnDefinition = "bytea")
     private byte[] rawTickData;
 }

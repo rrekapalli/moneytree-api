@@ -459,7 +459,7 @@
   - Commit changes: "build: add start-app.sh script for socketengine"
   - _Requirements: 15.6_
 
-- [ ] 23. Create module README documentation
+- [x] 23. Create module README documentation
   - Create README.md in ./socketengine/ directory
   - Document project structure and architecture overview
   - Document Kite API credential configuration (api_key, api_secret, access_token)
@@ -478,7 +478,7 @@
   - Commit changes: "docs: add comprehensive README for socketengine module"
   - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-- [ ] 24. Manual testing with Kite WebSocket
+- [-] 24. Manual testing with Kite WebSocket
   - Configure Kite API credentials in application.yml or .env
   - Start Redis and TimescaleDB (should already be running from ./backend)
   - Start the socketengine module
