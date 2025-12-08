@@ -957,7 +957,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const stockListWidget = StockListChartBuilder.create()
       .setData(this.filteredDashboardData)
       .setStockPerformanceConfiguration()
-      .setHeader('Index List')
       .setCurrencyFormatter('INR', 'en-IN')
       .setPredefinedPalette('finance')
       .setAccessor('tradingsymbol')
