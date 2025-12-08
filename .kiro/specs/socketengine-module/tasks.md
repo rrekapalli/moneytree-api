@@ -304,7 +304,7 @@
   - Commit changes: "feat: add TickPersistenceService for scheduled batch persistence"
   - _Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 12.4_
 
-- [ ] 13.1 Write integration tests for TickPersistenceService
+- [-] 13.1 Write integration tests for TickPersistenceService
   - Use Testcontainers with TimescaleDB image
   - Test persistBatch() inserts buffered ticks to database
   - Test raw binary data is preserved
