@@ -478,7 +478,7 @@
   - Commit changes: "docs: add comprehensive README for socketengine module"
   - _Requirements: 15.1, 15.2, 15.3, 15.4_
 
-- [-] 24. Manual testing with Kite WebSocket
+- [x] 24. Manual testing with Kite WebSocket
   - Configure Kite API credentials in application.yml or .env
   - Start Redis and TimescaleDB (should already be running from ./backend)
   - Start the socketengine module
@@ -496,7 +496,7 @@
   - Document any issues found and resolve them
   - Commit changes if any fixes were made: "fix: resolve manual testing issues"
 
-- [ ] 25. Performance testing and optimization
+- [-] 25. Performance testing and optimization
   - Test with high-frequency tick ingestion (simulate 1000 ticks/second)
   - Monitor thread pool queue sizes and adjust if needed
   - Monitor memory usage of tick buffer
