@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [ ] 1. Set up socketengine as standalone Spring Boot module
+- [x] 1. Set up socketengine as standalone Spring Boot module
   - Create ./socketengine/ directory at root level (sibling to ./backend/ and ./frontend/)
   - Initialize Spring Boot 3 project with Maven (pom.xml)
   - Set up package structure: com.moneytree.socketengine with subpackages (api, domain, kite, broadcast, redis, persistence, config)
@@ -16,7 +16,7 @@
   - Commit changes: "feat: initialize socketengine as standalone Spring Boot module"
   - _Requirements: 8.1, 8.2, 9.1, 9.2, 9.3, 9.4_
 
-- [ ] 2. Implement domain model and events
+- [-] 2. Implement domain model and events
   - Create Tick domain class with symbol, instrumentToken, type, timestamp, lastTradedPrice, volume, OHLC, rawBinaryData
   - Create InstrumentType enum (INDEX, STOCK)
   - Create InstrumentInfo class with instrumentToken, exchangeToken, tradingSymbol, type
