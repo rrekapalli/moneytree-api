@@ -137,7 +137,7 @@
   - _Requirements: 13.1_
 
 
-- [ ] 7. Implement KiteWebSocketClient
+- [x] 7. Implement KiteWebSocketClient
   - Create KiteWebSocketClient component using Java-WebSocket library
   - Inject SocketEngineProperties, ApplicationEventPublisher, KiteTickParser, ReconnectionStrategy, InstrumentLoader
   - Implement @PostConstruct initialize() method to load instruments and connect
@@ -154,7 +154,7 @@
   - Commit changes: "feat: add KiteWebSocketClient for Kite API integration"
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 12.1, 12.2_
 
-- [ ] 7.1 Write unit tests for KiteWebSocketClient
+- [x] 7.1 Write unit tests for KiteWebSocketClient
   - Test initialize() loads instruments and connects
   - Test onMessage() parses ticks and publishes events
   - Test onClose() schedules reconnection
