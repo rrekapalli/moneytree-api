@@ -430,7 +430,7 @@
   - Commit changes: "test: add end-to-end integration test for complete tick flow"
   - _Requirements: 13.5_
 
-- [-] 21. Update build-all.sh script
+- [x] 21. Update build-all.sh script
   - Open ./build-all.sh file
   - Add socketengine build step: `cd socketengine && ./mvnw clean package -DskipTests && cd ..`
   - Place socketengine build after backend build
