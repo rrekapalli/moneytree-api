@@ -114,7 +114,7 @@
   - Commit changes: "test: add unit tests for ReconnectionStrategy"
   - _Requirements: 13.2_
 
-- [-] 6. Implement KiteTickParser
+- [x] 6. Implement KiteTickParser
   - Create KiteTickParser component to parse binary tick data from Kite
   - Implement parse(byte[] binaryData) method returning List<Tick>
   - Parse Kite binary format according to API documentation
@@ -126,7 +126,7 @@
   - Commit changes: "feat: add KiteTickParser for binary tick data parsing"
   - _Requirements: 1.4_
 
-- [-] 6.1 Write unit tests for KiteTickParser
+- [x] 6.1 Write unit tests for KiteTickParser
   - Test parsing valid binary tick data
   - Test all tick fields are correctly extracted
   - Test raw binary data is preserved
