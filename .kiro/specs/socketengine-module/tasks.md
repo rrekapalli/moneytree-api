@@ -73,7 +73,7 @@
   - Commit changes: "feat: add InstrumentLoader with Redis caching"
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.7_
 
-- [-] 4.1 Write unit tests for InstrumentLoader
+- [x] 4.1 Write unit tests for InstrumentLoader
   - Test loadIndices() loads from cache when available
   - Test loadIndices() falls back to database on cache miss
   - Test loadStocks() loads from cache when available
@@ -85,7 +85,7 @@
   - Commit changes: "test: add unit tests for InstrumentLoader"
   - _Requirements: 13.2_
 
-- [ ] 4.2 Write integration tests for InstrumentLoader with Redis
+- [-] 4.2 Write integration tests for InstrumentLoader with Redis
   - Use Testcontainers with Redis image
   - Test complete flow: database -> cache -> retrieve from cache
   - Test cache expiration after TTL
