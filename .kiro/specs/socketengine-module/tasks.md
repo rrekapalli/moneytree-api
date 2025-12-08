@@ -164,7 +164,7 @@
   - Run tests: `mvn test -Dtest=KiteWebSocketClientTest`
   - Commit changes: "test: add unit tests for KiteWebSocketClient"
 
-- [ ] 8. Implement SessionManager
+- [x] 8. Implement SessionManager
   - Create SessionManager component with thread-safe collections
   - Use ConcurrentHashMap for sessions, sessionEndpoints, sessionSubscriptions
   - Use ConcurrentHashMap for reverse index: symbolToSessions
@@ -181,7 +181,7 @@
   - Commit changes: "feat: add SessionManager for WebSocket session management"
   - _Requirements: 2.5, 2.7, 4.1, 4.2, 12.3_
 
-- [ ] 8.1 Write unit tests for SessionManager
+- [x] 8.1 Write unit tests for SessionManager
   - Test registerSession() creates session entry
   - Test addSubscriptions() updates session and reverse index
   - Test removeSubscriptions() cleans up session and reverse index
