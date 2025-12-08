@@ -393,7 +393,7 @@
   - Run tests: `mvn test -Dtest=TickRestControllerTest`
   - Commit changes: "test: add unit tests for TickRestController"
 
-- [ ] 18. Implement health check and metrics
+- [x] 18. Implement health check and metrics
   - Create SocketEngineHealthIndicator implementing HealthIndicator
   - Check Kite connection status
   - Check buffer size (alert if > 100,000)
@@ -408,7 +408,7 @@
   - Commit changes: "feat: add health check and metrics for socketengine"
   - _Requirements: 12.4, 12.5_
 
-- [ ] 19. Checkpoint - Ensure all tests pass
+- [-] 19. Checkpoint - Ensure all tests pass
   - Run all backend tests: `mvn test`
   - Verify no compilation errors: `mvn clean compile`
   - Check getDiagnostics for any warnings or errors

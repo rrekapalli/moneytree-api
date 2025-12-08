@@ -6,6 +6,8 @@ import com.moneytree.socketengine.domain.InstrumentType;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
 import com.moneytree.socketengine.kite.InstrumentLoader;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.WebSocketSession;
@@ -37,14 +39,16 @@ class TickBroadcasterTest {
     private SessionManager sessionManager;
     private InstrumentLoader instrumentLoader;
     private ObjectMapper objectMapper;
+    private MeterRegistry meterRegistry;
 
     @BeforeEach
     void setUp() {
         sessionManager = mock(SessionManager.class);
         instrumentLoader = mock(InstrumentLoader.class);
         objectMapper = new ObjectMapper();
+        meterRegistry = new SimpleMeterRegistry();
         
-        tickBroadcaster = new TickBroadcaster(sessionManager, instrumentLoader, objectMapper);
+        tickBroadcaster = new TickBroadcaster(sessionManager, instrumentLoader, objectMapper, meterRegistry);
     }
 
     @Test

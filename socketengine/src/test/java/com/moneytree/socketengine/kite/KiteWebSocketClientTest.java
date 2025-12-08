@@ -6,6 +6,7 @@ import com.moneytree.socketengine.domain.InstrumentInfo;
 import com.moneytree.socketengine.domain.InstrumentType;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,9 @@ class KiteWebSocketClientTest {
     @Mock
     private InstrumentLoader instrumentLoader;
 
+    @Mock
+    private MeterRegistry meterRegistry;
+
     private SocketEngineProperties properties;
     private ObjectMapper objectMapper;
     private KiteWebSocketClient client;
@@ -68,7 +72,8 @@ class KiteWebSocketClientTest {
             tickParser,
             reconnectionStrategy,
             instrumentLoader,
-            objectMapper
+            objectMapper,
+            meterRegistry
         );
     }
 

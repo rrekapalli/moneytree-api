@@ -7,9 +7,9 @@ spring:
   
   # Database configuration (TimescaleDB/PostgreSQL)
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/moneytree}
+    url: ${DATABASE_URL:jdbc:postgresql://postgres.tailce422e.ts.net:5432/MoneyTree}
     username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:postgres}
+    password: ${DATABASE_PASSWORD:mysecretpassword}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -35,7 +35,7 @@ spring:
   # Redis configuration
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:redis.tailce422e.ts.net}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       timeout: 2000ms

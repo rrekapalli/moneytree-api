@@ -5,6 +5,8 @@ import com.moneytree.socketengine.api.dto.TickDto;
 import com.moneytree.socketengine.domain.InstrumentType;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,7 @@ class TickCacheServiceIntegrationTest {
     
     private RedisTemplate<String, String> redisTemplate;
     private ObjectMapper objectMapper;
+    private MeterRegistry meterRegistry;
     private TickCacheService tickCacheService;
     private LettuceConnectionFactory connectionFactory;
     
@@ -73,8 +76,11 @@ class TickCacheServiceIntegrationTest {
         // Setup ObjectMapper
         objectMapper = new ObjectMapper();
         
+        // Setup MeterRegistry
+        meterRegistry = new SimpleMeterRegistry();
+        
         // Create TickCacheService instance
-        tickCacheService = new TickCacheService(redisTemplate, objectMapper);
+        tickCacheService = new TickCacheService(redisTemplate, objectMapper, meterRegistry);
         
         // Clear Redis before each test
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
