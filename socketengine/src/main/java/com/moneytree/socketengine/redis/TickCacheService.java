@@ -5,7 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moneytree.socketengine.api.dto.TickDto;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -32,11 +33,24 @@ import java.util.stream.Stream;
  */
 @Component
 @Slf4j
-@RequiredArgsConstructor
 public class TickCacheService {
     
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final Counter ticksCachedCounter;
+    
+    public TickCacheService(
+            RedisTemplate<String, String> redisTemplate,
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry) {
+        this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
+        
+        // Register counter for ticks cached
+        this.ticksCachedCounter = Counter.builder("socketengine.ticks.cached")
+            .description("Total number of ticks cached to Redis")
+            .register(meterRegistry);
+    }
     
     /**
      * Cold path: Asynchronous event listener for Redis caching.
@@ -66,6 +80,9 @@ public class TickCacheService {
             if (ttl == null || ttl == -1) {
                 redisTemplate.expire(key, Duration.ofDays(2));
             }
+            
+            // Increment metrics counter
+            ticksCachedCounter.increment();
             
         } catch (JsonProcessingException e) {
             log.error("Error serializing tick for {}: {}", tick.getSymbol(), e.getMessage());

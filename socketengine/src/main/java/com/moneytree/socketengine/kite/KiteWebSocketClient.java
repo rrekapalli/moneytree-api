@@ -5,6 +5,8 @@ import com.moneytree.socketengine.config.SocketEngineProperties;
 import com.moneytree.socketengine.domain.InstrumentInfo;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,7 @@ public class KiteWebSocketClient {
     private final ReconnectionStrategy reconnectionStrategy;
     private final InstrumentLoader instrumentLoader;
     private final ObjectMapper objectMapper;
+    private final Counter ticksReceivedCounter;
     
     private WebSocketClient webSocketClient;
     private volatile boolean connected = false;
@@ -58,13 +61,19 @@ public class KiteWebSocketClient {
             KiteTickParser tickParser,
             ReconnectionStrategy reconnectionStrategy,
             InstrumentLoader instrumentLoader,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry) {
         this.properties = properties;
         this.eventPublisher = eventPublisher;
         this.tickParser = tickParser;
         this.reconnectionStrategy = reconnectionStrategy;
         this.instrumentLoader = instrumentLoader;
         this.objectMapper = objectMapper;
+        
+        // Register counter for ticks received from Kite
+        this.ticksReceivedCounter = Counter.builder("socketengine.ticks.received")
+            .description("Total number of ticks received from Kite WebSocket")
+            .register(meterRegistry);
     }
     
     /**
@@ -178,6 +187,7 @@ public class KiteWebSocketClient {
             ticks.forEach(tick -> {
                 try {
                     eventPublisher.publishEvent(new TickReceivedEvent(tick));
+                    ticksReceivedCounter.increment();
                 } catch (Exception e) {
                     log.error("Error publishing TickReceivedEvent for {}", tick.getSymbol(), e);
                 }

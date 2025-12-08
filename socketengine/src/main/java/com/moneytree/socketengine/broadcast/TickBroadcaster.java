@@ -6,6 +6,8 @@ import com.moneytree.socketengine.api.dto.TickDto;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
 import com.moneytree.socketengine.kite.InstrumentLoader;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -31,14 +33,21 @@ public class TickBroadcaster {
     private final SessionManager sessionManager;
     private final InstrumentLoader instrumentLoader;
     private final ObjectMapper objectMapper;
+    private final Counter ticksBroadcastCounter;
     
     public TickBroadcaster(
             SessionManager sessionManager,
             InstrumentLoader instrumentLoader,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry) {
         this.sessionManager = sessionManager;
         this.instrumentLoader = instrumentLoader;
         this.objectMapper = objectMapper;
+        
+        // Register counter for ticks broadcast
+        this.ticksBroadcastCounter = Counter.builder("socketengine.ticks.broadcast")
+            .description("Total number of ticks broadcast to WebSocket clients")
+            .register(meterRegistry);
     }
     
     /**
@@ -80,6 +89,7 @@ public class TickBroadcaster {
             targetSessions.forEach(sessionId -> {
                 try {
                     sessionManager.sendMessage(sessionId, json);
+                    ticksBroadcastCounter.increment();
                 } catch (Exception e) {
                     // Log warning (not error) since client disconnections are normal
                     log.warn("Failed to send tick to session {}: {}", 

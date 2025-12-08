@@ -365,7 +365,7 @@
   - Commit changes: "feat: add WebSocketConfig for endpoint registration"
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [-] 17. Implement TickRestController
+- [x] 17. Implement TickRestController
   - Create TickRestController with @RestController and @RequestMapping("/api/ticks")
   - Inject TickCacheService, TickRepository, SessionManager, InstrumentLoader
   - Implement GET /today/{symbol} endpoint with optional lastMinutes parameter
@@ -381,7 +381,7 @@
   - Commit changes: "feat: add TickRestController for REST API endpoints"
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 17.1 Write unit tests for TickRestController
+- [x] 17.1 Write unit tests for TickRestController
   - Test GET /today/{symbol} returns cached ticks
   - Test GET /today/{symbol} with lastMinutes filters correctly
   - Test GET /historical validates parameters

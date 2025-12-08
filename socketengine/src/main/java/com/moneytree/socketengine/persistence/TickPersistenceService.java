@@ -1,5 +1,8 @@
 package com.moneytree.socketengine.persistence;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,10 +32,25 @@ public class TickPersistenceService {
     
     private final TickBatchBuffer buffer;
     private final JdbcTemplate jdbcTemplate;
+    private final Counter ticksPersistedCounter;
+    private final Timer batchPersistenceTimer;
     
-    public TickPersistenceService(TickBatchBuffer buffer, JdbcTemplate jdbcTemplate) {
+    public TickPersistenceService(
+            TickBatchBuffer buffer, 
+            JdbcTemplate jdbcTemplate,
+            MeterRegistry meterRegistry) {
         this.buffer = buffer;
         this.jdbcTemplate = jdbcTemplate;
+        
+        // Register counter for ticks persisted
+        this.ticksPersistedCounter = Counter.builder("socketengine.ticks.persisted")
+            .description("Total number of ticks persisted to TimescaleDB")
+            .register(meterRegistry);
+        
+        // Register timer for batch persistence duration
+        this.batchPersistenceTimer = Timer.builder("socketengine.persistence.batch.duration")
+            .description("Duration of batch persistence operations")
+            .register(meterRegistry);
     }
     
     /**
@@ -44,8 +62,6 @@ public class TickPersistenceService {
      */
     @Scheduled(cron = "0 */15 * * * *")  // Every 15 minutes
     public void persistBatch() {
-        long startTime = System.currentTimeMillis();
-        
         // Drain all buffered ticks
         List<TickEntity> batch = buffer.drainBuffer();
         
@@ -54,27 +70,31 @@ public class TickPersistenceService {
             return;
         }
         
-        try {
-            // Batch insert to TimescaleDB
-            int rowsInserted = batchInsert(batch);
-            long duration = System.currentTimeMillis() - startTime;
-            
-            log.info("Persisted {} ticks to TimescaleDB in {}ms", rowsInserted, duration);
-            
-        } catch (Exception e) {
-            log.error("Failed to persist batch of {} ticks - will retry on next execution", batch.size(), e);
-            
-            // Re-add failed batch to buffer for retry on next scheduled execution
-            // We need to add a method to TickBatchBuffer to support this
-            buffer.reAddBatch(batch);
-            
-            // Alert if buffer size is growing too large
-            long bufferSize = buffer.getBufferSize();
-            if (bufferSize > 100000) {
-                log.error("ALERT: Tick buffer size exceeded 100,000 ({} ticks) - database may be down or slow", 
-                    bufferSize);
+        // Record batch persistence duration with timer
+        batchPersistenceTimer.record(() -> {
+            try {
+                // Batch insert to TimescaleDB
+                int rowsInserted = batchInsert(batch);
+                
+                log.info("Persisted {} ticks to TimescaleDB", rowsInserted);
+                
+                // Increment metrics counter
+                ticksPersistedCounter.increment(rowsInserted);
+                
+            } catch (Exception e) {
+                log.error("Failed to persist batch of {} ticks - will retry on next execution", batch.size(), e);
+                
+                // Re-add failed batch to buffer for retry on next scheduled execution
+                buffer.reAddBatch(batch);
+                
+                // Alert if buffer size is growing too large
+                long bufferSize = buffer.getBufferSize();
+                if (bufferSize > 100000) {
+                    log.error("ALERT: Tick buffer size exceeded 100,000 ({} ticks) - database may be down or slow", 
+                        bufferSize);
+                }
             }
-        }
+        });
     }
     
     /**
