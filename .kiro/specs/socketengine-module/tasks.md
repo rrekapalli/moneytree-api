@@ -205,7 +205,7 @@
   - Commit changes: "feat: add async configuration for separate thread pools"
   - _Requirements: 14.3_
 
-- [ ] 10. Implement TickBroadcaster (Hot Path)
+- [x] 10. Implement TickBroadcaster (Hot Path)
   - Create TickBroadcaster component with SessionManager, InstrumentLoader, ObjectMapper
   - Implement @EventListener onTickReceived(TickReceivedEvent) method (synchronous)
   - Convert Tick to TickDto once
@@ -219,7 +219,7 @@
   - Commit changes: "feat: add TickBroadcaster for hot path WebSocket broadcasting"
   - _Requirements: 4.3, 5.2_
 
-- [ ] 10.1 Write unit tests for TickBroadcaster
+- [x] 10.1 Write unit tests for TickBroadcaster
   - Test onTickReceived() broadcasts to subscribed sessions
   - Test index ticks broadcast to /ws/indices/all sessions
   - Test stock ticks broadcast to /ws/stocks/nse/all sessions
@@ -230,7 +230,7 @@
   - Commit changes: "test: add unit tests for TickBroadcaster"
 
 
-- [ ] 11. Implement TickCacheService (Cold Path - Consumer A)
+- [-] 11. Implement TickCacheService (Cold Path - Consumer A)
   - Create TickCacheService component with RedisTemplate and ObjectMapper
   - Implement @Async("tickCacheExecutor") @EventListener @Order(1) onTickReceived(TickReceivedEvent) method
   - Get current trading date in IST timezone
