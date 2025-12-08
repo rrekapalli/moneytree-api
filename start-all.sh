@@ -22,8 +22,9 @@ kill_port() {
 }
 
 # Check and free ports before starting
-echo "Checking for existing processes on ports 8080 and 4200..."
+echo "Checking for existing processes on ports 8080, 8081, and 4200..."
 kill_port 8080 "backend"
+kill_port 8081 "socketengine"
 kill_port 4200 "frontend"
 
 # Start backend in background
@@ -37,6 +38,17 @@ cd ..
 echo "Waiting for backend to start..."
 sleep 5
 
+# Start socketengine in background
+echo "Starting socketengine on port 8081..."
+cd socketengine
+./start-app.sh &
+SOCKETENGINE_PID=$!
+cd ..
+
+# Wait for socketengine to be ready
+echo "Waiting for socketengine to start..."
+sleep 3
+
 # Start frontend in background
 echo "Starting frontend on port 4200..."
 cd frontend
@@ -45,15 +57,17 @@ FRONTEND_PID=$!
 cd ..
 
 echo "Backend PID: $BACKEND_PID"
+echo "SocketEngine PID: $SOCKETENGINE_PID"
 echo "Frontend PID: $FRONTEND_PID"
 echo ""
 echo "Backend: http://localhost:8080"
+echo "SocketEngine: http://localhost:8081"
 echo "Frontend: http://localhost:4200"
 echo "API Docs: http://localhost:8080/swagger-ui.html"
 echo ""
-echo "Press Ctrl+C to stop both services"
+echo "Press Ctrl+C to stop all services"
 
 # Wait for user interrupt
-trap "kill $BACKEND_PID $FRONTEND_PID; exit" INT TERM
+trap "kill $BACKEND_PID $SOCKETENGINE_PID $FRONTEND_PID; exit" INT TERM
 wait
 
