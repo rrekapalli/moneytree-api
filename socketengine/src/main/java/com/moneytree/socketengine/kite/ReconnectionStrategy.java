@@ -31,6 +31,12 @@ public class ReconnectionStrategy {
      */
     public long getNextDelay() {
         int attempt = attemptCount.incrementAndGet();
+        
+        // Prevent overflow: if attempt is too large, just return max delay
+        if (attempt > 6) {  // 2^6 = 64, which is already > MAX_DELAY_SECONDS
+            return MAX_DELAY_SECONDS;
+        }
+        
         long delay = Math.min(
             MIN_DELAY_SECONDS * (1L << (attempt - 1)),  // Exponential: 2^(attempt-1)
             MAX_DELAY_SECONDS
