@@ -1,5 +1,7 @@
 package com.moneytree.socketengine.domain;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Value;
 
@@ -29,4 +31,19 @@ public class InstrumentInfo {
      * Type of instrument (INDEX or STOCK)
      */
     InstrumentType type;
+    
+    /**
+     * Constructor for Jackson deserialization
+     */
+    @JsonCreator
+    public InstrumentInfo(
+            @JsonProperty("instrumentToken") long instrumentToken,
+            @JsonProperty("exchangeToken") long exchangeToken,
+            @JsonProperty("tradingSymbol") String tradingSymbol,
+            @JsonProperty("type") InstrumentType type) {
+        this.instrumentToken = instrumentToken;
+        this.exchangeToken = exchangeToken;
+        this.tradingSymbol = tradingSymbol;
+        this.type = type;
+    }
 }

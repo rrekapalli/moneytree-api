@@ -58,7 +58,7 @@
   - _Requirements: 13.4_
 
 
-- [ ] 4. Implement InstrumentLoader with Redis caching
+- [-] 4. Implement InstrumentLoader with Redis caching
   - Create InstrumentLoader component with JdbcTemplate and RedisTemplate
   - Implement loadAllInstruments() method that loads indices and stocks
   - Implement loadIndices() with Redis cache check (key: instruments:nse:indices, TTL: 1 day)
@@ -73,7 +73,7 @@
   - Commit changes: "feat: add InstrumentLoader with Redis caching"
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.7_
 
-- [ ] 4.1 Write unit tests for InstrumentLoader
+- [-] 4.1 Write unit tests for InstrumentLoader
   - Test loadIndices() loads from cache when available
   - Test loadIndices() falls back to database on cache miss
   - Test loadStocks() loads from cache when available
