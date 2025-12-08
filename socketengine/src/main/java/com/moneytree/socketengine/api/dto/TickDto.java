@@ -7,8 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Data Transfer Object for tick data sent to WebSocket clients.
- * Contains all relevant market data fields in a JSON-friendly format.
+ * Data Transfer Object for market tick data sent to WebSocket clients.
+ * Represents a single market data update with price, volume, and OHLC information.
  */
 @Data
 @Builder
@@ -16,23 +16,25 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class TickDto {
+    
     /**
      * Trading symbol (e.g., "NIFTY 50", "RELIANCE")
      */
     private String symbol;
     
     /**
-     * Unique numeric identifier for the instrument
+     * Unique instrument token from Kite
      */
     private long instrumentToken;
     
     /**
-     * Type of instrument: "INDEX" or "STOCK"
+     * Instrument type: "INDEX" or "STOCK"
      */
     private String type;
     
     /**
-     * ISO 8601 formatted timestamp (e.g., "2025-12-08T10:15:03.123+05:30")
+     * Tick timestamp in ISO 8601 format with timezone
+     * Example: "2025-12-08T10:15:03.123+05:30"
      */
     private String timestamp;
     
