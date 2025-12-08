@@ -118,6 +118,28 @@ public class TickBatchBuffer {
     }
     
     /**
+     * Re-adds a batch of tick entities back to the buffer.
+     * Used when batch persistence fails and needs to be retried.
+     * 
+     * Thread-safe: Can be called concurrently with other buffer operations.
+     * 
+     * @param batch List of tick entities to re-add to the buffer
+     */
+    public void reAddBatch(List<TickEntity> batch) {
+        if (batch == null || batch.isEmpty()) {
+            return;
+        }
+        
+        // Add all entities back to the buffer
+        batch.forEach(entity -> {
+            buffer.offer(entity);
+            bufferSize.incrementAndGet();
+        });
+        
+        log.warn("Re-added {} ticks to buffer for retry", batch.size());
+    }
+    
+    /**
      * Determines the exchange for an instrument based on its type.
      * NSE is used for both indices and stocks in this implementation.
      * 

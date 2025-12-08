@@ -259,7 +259,7 @@
   - Commit changes: "test: add integration tests for TickCacheService"
   - _Requirements: 13.3_
 
-- [ ] 12. Implement TickBatchBuffer (Cold Path - Consumer B)
+- [x] 12. Implement TickBatchBuffer (Cold Path - Consumer B)
   - Create TickBatchBuffer component with ConcurrentLinkedQueue and AtomicLong
   - Inject InstrumentLoader to get instrument metadata
   - Implement @Async("tickPersistenceExecutor") @EventListener @Order(2) onTickReceived(TickReceivedEvent) method
@@ -276,7 +276,7 @@
   - Commit changes: "feat: add TickBatchBuffer for async tick buffering"
   - _Requirements: 5.4, 7.2, 14.1_
 
-- [ ] 12.1 Write unit tests for TickBatchBuffer
+- [x] 12.1 Write unit tests for TickBatchBuffer
   - Test onTickReceived() adds tick to buffer
   - Test buffer size increments correctly
   - Test drainBuffer() returns all buffered ticks and resets counter
@@ -286,7 +286,7 @@
   - Commit changes: "test: add unit tests for TickBatchBuffer"
   - _Requirements: 14.2_
 
-- [ ] 13. Implement TickPersistenceService
+- [-] 13. Implement TickPersistenceService
   - Create TickPersistenceService with TickBatchBuffer and JdbcTemplate
   - Implement @Scheduled(cron = "0 */15 * * * *") persistBatch() method
   - Drain buffer and get batch of TickEntity
