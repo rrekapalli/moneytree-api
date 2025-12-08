@@ -353,7 +353,7 @@
   - Run tests: `mvn test -Dtest=TickWebSocketHandlerTest`
   - Commit changes: "test: add unit tests for TickWebSocketHandler"
 
-- [ ] 16. Implement WebSocketConfig
+- [x] 16. Implement WebSocketConfig
   - Create WebSocketConfig class implementing WebSocketConfigurer
   - Inject TickWebSocketHandler
   - Implement registerWebSocketHandlers() method
@@ -365,7 +365,7 @@
   - Commit changes: "feat: add WebSocketConfig for endpoint registration"
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
 
-- [ ] 17. Implement TickRestController
+- [-] 17. Implement TickRestController
   - Create TickRestController with @RestController and @RequestMapping("/api/ticks")
   - Inject TickCacheService, TickRepository, SessionManager, InstrumentLoader
   - Implement GET /today/{symbol} endpoint with optional lastMinutes parameter
