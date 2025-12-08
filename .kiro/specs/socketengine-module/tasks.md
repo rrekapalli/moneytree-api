@@ -95,7 +95,7 @@
   - Commit changes: "test: add integration tests for InstrumentLoader with Redis"
   - _Requirements: 13.3_
 
-- [ ] 5. Implement ReconnectionStrategy
+- [x] 5. Implement ReconnectionStrategy
   - Create ReconnectionStrategy component with exponential backoff logic
   - Implement getNextDelay() method (1s, 2s, 4s, 8s, 16s, 32s, 60s max)
   - Implement reset() method to reset attempt counter
@@ -105,7 +105,7 @@
   - Commit changes: "feat: add ReconnectionStrategy with exponential backoff"
   - _Requirements: 1.3_
 
-- [ ] 5.1 Write unit tests for ReconnectionStrategy
+- [x] 5.1 Write unit tests for ReconnectionStrategy
   - Test exponential backoff sequence (1, 2, 4, 8, 16, 32, 60, 60)
   - Test reset() returns delay to 1 second
   - Test thread safety with concurrent calls
