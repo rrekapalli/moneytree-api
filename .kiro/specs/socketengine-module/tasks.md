@@ -230,7 +230,7 @@
   - Commit changes: "test: add unit tests for TickBroadcaster"
 
 
-- [-] 11. Implement TickCacheService (Cold Path - Consumer A)
+- [x] 11. Implement TickCacheService (Cold Path - Consumer A)
   - Create TickCacheService component with RedisTemplate and ObjectMapper
   - Implement @Async("tickCacheExecutor") @EventListener @Order(1) onTickReceived(TickReceivedEvent) method
   - Get current trading date in IST timezone
@@ -247,7 +247,7 @@
   - Commit changes: "feat: add TickCacheService for async Redis caching"
   - _Requirements: 5.3, 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [-] 11.1 Write integration tests for TickCacheService
+- [x] 11.1 Write integration tests for TickCacheService
   - Use Testcontainers with Redis image
   - Test onTickReceived() caches tick to Redis
   - Test TTL is set correctly
