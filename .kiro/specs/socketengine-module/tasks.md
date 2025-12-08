@@ -1,0 +1,534 @@
+# Implementation Plan
+
+- [ ] 1. Set up socketengine as standalone Spring Boot module
+  - Create ./socketengine/ directory at root level (sibling to ./backend/ and ./frontend/)
+  - Initialize Spring Boot 3 project with Maven (pom.xml)
+  - Set up package structure: com.moneytree.socketengine with subpackages (api, domain, kite, broadcast, redis, persistence, config)
+  - Create main application class: SocketEngineApplication with @SpringBootApplication
+  - Add package-info.java with @ApplicationModule annotation for Spring Modulith
+  - Create SocketEngineProperties class with @ConfigurationProperties for externalized config
+  - Create application.yml configuration for Kite, Redis, and persistence settings
+  - Create .env file template for environment variables
+  - Add Maven/Gradle dependencies (Spring Boot 3, Spring WebSocket, Redis, JPA, Java-WebSocket, Lombok, etc.)
+  - Set server port to 8081 (to avoid conflict with backend on 8080)
+  - Verify no compilation errors using getDiagnostics
+  - Run build: `cd socketengine && mvn clean compile -DskipTests`
+  - Commit changes: "feat: initialize socketengine as standalone Spring Boot module"
+  - _Requirements: 8.1, 8.2, 9.1, 9.2, 9.3, 9.4_
+
+- [ ] 2. Implement domain model and events
+  - Create Tick domain class with symbol, instrumentToken, type, timestamp, lastTradedPrice, volume, OHLC, rawBinaryData
+  - Create InstrumentType enum (INDEX, STOCK)
+  - Create InstrumentInfo class with instrumentToken, exchangeToken, tradingSymbol, type
+  - Create TickReceivedEvent record for domain events
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add domain model and events for socketengine"
+  - _Requirements: 5.1_
+
+- [ ] 2.1 Write unit tests for domain model
+  - Test Tick builder creates valid instances
+  - Test OHLC nested class
+  - Test TickReceivedEvent creation
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickTest`
+  - Commit changes: "test: add unit tests for domain model"
+
+- [ ] 3. Implement TimescaleDB schema and entity
+  - Create SQL migration script for kite_ticks_data hypertable
+  - Add columns: instrument_token (BIGINT), tradingsymbol (VARCHAR), exchange (VARCHAR), tick_timestamp (TIMESTAMPTZ), raw_tick_data (BYTEA)
+  - Create hypertable with 1-day chunk interval
+  - Add indexes: (tradingsymbol, tick_timestamp DESC), (exchange, tick_timestamp DESC), (instrument_token, tick_timestamp DESC)
+  - Create TickEntity JPA entity with @IdClass for composite key (instrument_token, tick_timestamp)
+  - Create TickEntityId class for composite primary key
+  - Create TickRepository interface extending JpaRepository
+  - Add custom query methods: findByTradingSymbolAndTimestampBetween, findByInstrumentTokenAndTimestampBetween, findByExchangeAndTimestampBetween, findByTimestampBetween
+  - Verify no compilation errors using getDiagnostics
+  - Run build: `cd socketengine && mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TimescaleDB schema and JPA entities for tick persistence"
+  - _Requirements: 7.1, 7.2, 7.7_
+
+- [ ] 3.1 Write integration tests for TickRepository
+  - Use Testcontainers with TimescaleDB image
+  - Test findBySymbolAndTimestampBetween returns correct ticks
+  - Test raw binary data is preserved
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickRepositoryIntegrationTest`
+  - Commit changes: "test: add integration tests for TickRepository"
+  - _Requirements: 13.4_
+
+
+- [ ] 4. Implement InstrumentLoader with Redis caching
+  - Create InstrumentLoader component with JdbcTemplate and RedisTemplate
+  - Implement loadAllInstruments() method that loads indices and stocks
+  - Implement loadIndices() with Redis cache check (key: instruments:nse:indices, TTL: 1 day)
+  - Implement loadStocks() with Redis cache check (key: instruments:nse:stocks, TTL: 1 day)
+  - Implement loadIndicesFromDatabase() with SQL query for NSE INDICES
+  - Implement loadStocksFromDatabase() with SQL query for NSE EQ stocks (excluding LOAN)
+  - Implement loadFromCache() and cacheInstruments() helper methods
+  - Implement refreshCache() method for manual cache refresh
+  - Add isIndexToken(), isStockToken(), getInstrumentInfo() lookup methods
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add InstrumentLoader with Redis caching"
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.7_
+
+- [ ] 4.1 Write unit tests for InstrumentLoader
+  - Test loadIndices() loads from cache when available
+  - Test loadIndices() falls back to database on cache miss
+  - Test loadStocks() loads from cache when available
+  - Test loadStocks() falls back to database on cache miss
+  - Test cacheInstruments() stores data in Redis with correct TTL
+  - Test isIndexToken() and isStockToken() return correct results
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=InstrumentLoaderTest`
+  - Commit changes: "test: add unit tests for InstrumentLoader"
+  - _Requirements: 13.2_
+
+- [ ] 4.2 Write integration tests for InstrumentLoader with Redis
+  - Use Testcontainers with Redis image
+  - Test complete flow: database -> cache -> retrieve from cache
+  - Test cache expiration after TTL
+  - Test refreshCache() updates cached data
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=InstrumentLoaderIntegrationTest`
+  - Commit changes: "test: add integration tests for InstrumentLoader with Redis"
+  - _Requirements: 13.3_
+
+- [ ] 5. Implement ReconnectionStrategy
+  - Create ReconnectionStrategy component with exponential backoff logic
+  - Implement getNextDelay() method (1s, 2s, 4s, 8s, 16s, 32s, 60s max)
+  - Implement reset() method to reset attempt counter
+  - Use AtomicInteger for thread-safe attempt counting
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add ReconnectionStrategy with exponential backoff"
+  - _Requirements: 1.3_
+
+- [ ] 5.1 Write unit tests for ReconnectionStrategy
+  - Test exponential backoff sequence (1, 2, 4, 8, 16, 32, 60, 60)
+  - Test reset() returns delay to 1 second
+  - Test thread safety with concurrent calls
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=ReconnectionStrategyTest`
+  - Commit changes: "test: add unit tests for ReconnectionStrategy"
+  - _Requirements: 13.2_
+
+- [ ] 6. Implement KiteTickParser
+  - Create KiteTickParser component to parse binary tick data from Kite
+  - Implement parse(byte[] binaryData) method returning List<Tick>
+  - Parse Kite binary format according to API documentation
+  - Extract all tick fields: symbol, instrumentToken, timestamp, price, volume, OHLC
+  - Store original binary data in Tick.rawBinaryData field
+  - Handle parsing errors gracefully with TickParseException
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add KiteTickParser for binary tick data parsing"
+  - _Requirements: 1.4_
+
+- [ ] 6.1 Write unit tests for KiteTickParser
+  - Test parsing valid binary tick data
+  - Test all tick fields are correctly extracted
+  - Test raw binary data is preserved
+  - Test malformed data throws TickParseException
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=KiteTickParserTest`
+  - Commit changes: "test: add unit tests for KiteTickParser"
+  - _Requirements: 13.1_
+
+
+- [ ] 7. Implement KiteWebSocketClient
+  - Create KiteWebSocketClient component using Java-WebSocket library
+  - Inject SocketEngineProperties, ApplicationEventPublisher, KiteTickParser, ReconnectionStrategy, InstrumentLoader
+  - Implement @PostConstruct initialize() method to load instruments and connect
+  - Implement connect() method with WebSocket connection setup
+  - Add authentication headers (X-Kite-Version, Authorization with api_key:access_token)
+  - Implement onOpen() handler to subscribe to all instrument tokens
+  - Implement onMessage() handler to parse ticks and publish TickReceivedEvent
+  - Implement onClose() handler to schedule reconnection with exponential backoff
+  - Implement onError() handler with special handling for authentication failures
+  - Implement subscribeToInstruments() method to send Kite subscription message
+  - Add connection state tracking with volatile boolean
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add KiteWebSocketClient for Kite API integration"
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 12.1, 12.2_
+
+- [ ] 7.1 Write unit tests for KiteWebSocketClient
+  - Test initialize() loads instruments and connects
+  - Test onMessage() parses ticks and publishes events
+  - Test onClose() schedules reconnection
+  - Test onError() handles authentication failures
+  - Test subscribeToInstruments() formats message correctly
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=KiteWebSocketClientTest`
+  - Commit changes: "test: add unit tests for KiteWebSocketClient"
+
+- [ ] 8. Implement SessionManager
+  - Create SessionManager component with thread-safe collections
+  - Use ConcurrentHashMap for sessions, sessionEndpoints, sessionSubscriptions
+  - Use ConcurrentHashMap for reverse index: symbolToSessions
+  - Implement registerSession(sessionId, endpoint, session) method
+  - Implement addSubscriptions(sessionId, symbols) method with reverse index update
+  - Implement removeSubscriptions(sessionId, symbols) method with reverse index cleanup
+  - Implement removeSession(sessionId) method with full cleanup
+  - Implement getSessionsSubscribedTo(symbol) method
+  - Implement getIndicesAllSessions() method (filter by /ws/indices/all endpoint)
+  - Implement getStocksAllSessions() method (filter by /ws/stocks/nse/all endpoint)
+  - Implement sendMessage(sessionId, message) method with IOException handling
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add SessionManager for WebSocket session management"
+  - _Requirements: 2.5, 2.7, 4.1, 4.2, 12.3_
+
+- [ ] 8.1 Write unit tests for SessionManager
+  - Test registerSession() creates session entry
+  - Test addSubscriptions() updates session and reverse index
+  - Test removeSubscriptions() cleans up session and reverse index
+  - Test removeSession() performs full cleanup
+  - Test getSessionsSubscribedTo() returns correct sessions
+  - Test getIndicesAllSessions() filters by endpoint
+  - Test getStocksAllSessions() filters by endpoint
+  - Test thread safety with concurrent operations
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=SessionManagerTest`
+  - Commit changes: "test: add unit tests for SessionManager"
+  - _Requirements: 13.2, 14.2_
+
+- [ ] 9. Implement async configuration
+  - Create AsyncConfig class with @EnableAsync
+  - Create tickCacheExecutor bean (4-8 threads, 10000 queue capacity)
+  - Create tickPersistenceExecutor bean (2-4 threads, 20000 queue capacity)
+  - Set thread name prefixes and rejection policy (CallerRunsPolicy)
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add async configuration for separate thread pools"
+  - _Requirements: 14.3_
+
+- [ ] 10. Implement TickBroadcaster (Hot Path)
+  - Create TickBroadcaster component with SessionManager, InstrumentLoader, ObjectMapper
+  - Implement @EventListener onTickReceived(TickReceivedEvent) method (synchronous)
+  - Convert Tick to TickDto once
+  - Serialize to JSON once
+  - Identify target sessions: explicit subscriptions + /ws/indices/all (if index) + /ws/stocks/nse/all (if stock)
+  - Broadcast to all target sessions using SessionManager.sendMessage()
+  - Handle individual session send failures gracefully (log warning, continue)
+  - Implement toDto(Tick) helper method
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TickBroadcaster for hot path WebSocket broadcasting"
+  - _Requirements: 4.3, 5.2_
+
+- [ ] 10.1 Write unit tests for TickBroadcaster
+  - Test onTickReceived() broadcasts to subscribed sessions
+  - Test index ticks broadcast to /ws/indices/all sessions
+  - Test stock ticks broadcast to /ws/stocks/nse/all sessions
+  - Test failed sends don't affect other sessions
+  - Test toDto() conversion is correct
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickBroadcasterTest`
+  - Commit changes: "test: add unit tests for TickBroadcaster"
+
+
+- [ ] 11. Implement TickCacheService (Cold Path - Consumer A)
+  - Create TickCacheService component with RedisTemplate and ObjectMapper
+  - Implement @Async("tickCacheExecutor") @EventListener @Order(1) onTickReceived(TickReceivedEvent) method
+  - Get current trading date in IST timezone
+  - Build Redis key: "ticks:{tradingDate}:{symbol}"
+  - Serialize tick to JSON
+  - RPUSH to Redis List
+  - Set TTL to 2 days if new key
+  - Handle Redis errors gracefully (log, don't throw)
+  - Implement getTodayTicks(symbol, lastMinutes) method
+  - Implement time-window filtering for lastMinutes parameter
+  - Implement getTradingDate() helper method
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TickCacheService for async Redis caching"
+  - _Requirements: 5.3, 6.1, 6.2, 6.3, 6.4, 6.5_
+
+- [ ] 11.1 Write integration tests for TickCacheService
+  - Use Testcontainers with Redis image
+  - Test onTickReceived() caches tick to Redis
+  - Test TTL is set correctly
+  - Test getTodayTicks() retrieves cached ticks
+  - Test time-window filtering works correctly
+  - Test Redis errors don't crash the service
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickCacheServiceIntegrationTest`
+  - Commit changes: "test: add integration tests for TickCacheService"
+  - _Requirements: 13.3_
+
+- [ ] 12. Implement TickBatchBuffer (Cold Path - Consumer B)
+  - Create TickBatchBuffer component with ConcurrentLinkedQueue and AtomicLong
+  - Inject InstrumentLoader to get instrument metadata
+  - Implement @Async("tickPersistenceExecutor") @EventListener @Order(2) onTickReceived(TickReceivedEvent) method
+  - Create TickEntity from Tick with instrument_token, tradingsymbol, exchange, tick_timestamp, and raw binary data
+  - Lookup InstrumentInfo to get tradingsymbol and exchange
+  - Add to buffer using offer()
+  - Increment buffer size counter
+  - Log buffer size every 10,000 ticks
+  - Implement drainBuffer() method that polls all entities and resets counter
+  - Implement getBufferSize() method
+  - Handle buffering errors gracefully (log, don't throw)
+  - Verify no compilation errors using getDiagnostics
+  - Run build: `cd socketengine && mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TickBatchBuffer for async tick buffering"
+  - _Requirements: 5.4, 7.2, 14.1_
+
+- [ ] 12.1 Write unit tests for TickBatchBuffer
+  - Test onTickReceived() adds tick to buffer
+  - Test buffer size increments correctly
+  - Test drainBuffer() returns all buffered ticks and resets counter
+  - Test thread safety with concurrent additions
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickBatchBufferTest`
+  - Commit changes: "test: add unit tests for TickBatchBuffer"
+  - _Requirements: 14.2_
+
+- [ ] 13. Implement TickPersistenceService
+  - Create TickPersistenceService with TickBatchBuffer and JdbcTemplate
+  - Implement @Scheduled(cron = "0 */15 * * * *") persistBatch() method
+  - Drain buffer and get batch of TickEntity
+  - Skip if batch is empty
+  - Call batchInsert() with JDBC batch operations
+  - Log success with count and duration
+  - On failure: log error, re-add batch to buffer for retry
+  - Alert if buffer size exceeds 100,000
+  - Implement @Scheduled(cron = "0 0 16 * * MON-FRI") endOfDayFlush() method
+  - Implement batchInsert(List<TickEntity>) method with JDBC batch update
+  - SQL: INSERT INTO kite_ticks_data (instrument_token, tradingsymbol, exchange, tick_timestamp, raw_tick_data) VALUES (?, ?, ?, ?, ?)
+  - Use batch size of 1000 for efficient inserts
+  - Verify no compilation errors using getDiagnostics
+  - Run build: `cd socketengine && mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TickPersistenceService for scheduled batch persistence"
+  - _Requirements: 7.2, 7.3, 7.4, 7.5, 7.6, 12.4_
+
+- [ ] 13.1 Write integration tests for TickPersistenceService
+  - Use Testcontainers with TimescaleDB image
+  - Test persistBatch() inserts buffered ticks to database
+  - Test raw binary data is preserved
+  - Test failed batch is re-added to buffer
+  - Test endOfDayFlush() persists remaining ticks
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickPersistenceServiceIntegrationTest`
+  - Commit changes: "test: add integration tests for TickPersistenceService"
+  - _Requirements: 13.4_
+
+- [ ] 14. Implement DTOs for API layer
+  - Create TickDto class with all tick fields and OHLCDto nested class
+  - Add @JsonInclude(JsonInclude.Include.NON_NULL) annotation
+  - Create SubscriptionRequestDto with action, type, symbols fields
+  - Add Bean Validation annotations (@NotBlank, @Pattern, @NotEmpty)
+  - Create SubscriptionResponseDto with sessionId, endpoint, subscribedSymbols, connectedAt
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add DTOs for socketengine API layer"
+  - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
+
+
+- [ ] 15. Implement TickWebSocketHandler
+  - Create TickWebSocketHandler extending TextWebSocketHandler
+  - Inject SessionManager, ObjectMapper, Validator
+  - Implement afterConnectionEstablished() to register session with endpoint
+  - Implement handleTextMessage() to process SUBSCRIBE/UNSUBSCRIBE messages
+  - Validate subscription messages using Bean Validation
+  - Send error responses for invalid messages
+  - Implement afterConnectionClosed() to remove session and cleanup
+  - Implement sendError() helper method
+  - Implement extractEndpoint() helper method to determine endpoint from session URI
+  - Log all connection events (connect, subscribe, unsubscribe, disconnect)
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TickWebSocketHandler for WebSocket connections"
+  - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 4.1, 4.2, 4.4, 4.5, 12.3_
+
+- [ ] 15.1 Write unit tests for TickWebSocketHandler
+  - Test afterConnectionEstablished() registers session
+  - Test handleTextMessage() processes SUBSCRIBE correctly
+  - Test handleTextMessage() processes UNSUBSCRIBE correctly
+  - Test invalid messages send error responses
+  - Test afterConnectionClosed() cleans up session
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickWebSocketHandlerTest`
+  - Commit changes: "test: add unit tests for TickWebSocketHandler"
+
+- [ ] 16. Implement WebSocketConfig
+  - Create WebSocketConfig class implementing WebSocketConfigurer
+  - Inject TickWebSocketHandler
+  - Implement registerWebSocketHandlers() method
+  - Register handler for all four endpoints: /ws/indices, /ws/stocks, /ws/indices/all, /ws/stocks/nse/all
+  - Set allowed origins (configure for production)
+  - Enable SockJS fallback
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add WebSocketConfig for endpoint registration"
+  - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+- [ ] 17. Implement TickRestController
+  - Create TickRestController with @RestController and @RequestMapping("/api/ticks")
+  - Inject TickCacheService, TickRepository, SessionManager, InstrumentLoader
+  - Implement GET /today/{symbol} endpoint with optional lastMinutes parameter
+  - Implement GET /historical endpoint with symbol, startTime, endTime parameters
+  - Validate startTime < endTime
+  - Parse raw binary data on demand for historical queries
+  - Implement GET /subscriptions endpoint returning all active sessions
+  - Implement POST /admin/refresh-instruments endpoint for manual cache refresh
+  - Add proper error handling with HTTP 400/500 status codes
+  - Add Swagger/OpenAPI annotations
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add TickRestController for REST API endpoints"
+  - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
+
+- [ ] 17.1 Write unit tests for TickRestController
+  - Test GET /today/{symbol} returns cached ticks
+  - Test GET /today/{symbol} with lastMinutes filters correctly
+  - Test GET /historical validates parameters
+  - Test GET /historical returns historical ticks
+  - Test GET /subscriptions returns active sessions
+  - Test POST /admin/refresh-instruments refreshes cache
+  - Test error handling returns correct HTTP status codes
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=TickRestControllerTest`
+  - Commit changes: "test: add unit tests for TickRestController"
+
+- [ ] 18. Implement health check and metrics
+  - Create SocketEngineHealthIndicator implementing HealthIndicator
+  - Check Kite connection status
+  - Check buffer size (alert if > 100,000)
+  - Return Health.up() or Health.down() with details
+  - Add Micrometer metrics for ticks received, broadcast, cached, persisted
+  - Add gauge for active WebSocket sessions
+  - Add gauge for Kite connection status
+  - Add gauge for buffer size
+  - Add timer for batch persistence duration
+  - Verify no compilation errors using getDiagnostics
+  - Run backend build: `mvn clean compile -DskipTests`
+  - Commit changes: "feat: add health check and metrics for socketengine"
+  - _Requirements: 12.4, 12.5_
+
+- [ ] 19. Checkpoint - Ensure all tests pass
+  - Run all backend tests: `mvn test`
+  - Verify no compilation errors: `mvn clean compile`
+  - Check getDiagnostics for any warnings or errors
+  - Ensure all tests pass, ask the user if questions arise
+  - Commit changes if any fixes were made: "fix: resolve test failures and compilation errors"
+
+
+- [ ] 20. Write end-to-end integration test
+  - Create SocketEngineEndToEndTest with Testcontainers (Redis + TimescaleDB)
+  - Test complete flow: Tick arrives -> Event published -> Broadcast -> Cache -> Persist
+  - Publish TickReceivedEvent and verify it reaches all consumers
+  - Verify tick is cached in Redis with correct key and TTL
+  - Verify tick is buffered for persistence
+  - Trigger persistBatch() and verify tick is in TimescaleDB
+  - Verify raw binary data is preserved throughout
+  - Use Awaitility for async assertions
+  - Verify tests compile without errors using getDiagnostics
+  - Run tests: `mvn test -Dtest=SocketEngineEndToEndTest`
+  - Commit changes: "test: add end-to-end integration test for complete tick flow"
+  - _Requirements: 13.5_
+
+- [ ] 21. Update build-all.sh script
+  - Open ./build-all.sh file
+  - Add socketengine build step: `cd socketengine && ./mvnw clean package -DskipTests && cd ..`
+  - Place socketengine build after backend build
+  - Test script runs successfully: `./build-all.sh`
+  - Commit changes: "build: add socketengine module to build-all.sh"
+  - _Requirements: 15.5_
+
+- [ ] 22. Update start-all.sh script
+  - Open ./start-all.sh file
+  - Add socketengine startup: `cd socketengine && ./start-app.sh & SOCKETENGINE_PID=$! && cd ..`
+  - Place socketengine startup after backend startup
+  - Add SOCKETENGINE_PID to the list of PIDs to track
+  - Update trap command to kill socketengine process on exit
+  - Test script runs successfully: `./start-all.sh`
+  - Verify socketengine module logs appear in console (port 8081)
+  - Commit changes: "build: add socketengine module to start-all.sh"
+  - _Requirements: 15.6_
+
+- [ ] 22.1 Create start-app.sh script for socketengine
+  - Create ./socketengine/start-app.sh script
+  - Add shebang and set -e
+  - Load environment variables from .env if exists
+  - Start Spring Boot application: `./mvnw spring-boot:run`
+  - Make script executable: `chmod +x start-app.sh`
+  - Test script runs successfully: `cd socketengine && ./start-app.sh`
+  - Commit changes: "build: add start-app.sh script for socketengine"
+  - _Requirements: 15.6_
+
+- [ ] 23. Create module README documentation
+  - Create README.md in ./socketengine/ directory
+  - Document project structure and architecture overview
+  - Document Kite API credential configuration (api_key, api_secret, access_token)
+  - Document Redis connection configuration (host, port, password)
+  - Document TimescaleDB connection configuration (url, username, password)
+  - Document how to build: `mvn clean package`
+  - Document how to run: `./start-app.sh` or `mvn spring-boot:run`
+  - Document WebSocket endpoints and message formats
+  - Provide example subscription messages (SUBSCRIBE/UNSUBSCRIBE)
+  - Provide example tick response format
+  - Document REST API endpoints with examples
+  - Explain periodic persistence mechanism (15-minute batches, EOD flush)
+  - Document port configuration (default 8081)
+  - Document how to run with existing infrastructure (Redis, TimescaleDB from ./backend)
+  - Add troubleshooting section for common issues
+  - Commit changes: "docs: add comprehensive README for socketengine module"
+  - _Requirements: 15.1, 15.2, 15.3, 15.4_
+
+- [ ] 24. Manual testing with Kite WebSocket
+  - Configure Kite API credentials in application.yml or .env
+  - Start Redis and TimescaleDB (should already be running from ./backend)
+  - Start the socketengine module
+  - Verify Kite WebSocket connection is established (check logs)
+  - Verify instruments are loaded from database or cache
+  - Verify subscription to instrument tokens is successful
+  - Monitor logs for incoming ticks
+  - Test WebSocket client connection to /ws/indices/all
+  - Verify ticks are broadcast to connected client
+  - Test subscription/unsubscription on /ws/indices endpoint
+  - Verify Redis cache contains tick data (use redis-cli)
+  - Wait for 15-minute batch job and verify ticks in TimescaleDB
+  - Test REST API endpoints (GET /api/ticks/today/{symbol})
+  - Test reconnection by stopping/starting Kite connection
+  - Document any issues found and resolve them
+  - Commit changes if any fixes were made: "fix: resolve manual testing issues"
+
+- [ ] 25. Performance testing and optimization
+  - Test with high-frequency tick ingestion (simulate 1000 ticks/second)
+  - Monitor thread pool queue sizes and adjust if needed
+  - Monitor memory usage of tick buffer
+  - Test with 100 concurrent WebSocket clients
+  - Measure broadcast latency (p50, p95, p99)
+  - Measure Redis cache write latency
+  - Measure TimescaleDB batch insert duration
+  - Verify async consumers don't block hot path
+  - Test subscription churn (frequent subscribe/unsubscribe)
+  - Optimize if performance issues are found
+  - Document performance test results
+  - Commit changes if optimizations were made: "perf: optimize socketengine performance"
+
+- [ ] 26. Security hardening
+  - Review WebSocket endpoint security (add authentication if needed)
+  - Verify Kite credentials are not logged
+  - Verify database credentials are externalized
+  - Add rate limiting for subscription requests (if needed)
+  - Add connection limits per IP (if needed)
+  - Review CORS/origin configuration for production
+  - Test with invalid/malicious subscription messages
+  - Verify error messages don't leak sensitive information
+  - Document security considerations in README
+  - Commit changes if security improvements were made: "security: harden socketengine module"
+
+- [ ] 27. Final Checkpoint - Ensure all tests pass
+  - Run all backend tests: `mvn test`
+  - Verify no compilation errors: `mvn clean compile`
+  - Check getDiagnostics for any warnings or errors
+  - Verify health check endpoint returns healthy status
+  - Verify metrics are being collected
+  - Test build-all.sh script
+  - Test start-all.sh script
+  - Ensure all tests pass, ask the user if questions arise
+  - Create final commit: "feat: complete socketengine module implementation"
