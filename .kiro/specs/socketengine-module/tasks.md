@@ -315,7 +315,7 @@
   - Commit changes: "test: add integration tests for TickPersistenceService"
   - _Requirements: 13.4_
 
-- [ ] 14. Implement DTOs for API layer
+- [x] 14. Implement DTOs for API layer
   - Create TickDto class with all tick fields and OHLCDto nested class
   - Add @JsonInclude(JsonInclude.Include.NON_NULL) annotation
   - Create SubscriptionRequestDto with action, type, symbols fields
