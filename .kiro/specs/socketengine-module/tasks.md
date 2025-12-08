@@ -34,7 +34,7 @@
   - Run tests: `mvn test -Dtest=TickTest`
   - Commit changes: "test: add unit tests for domain model"
 
-- [-] 3. Implement TimescaleDB schema and entity
+- [x] 3. Implement TimescaleDB schema and entity
   - Create SQL migration script for kite_ticks_data hypertable
   - Add columns: instrument_token (BIGINT), tradingsymbol (VARCHAR), exchange (VARCHAR), tick_timestamp (TIMESTAMPTZ), raw_tick_data (BYTEA)
   - Create hypertable with 1-day chunk interval
@@ -48,7 +48,7 @@
   - Commit changes: "feat: add TimescaleDB schema and JPA entities for tick persistence"
   - _Requirements: 7.1, 7.2, 7.7_
 
-- [-] 3.1 Write integration tests for TickRepository
+- [x] 3.1 Write integration tests for TickRepository
   - Use Testcontainers with TimescaleDB image
   - Test findBySymbolAndTimestampBetween returns correct ticks
   - Test raw binary data is preserved
