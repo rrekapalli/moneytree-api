@@ -75,12 +75,7 @@
             <tr class="stock-row cursor-pointer" 
                 [class.selected-stock]="stock.symbol === selectedStockSymbol"
                 (click)="onRowClick(stock)"
-                (dblclick)="onRowDoubleClick(stock)"
-                (mouseenter)="setHoveredStock(stock)"
-                (mouseleave)="clearHoveredStock()"
-                [pTooltip]="stockTooltipTemplate"
-                tooltipPosition="top"
-                tooltipStyleClass="stock-tooltip">
+                (dblclick)="onRowDoubleClick(stock)">
                 <td>
                     <span class="stock-symbol" title="Click to view chart">{{ stock.symbol }}</span>
                 </td>
