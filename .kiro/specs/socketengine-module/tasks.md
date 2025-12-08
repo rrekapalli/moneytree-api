@@ -438,7 +438,7 @@
   - Commit changes: "build: add socketengine module to build-all.sh"
   - _Requirements: 15.5_
 
-- [ ] 22. Update start-all.sh script
+- [x] 22. Update start-all.sh script
   - Open ./start-all.sh file
   - Add socketengine startup: `cd socketengine && ./start-app.sh & SOCKETENGINE_PID=$! && cd ..`
   - Place socketengine startup after backend startup
@@ -449,7 +449,7 @@
   - Commit changes: "build: add socketengine module to start-all.sh"
   - _Requirements: 15.6_
 
-- [ ] 22.1 Create start-app.sh script for socketengine
+- [x] 22.1 Create start-app.sh script for socketengine
   - Create ./socketengine/start-app.sh script
   - Add shebang and set -e
   - Load environment variables from .env if exists
