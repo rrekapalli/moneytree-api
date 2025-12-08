@@ -408,7 +408,7 @@
   - Commit changes: "feat: add health check and metrics for socketengine"
   - _Requirements: 12.4, 12.5_
 
-- [-] 19. Checkpoint - Ensure all tests pass
+- [x] 19. Checkpoint - Ensure all tests pass
   - Run all backend tests: `mvn test`
   - Verify no compilation errors: `mvn clean compile`
   - Check getDiagnostics for any warnings or errors
@@ -416,7 +416,7 @@
   - Commit changes if any fixes were made: "fix: resolve test failures and compilation errors"
 
 
-- [ ] 20. Write end-to-end integration test
+- [x] 20. Write end-to-end integration test
   - Create SocketEngineEndToEndTest with Testcontainers (Redis + TimescaleDB)
   - Test complete flow: Tick arrives -> Event published -> Broadcast -> Cache -> Persist
   - Publish TickReceivedEvent and verify it reaches all consumers
