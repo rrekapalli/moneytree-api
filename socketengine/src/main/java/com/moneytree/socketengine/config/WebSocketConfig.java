@@ -45,18 +45,32 @@ public class WebSocketConfig implements WebSocketConfigurer {
      * - Allowed origins: Configurable via socketengine.websocket.allowed-origins property
      * - SockJS fallback: Enabled for browser compatibility
      * 
+     * Security:
+     * - CORS origins should be restricted in production (not "*")
+     * - Rate limiting and connection limits are enforced by TickWebSocketHandler
+     * 
      * @param registry the WebSocket handler registry
      */
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        log.info("Registering WebSocket handlers with allowed origins: {}", allowedOrigins);
+        // Parse allowed origins (supports comma-separated list)
+        String[] origins = parseAllowedOrigins(allowedOrigins);
+        
+        log.info("Registering WebSocket handlers with allowed origins: {}", 
+            String.join(", ", origins));
+        
+        // Warn if using wildcard in production
+        if ("*".equals(allowedOrigins)) {
+            log.warn("SECURITY WARNING: WebSocket CORS is configured to allow all origins (*). " +
+                    "This should be restricted in production environments.");
+        }
         
         registry.addHandler(tickWebSocketHandler, 
                 "/ws/indices",           // Selective index subscriptions
                 "/ws/stocks",            // Selective stock subscriptions
                 "/ws/indices/all",       // All indices auto-stream
                 "/ws/stocks/nse/all")    // All NSE stocks auto-stream
-            .setAllowedOrigins(allowedOrigins)  // Configure for production security
+            .setAllowedOrigins(origins)  // Configure for production security
             .withSockJS();  // Enable SockJS fallback for older browsers
         
         log.info("WebSocket endpoints registered successfully:");
@@ -64,5 +78,21 @@ public class WebSocketConfig implements WebSocketConfigurer {
         log.info("  - /ws/stocks (selective stock subscriptions)");
         log.info("  - /ws/indices/all (auto-stream all NSE indices)");
         log.info("  - /ws/stocks/nse/all (auto-stream all NSE equity stocks)");
+    }
+    
+    /**
+     * Parses allowed origins configuration.
+     * Supports comma-separated list or single value.
+     *
+     * @param originsConfig the origins configuration string
+     * @return array of allowed origins
+     */
+    private String[] parseAllowedOrigins(String originsConfig) {
+        if (originsConfig == null || originsConfig.trim().isEmpty()) {
+            return new String[]{"*"};
+        }
+        
+        // Split by comma and trim whitespace
+        return originsConfig.split(",\\s*");
     }
 }

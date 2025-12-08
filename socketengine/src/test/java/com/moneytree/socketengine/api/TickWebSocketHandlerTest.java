@@ -3,6 +3,7 @@ package com.moneytree.socketengine.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moneytree.socketengine.api.dto.SubscriptionRequestDto;
 import com.moneytree.socketengine.broadcast.SessionManager;
+import com.moneytree.socketengine.config.SecurityConfig;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,12 +44,21 @@ class TickWebSocketHandlerTest {
     private WebSocketSession webSocketSession;
 
     private ObjectMapper objectMapper;
+    private SecurityConfig.RateLimiter rateLimiter;
+    private SecurityConfig.ConnectionTracker connectionTracker;
     private TickWebSocketHandler handler;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        handler = new TickWebSocketHandler(sessionManager, objectMapper, validator);
+        rateLimiter = new SecurityConfig.RateLimiter(100, 60);
+        connectionTracker = new SecurityConfig.ConnectionTracker(50);
+        handler = new TickWebSocketHandler(sessionManager, objectMapper, validator, 
+            rateLimiter, connectionTracker);
+        
+        // Mock remote address for connection tracking
+        when(webSocketSession.getRemoteAddress())
+            .thenReturn(new InetSocketAddress("192.168.1.1", 12345));
     }
 
     @Test

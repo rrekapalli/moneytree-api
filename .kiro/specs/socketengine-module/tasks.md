@@ -496,7 +496,7 @@
   - Document any issues found and resolve them
   - Commit changes if any fixes were made: "fix: resolve manual testing issues"
 
-- [-] 25. Performance testing and optimization
+- [x] 25. Performance testing and optimization
   - Test with high-frequency tick ingestion (simulate 1000 ticks/second)
   - Monitor thread pool queue sizes and adjust if needed
   - Monitor memory usage of tick buffer
@@ -510,8 +510,7 @@
   - Document performance test results
   - Commit changes if optimizations were made: "perf: optimize socketengine performance"
 
-- [ ] 26. Security hardening
-  - Review WebSocket endpoint security (add authentication if needed)
+- [-] 26. Security hardening
   - Verify Kite credentials are not logged
   - Verify database credentials are externalized
   - Add rate limiting for subscription requests (if needed)

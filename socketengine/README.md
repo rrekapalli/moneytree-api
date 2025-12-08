@@ -640,6 +640,80 @@ socketengine/
     └── test/                        # Unit and integration tests
 ```
 
+## Security Considerations
+
+The socketengine module implements several security measures to protect against abuse and information leakage:
+
+### Credential Management
+
+- **Never commit credentials**: The `.env` file is excluded from version control
+- **Environment variables**: All sensitive configuration (API keys, passwords) must be externalized
+- **No credential logging**: API keys, secrets, and tokens are never written to logs
+- **Access token rotation**: Kite access tokens expire daily and must be refreshed
+
+### Network Security
+
+- **CORS configuration**: WebSocket endpoints support configurable CORS origins
+  - Development: `WEBSOCKET_ALLOWED_ORIGINS=*` (allows all origins)
+  - Production: `WEBSOCKET_ALLOWED_ORIGINS=https://yourdomain.com,https://app.yourdomain.com`
+- **Rate limiting**: Subscription requests are rate-limited to 100 requests per 60 seconds per session
+- **Connection limits**: Maximum 50 concurrent connections per IP address
+- **Input validation**: All subscription messages are validated using Bean Validation
+- **Error sanitization**: Error messages sent to clients are sanitized to prevent information leakage
+
+### Best Practices for Production
+
+1. **Restrict CORS origins**: Never use `*` in production
+   ```yaml
+   socketengine:
+     websocket:
+       allowed-origins: https://yourdomain.com,https://app.yourdomain.com
+   ```
+
+2. **Use strong database passwords**: Change default passwords in production
+
+3. **Enable Redis authentication**: Set `REDIS_PASSWORD` for production Redis instances
+
+4. **Monitor rate limits**: Check logs for rate limit violations
+   ```bash
+   grep "Rate limit exceeded" socketengine.log
+   ```
+
+5. **Monitor connection limits**: Check logs for connection limit violations
+   ```bash
+   grep "Connection limit exceeded" socketengine.log
+   ```
+
+6. **Secure the .env file**: Set appropriate file permissions
+   ```bash
+   chmod 600 .env
+   ```
+
+7. **Use HTTPS/WSS**: In production, always use secure protocols
+   - Frontend should connect via `wss://` (not `ws://`)
+   - REST API should be accessed via `https://` (not `http://`)
+
+8. **Regular credential rotation**: Rotate Kite API credentials periodically
+
+9. **Monitor for suspicious activity**: Watch for:
+   - Excessive subscription requests from single sessions
+   - High connection counts from single IPs
+   - Authentication failures
+   - Unusual error patterns
+
+### Security Checklist for Deployment
+
+- [ ] All credentials externalized to environment variables
+- [ ] `.env` file not committed to version control
+- [ ] CORS origins restricted to specific domains
+- [ ] Database password changed from default
+- [ ] Redis authentication enabled (if applicable)
+- [ ] File permissions set on `.env` (chmod 600)
+- [ ] HTTPS/WSS enabled for production
+- [ ] Monitoring and alerting configured
+- [ ] Rate limiting tested and verified
+- [ ] Connection limits tested and verified
+
 ## Contributing
 
 When making changes to the socketengine module:
@@ -648,6 +722,8 @@ When making changes to the socketengine module:
 2. Verify no compilation errors: `mvn clean compile`
 3. Test with real Kite WebSocket connection
 4. Update this README if adding new features or changing configuration
+5. Never commit credentials or sensitive configuration
+6. Test security features (rate limiting, connection limits, CORS)
 
 ## License
 

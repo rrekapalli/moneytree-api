@@ -109,12 +109,21 @@ public class KiteWebSocketClient {
     /**
      * Establishes WebSocket connection to Kite API.
      * Sets up authentication headers and connection handlers.
+     * 
+     * Security: API credentials are never logged.
      */
     private void connect() {
         try {
             String wsUrl = properties.getKite().getWebsocketUrl();
             String apiKey = properties.getKite().getApiKey();
             String accessToken = properties.getKite().getAccessToken();
+            
+            // Validate credentials are present (but don't log them)
+            if (apiKey == null || apiKey.isEmpty() || 
+                accessToken == null || accessToken.isEmpty()) {
+                log.error("Kite API credentials are missing or empty. Please check configuration.");
+                return;
+            }
             
             log.info("Connecting to Kite WebSocket: {}", wsUrl);
             
