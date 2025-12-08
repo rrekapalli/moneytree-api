@@ -126,7 +126,7 @@
   - Commit changes: "feat: add KiteTickParser for binary tick data parsing"
   - _Requirements: 1.4_
 
-- [ ] 6.1 Write unit tests for KiteTickParser
+- [-] 6.1 Write unit tests for KiteTickParser
   - Test parsing valid binary tick data
   - Test all tick fields are correctly extracted
   - Test raw binary data is preserved
