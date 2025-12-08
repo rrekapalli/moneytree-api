@@ -327,7 +327,7 @@
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
 
-- [ ] 15. Implement TickWebSocketHandler
+- [-] 15. Implement TickWebSocketHandler
   - Create TickWebSocketHandler extending TextWebSocketHandler
   - Inject SessionManager, ObjectMapper, Validator
   - Implement afterConnectionEstablished() to register session with endpoint
@@ -343,7 +343,7 @@
   - Commit changes: "feat: add TickWebSocketHandler for WebSocket connections"
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 4.1, 4.2, 4.4, 4.5, 12.3_
 
-- [ ] 15.1 Write unit tests for TickWebSocketHandler
+- [-] 15.1 Write unit tests for TickWebSocketHandler
   - Test afterConnectionEstablished() registers session
   - Test handleTextMessage() processes SUBSCRIBE correctly
   - Test handleTextMessage() processes UNSUBSCRIBE correctly
