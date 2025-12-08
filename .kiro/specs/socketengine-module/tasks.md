@@ -247,7 +247,7 @@
   - Commit changes: "feat: add TickCacheService for async Redis caching"
   - _Requirements: 5.3, 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 11.1 Write integration tests for TickCacheService
+- [-] 11.1 Write integration tests for TickCacheService
   - Use Testcontainers with Redis image
   - Test onTickReceived() caches tick to Redis
   - Test TTL is set correctly
