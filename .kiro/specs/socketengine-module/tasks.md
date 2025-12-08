@@ -16,7 +16,7 @@
   - Commit changes: "feat: initialize socketengine as standalone Spring Boot module"
   - _Requirements: 8.1, 8.2, 9.1, 9.2, 9.3, 9.4_
 
-- [-] 2. Implement domain model and events
+- [x] 2. Implement domain model and events
   - Create Tick domain class with symbol, instrumentToken, type, timestamp, lastTradedPrice, volume, OHLC, rawBinaryData
   - Create InstrumentType enum (INDEX, STOCK)
   - Create InstrumentInfo class with instrumentToken, exchangeToken, tradingSymbol, type
@@ -26,7 +26,7 @@
   - Commit changes: "feat: add domain model and events for socketengine"
   - _Requirements: 5.1_
 
-- [ ] 2.1 Write unit tests for domain model
+- [x] 2.1 Write unit tests for domain model
   - Test Tick builder creates valid instances
   - Test OHLC nested class
   - Test TickReceivedEvent creation
@@ -34,7 +34,7 @@
   - Run tests: `mvn test -Dtest=TickTest`
   - Commit changes: "test: add unit tests for domain model"
 
-- [ ] 3. Implement TimescaleDB schema and entity
+- [-] 3. Implement TimescaleDB schema and entity
   - Create SQL migration script for kite_ticks_data hypertable
   - Add columns: instrument_token (BIGINT), tradingsymbol (VARCHAR), exchange (VARCHAR), tick_timestamp (TIMESTAMPTZ), raw_tick_data (BYTEA)
   - Create hypertable with 1-day chunk interval
@@ -48,7 +48,7 @@
   - Commit changes: "feat: add TimescaleDB schema and JPA entities for tick persistence"
   - _Requirements: 7.1, 7.2, 7.7_
 
-- [ ] 3.1 Write integration tests for TickRepository
+- [-] 3.1 Write integration tests for TickRepository
   - Use Testcontainers with TimescaleDB image
   - Test findBySymbolAndTimestampBetween returns correct ticks
   - Test raw binary data is preserved
