@@ -243,7 +243,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [-] 16. Update component template for signal binding
+- [x] 16. Update component template for signal binding
   - Replace direct property access with signal calls
   - Use computed signals in template expressions
   - Remove manual change detection triggers
@@ -251,7 +251,7 @@
   - Commit changes to local git
   - _Requirements: 7.3_
 
-- [ ] 17. Add debug logging configuration
+- [-] 17. Add debug logging configuration
   - Create debug flag for verbose logging
   - Add conditional logging throughout WebSocket flow
   - Log all WebSocket operations in debug mode
