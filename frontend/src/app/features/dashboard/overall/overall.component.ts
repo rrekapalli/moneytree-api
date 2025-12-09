@@ -299,6 +299,29 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
   
   /**
+   * Handle WebSocket data parsing errors
+   * This method logs parsing errors with the raw message and error details.
+   * The update is skipped and the application continues with existing data.
+   * 
+   * Requirements: 5.3, 8.2
+   * 
+   * @param rawMessage - The raw message string that failed to parse
+   * @param error - The error object from the parsing failure
+   */
+  private handleParsingError(rawMessage: string, error: any): void {
+    // Log error with raw message (first 200 chars) and error details
+    console.warn('[WebSocket] Failed to parse message:', {
+      rawMessage: rawMessage.substring(0, 200), // Log first 200 chars
+      error: error?.message || String(error),
+      timestamp: new Date().toISOString()
+    });
+    
+    // Skip this update - continue with existing data
+    // No state changes, no user-facing error
+    // The application continues to function normally with current data
+  }
+  
+  /**
    * Handle incoming indices data from WebSocket
    * This method processes real-time indices data received via WebSocket and updates the component state.
    * 
