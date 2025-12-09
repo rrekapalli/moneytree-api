@@ -250,14 +250,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
               this.handleIncomingIndicesData(indicesDto);
             },
             error: (error) => {
-              // Log error but continue with fallback data
-              if (this.enableDebugLogging) {
-                console.warn('[WebSocket] Subscription error:', {
-                  error: error.message || error,
-                  timestamp: new Date().toISOString()
-                });
-              }
-              // Continue with fallback data - no user-facing error
+              // Use centralized subscription error handler with retry logic
+              this.handleSubscriptionError('/topic/nse-indices', error, 0);
             }
           });
         
@@ -319,6 +313,86 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Skip this update - continue with existing data
     // No state changes, no user-facing error
     // The application continues to function normally with current data
+  }
+  
+  /**
+   * Handle WebSocket subscription errors
+   * This method logs subscription errors with topic name and error details.
+   * It implements retry logic with exponential backoff to attempt reconnection.
+   * 
+   * Requirements: 4.2, 8.3
+   * 
+   * @param topic - The topic name that failed to subscribe
+   * @param error - The error object from the subscription failure
+   * @param retryCount - Current retry attempt count (default: 0)
+   */
+  private handleSubscriptionError(topic: string, error: any, retryCount: number = 0): void {
+    // Log error with topic name and error details
+    console.error('[WebSocket] Subscription error:', {
+      topic,
+      error: error?.message || String(error),
+      retryCount,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Maximum retry attempts
+    const MAX_RETRIES = 5;
+    
+    // Check if we should retry
+    if (retryCount < MAX_RETRIES) {
+      // Calculate exponential backoff delay: 2^retryCount * 1000ms
+      // Retry 0: 1s, Retry 1: 2s, Retry 2: 4s, Retry 3: 8s, Retry 4: 16s
+      const delayMs = Math.pow(2, retryCount) * 1000;
+      
+      if (this.enableDebugLogging) {
+        console.log(`[WebSocket] Scheduling retry ${retryCount + 1}/${MAX_RETRIES} in ${delayMs}ms`);
+      }
+      
+      // Schedule retry with exponential backoff
+      setTimeout(() => {
+        this.retrySubscription(topic, retryCount + 1);
+      }, delayMs);
+    } else {
+      // Max retries exceeded - log final failure and continue with fallback data
+      console.warn('[WebSocket] Max retry attempts exceeded for topic:', topic);
+      console.warn('[WebSocket] Continuing with fallback data only');
+      
+      // Update connection state to ERROR to indicate subscription failure
+      this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
+    }
+  }
+  
+  /**
+   * Retry WebSocket subscription after a failure
+   * This method attempts to resubscribe to the all indices topic.
+   * 
+   * @param topic - The topic name to retry subscribing to
+   * @param retryCount - Current retry attempt count
+   */
+  private retrySubscription(topic: string, retryCount: number): void {
+    if (this.enableDebugLogging) {
+      console.log(`[WebSocket] Attempting retry ${retryCount} for topic: ${topic}`);
+    }
+    
+    // Check if we're trying to retry the all indices subscription
+    if (topic === '/topic/nse-indices') {
+      // Attempt to resubscribe to all indices
+      this.allIndicesSubscription = this.webSocketService
+        .subscribeToAllIndices()
+        .subscribe({
+          next: (indicesDto: IndicesDto) => {
+            // Subscription successful - reset retry count
+            if (this.enableDebugLogging) {
+              console.log('[WebSocket] Retry successful for topic:', topic);
+            }
+            this.handleIncomingIndicesData(indicesDto);
+          },
+          error: (error) => {
+            // Subscription failed again - call error handler with incremented retry count
+            this.handleSubscriptionError(topic, error, retryCount);
+          }
+        });
+    }
   }
   
   /**

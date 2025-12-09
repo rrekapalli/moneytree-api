@@ -174,7 +174,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [-] 11. Implement error handling for data parsing
+- [x] 11. Implement error handling for data parsing
   - Create `handleParsingError()` method
   - Log raw message (first 200 chars) and error
   - Skip the update, continue with existing data
@@ -182,7 +182,7 @@
   - Commit changes to local git
   - _Requirements: 5.3, 8.2_
 
-- [ ] 12. Implement error handling for subscriptions
+- [-] 12. Implement error handling for subscriptions
   - Create `handleSubscriptionError()` method
   - Log topic name and error details
   - Implement retry logic with delay
