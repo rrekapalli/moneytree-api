@@ -190,7 +190,7 @@
   - Commit changes to local git
   - _Requirements: 4.2, 8.3_
 
-- [ ] 12.1 Write property test for exponential backoff
+- [-] 12.1 Write property test for exponential backoff
   - **Property 8: Exponential backoff on reconnection**
   - **Validates: Requirements 4.2**
   - Verify app builds without errors/warnings

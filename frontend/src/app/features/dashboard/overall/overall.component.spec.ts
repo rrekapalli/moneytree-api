@@ -2031,4 +2031,212 @@ describe('OverallComponent - WebSocket Integration', () => {
       expect(dataWithIndicators[0].changeIndicator).toBe('neutral');
     });
   });
+
+  describe('Property 8: Exponential backoff on reconnection', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 8: Exponential backoff on reconnection
+     * Validates: Requirements 4.2
+     * 
+     * Property: For any WebSocket connection loss, reconnection attempts should follow
+     * an exponential backoff pattern (2^retryCount * 1000ms)
+     */
+    it('should implement exponential backoff for subscription retries (property-based test)', (done) => {
+      // Arbitrary generator for retry counts (0 to 4, since max is 5)
+      const arbitraryRetryCount = fc.integer({ min: 0, max: 4 });
+
+      fc.assert(
+        fc.asyncProperty(
+          arbitraryRetryCount,
+          async (retryCount) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Spy on setTimeout to verify exponential backoff
+            const setTimeoutSpy = spyOn(window, 'setTimeout').and.callFake((fn: any, delay?: number) => {
+              // Verify exponential backoff delay: 2^retryCount * 1000ms
+              const expectedDelay = Math.pow(2, retryCount) * 1000;
+              expect(delay).toBe(expectedDelay);
+              
+              // Don't actually wait - just verify the delay calculation
+              return 0 as any;
+            });
+
+            // Create a test error
+            const testError = new Error('Subscription failed');
+
+            // Call handleSubscriptionError with the retry count
+            componentAny.handleSubscriptionError('/topic/nse-indices', testError, retryCount);
+
+            // Wait for async operations
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // Verify setTimeout was called (for retry scheduling)
+            if (retryCount < 5) {
+              // Should schedule a retry
+              expect(setTimeoutSpy).toHaveBeenCalled();
+            }
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      ).then(() => done()).catch((error: any) => done.fail(error));
+    });
+
+    it('should calculate correct exponential backoff delays', () => {
+      const componentAny = component as any;
+
+      // Test exponential backoff calculation for each retry count
+      const expectedDelays = [
+        { retryCount: 0, expectedDelay: 1000 },   // 2^0 * 1000 = 1s
+        { retryCount: 1, expectedDelay: 2000 },   // 2^1 * 1000 = 2s
+        { retryCount: 2, expectedDelay: 4000 },   // 2^2 * 1000 = 4s
+        { retryCount: 3, expectedDelay: 8000 },   // 2^3 * 1000 = 8s
+        { retryCount: 4, expectedDelay: 16000 }   // 2^4 * 1000 = 16s
+      ];
+
+      expectedDelays.forEach(({ retryCount, expectedDelay }) => {
+        // Spy on setTimeout to capture the delay
+        const setTimeoutSpy = spyOn(window, 'setTimeout').and.callFake((fn: any, delay?: number) => {
+          expect(delay).toBe(expectedDelay);
+          return 0 as any;
+        });
+
+        // Call handleSubscriptionError
+        const testError = new Error('Test error');
+        componentAny.handleSubscriptionError('/topic/nse-indices', testError, retryCount);
+
+        // Verify setTimeout was called with correct delay
+        expect(setTimeoutSpy).toHaveBeenCalled();
+
+        // Reset spy for next iteration
+        setTimeoutSpy.calls.reset();
+      });
+    });
+
+    it('should stop retrying after max attempts', () => {
+      const componentAny = component as any;
+
+      // Spy on setTimeout to verify no retry is scheduled
+      const setTimeoutSpy = spyOn(window, 'setTimeout');
+
+      // Spy on console.warn to verify max retries message
+      const consoleWarnSpy = spyOn(console, 'warn');
+
+      // Call handleSubscriptionError with retry count at max (5)
+      const testError = new Error('Test error');
+      componentAny.handleSubscriptionError('/topic/nse-indices', testError, 5);
+
+      // Verify setTimeout was NOT called (no retry scheduled)
+      expect(setTimeoutSpy).not.toHaveBeenCalled();
+
+      // Verify console.warn was called with max retries message
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[WebSocket] Max retry attempts exceeded for topic:',
+        '/topic/nse-indices'
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        '[WebSocket] Continuing with fallback data only'
+      );
+
+      // Verify connection state was updated to ERROR
+      expect(componentAny.wsConnectionStateSignal()).toBe('ERROR');
+    });
+
+    it('should log subscription error with context', () => {
+      const componentAny = component as any;
+
+      // Spy on console.error
+      const consoleErrorSpy = spyOn(console, 'error');
+
+      // Create a test error
+      const testError = new Error('Test subscription error');
+
+      // Call handleSubscriptionError
+      componentAny.handleSubscriptionError('/topic/test-topic', testError, 2);
+
+      // Verify console.error was called with context
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        '[WebSocket] Subscription error:',
+        jasmine.objectContaining({
+          topic: '/topic/test-topic',
+          error: 'Test subscription error',
+          retryCount: 2,
+          timestamp: jasmine.any(String)
+        })
+      );
+    });
+
+    it('should call retrySubscription with incremented retry count', (done) => {
+      const componentAny = component as any;
+
+      // Spy on retrySubscription
+      const retrySubscriptionSpy = spyOn(componentAny, 'retrySubscription');
+
+      // Spy on setTimeout to capture and execute the callback
+      spyOn(window, 'setTimeout').and.callFake((fn: any, delay?: number) => {
+        // Execute the callback immediately for testing
+        fn();
+        return 0 as any;
+      });
+
+      // Call handleSubscriptionError with retry count 2
+      const testError = new Error('Test error');
+      componentAny.handleSubscriptionError('/topic/nse-indices', testError, 2);
+
+      // Wait for async operations
+      setTimeout(() => {
+        // Verify retrySubscription was called with incremented retry count
+        expect(retrySubscriptionSpy).toHaveBeenCalledWith('/topic/nse-indices', 3);
+        done();
+      }, 50);
+    });
+
+    it('should attempt resubscription in retrySubscription method', () => {
+      const componentAny = component as any;
+
+      // Reset mock
+      mockWebSocketService.subscribeToAllIndices.calls.reset();
+      mockWebSocketService.subscribeToAllIndices.and.returnValue(of({ indices: [] }));
+
+      // Call retrySubscription
+      componentAny.retrySubscription('/topic/nse-indices', 1);
+
+      // Verify subscribeToAllIndices was called
+      expect(mockWebSocketService.subscribeToAllIndices).toHaveBeenCalled();
+
+      // Verify subscription was stored
+      expect(componentAny.allIndicesSubscription).not.toBeNull();
+    });
+
+    it('should handle retry subscription failure by calling error handler again', (done) => {
+      const componentAny = component as any;
+
+      // Spy on handleSubscriptionError
+      const handleSubscriptionErrorSpy = spyOn(componentAny, 'handleSubscriptionError').and.callThrough();
+
+      // Set up mock to fail subscription
+      const errorObservable = new Observable<any>((subscriber: any) => {
+        subscriber.error(new Error('Retry failed'));
+      });
+      mockWebSocketService.subscribeToAllIndices.and.returnValue(errorObservable as any);
+
+      // Call retrySubscription
+      componentAny.retrySubscription('/topic/nse-indices', 2);
+
+      // Wait for subscription error
+      setTimeout(() => {
+        // Verify handleSubscriptionError was called again with incremented retry count
+        expect(handleSubscriptionErrorSpy).toHaveBeenCalledWith(
+          '/topic/nse-indices',
+          jasmine.any(Error),
+          2
+        );
+        done();
+      }, 50);
+    });
+  });
 });
