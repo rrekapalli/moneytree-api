@@ -94,15 +94,33 @@ public class KiteWebSocketClient {
     
     /**
      * Cleanup on application shutdown.
-     * Closes WebSocket connection gracefully.
+     * Closes WebSocket connection gracefully and waits for completion.
      */
     @PreDestroy
     public void shutdown() {
         log.info("Shutting down Kite WebSocket client");
         shouldReconnect = false;
         
-        if (webSocketClient != null && webSocketClient.isOpen()) {
-            webSocketClient.close();
+        if (webSocketClient != null) {
+            try {
+                if (webSocketClient.isOpen()) {
+                    log.info("Closing Kite WebSocket connection...");
+                    // Close with normal closure code (1000)
+                    webSocketClient.closeBlocking();
+                    log.info("Kite WebSocket connection closed successfully");
+                } else {
+                    log.info("Kite WebSocket connection already closed");
+                }
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while closing Kite WebSocket connection", e);
+                Thread.currentThread().interrupt();
+                // Force close if blocking close was interrupted
+                webSocketClient.close();
+            } catch (Exception e) {
+                log.error("Error closing Kite WebSocket connection", e);
+                // Force close on error
+                webSocketClient.close();
+            }
         }
     }
     
