@@ -182,7 +182,7 @@
   - Commit changes to local git
   - _Requirements: 5.3, 8.2_
 
-- [-] 12. Implement error handling for subscriptions
+- [x] 12. Implement error handling for subscriptions
   - Create `handleSubscriptionError()` method
   - Log topic name and error details
   - Implement retry logic with delay
@@ -190,13 +190,13 @@
   - Commit changes to local git
   - _Requirements: 4.2, 8.3_
 
-- [-] 12.1 Write property test for exponential backoff
+- [x] 12.1 Write property test for exponential backoff
   - **Property 8: Exponential backoff on reconnection**
   - **Validates: Requirements 4.2**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 13. Add connection state logging
+- [-] 13. Add connection state logging
   - Use effect to log connection state changes
   - Include timestamp and state transition
   - Enable verbose logging in debug mode

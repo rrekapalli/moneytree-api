@@ -464,17 +464,44 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   
   /**
    * Set up Angular signal effects for logging and widget updates
+   * Requirements: 8.4, 8.5
    */
   private setupSignalEffects(): void {
-    // Effect: Log WebSocket connection state changes
+    // Track previous state for state transition logging
+    let previousState: WebSocketConnectionState | null = null;
+    
+    // Effect: Log WebSocket connection state changes with detailed information
+    // This effect logs all connection state transitions with timestamps
+    // Requirements: 8.4, 8.5
     effect(() => {
-      const state = this.wsConnectionStateSignal();
+      const currentState = this.wsConnectionStateSignal();
+      const timestamp = new Date().toISOString();
+      
+      // Always log state changes (not just in debug mode) for monitoring
+      console.log('[WebSocket] Connection state changed:', {
+        previousState: previousState !== null ? WebSocketConnectionState[previousState] : 'INITIAL',
+        currentState: WebSocketConnectionState[currentState],
+        timestamp,
+        transition: previousState !== null 
+          ? `${WebSocketConnectionState[previousState]} → ${WebSocketConnectionState[currentState]}`
+          : `INITIAL → ${WebSocketConnectionState[currentState]}`
+      });
+      
+      // Verbose logging in debug mode with additional context
       if (this.enableDebugLogging) {
-        console.log('[WebSocket] Connection state changed:', {
-          state,
-          timestamp: new Date().toISOString()
+        console.log('[WebSocket] Verbose state details:', {
+          stateValue: currentState,
+          stateName: WebSocketConnectionState[currentState],
+          hasActiveSubscription: this.allIndicesSubscription !== null,
+          subscribedTopicsCount: this.subscribedTopics.size,
+          currentSubscribedIndex: this.currentSubscribedIndex,
+          isSubscribing: this.isSubscribing,
+          timestamp
         });
       }
+      
+      // Update previous state for next transition
+      previousState = currentState;
     });
     
     // Effect: Update widgets when indices data changes
