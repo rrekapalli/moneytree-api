@@ -138,7 +138,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 9. Implement price change indicators
+- [x] 9. Implement price change indicators
   - Add logic to detect price increases (positive indicator)
   - Add logic to detect price decreases (negative indicator)
   - Update widget data with change indicators
@@ -147,13 +147,13 @@
   - Commit changes to local git
   - _Requirements: 3.1, 3.2_
 
-- [ ] 9.1 Write property test for positive indicator
+- [x] 9.1 Write property test for positive indicator
   - **Property 5: Price increase shows positive indicator**
   - **Validates: Requirements 3.1**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 9.2 Write property test for negative indicator
+- [x] 9.2 Write property test for negative indicator
   - **Property 6: Price decrease shows negative indicator**
   - **Validates: Requirements 3.2**
   - Verify app builds without errors/warnings
