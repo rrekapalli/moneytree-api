@@ -196,7 +196,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [-] 13. Add connection state logging
+- [x] 13. Add connection state logging
   - Use effect to log connection state changes
   - Include timestamp and state transition
   - Enable verbose logging in debug mode
@@ -204,7 +204,7 @@
   - Commit changes to local git
   - _Requirements: 8.4, 8.5_
 
-- [ ] 14. Optimize signal performance
+- [-] 14. Optimize signal performance
   - Ensure computed signals are used for derived data
   - Verify signal batching for rapid updates
   - Test that only affected components update
@@ -212,19 +212,19 @@
   - Commit changes to local git
   - _Requirements: 6.1, 6.2, 6.4, 6.5_
 
-- [ ] 14.1 Write property test for signal batching
+- [x] 14.1 Write property test for signal batching
   - **Property 12: Signal batching for rapid updates**
   - **Validates: Requirements 6.2**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 14.2 Write property test for computed signals
+- [x] 14.2 Write property test for computed signals
   - **Property 13: Computed signals auto-recompute**
   - **Validates: Requirements 6.4**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 14.3 Write property test for targeted updates
+- [x] 14.3 Write property test for targeted updates
   - **Property 14: Targeted UI updates**
   - **Validates: Requirements 6.5**
   - Verify app builds without errors/warnings
