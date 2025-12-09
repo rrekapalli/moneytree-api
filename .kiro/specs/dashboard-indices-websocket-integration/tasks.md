@@ -9,7 +9,7 @@
   - Commit changes to local git
   - _Requirements: 7.1, 7.4, 7.5_
 
-- [ ] 1.1 Write property test for signal initialization
+- [-] 1.1 Write property test for signal initialization
   - **Property 1: Signal initialization with defaults**
   - **Validates: Requirements 7.1**
   - Verify app builds without errors/warnings
