@@ -109,7 +109,7 @@
   - Commit changes to local git
   - _Requirements: 2.2, 2.5_
 
-- [ ] 7. Integrate cleanup into component destruction
+- [x] 7. Integrate cleanup into component destruction
   - Call `cleanupWebSocketSubscription()` in `onChildDestroy()`
   - Ensure cleanup happens before parent cleanup
   - Verify no errors if WebSocket was never connected
@@ -117,7 +117,7 @@
   - Commit changes to local git
   - _Requirements: 1.4, 1.5, 2.2_
 
-- [ ] 8. Update widget update logic to use signals
+- [-] 8. Update widget update logic to use signals
   - Modify `updateIndexListWidget()` to read from signals
   - Use effect to automatically update widget when signal changes
   - Remove manual change detection calls (signals handle this)

@@ -342,11 +342,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     });
     
     // Effect: Update widgets when indices data changes
+    // This effect automatically triggers UI updates without manual change detection
     effect(() => {
       const data = this.indicesDataSignal();
+      const selectedSymbol = this.selectedIndexSymbolSignal();
+      
       if (data && data.length > 0) {
         // Update the Index List widget with new data
-        this.updateStockListWithFilteredData();
+        // The signal-based approach ensures automatic UI updates
+        this.updateIndexListWidget(data, selectedSymbol);
       }
     });
     
@@ -356,6 +360,48 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Keep the existing property in sync for backward compatibility
       this.selectedIndexSymbol = symbol;
     });
+  }
+  
+  /**
+   * Update Index List widget with signal-based data
+   * This method reads from signals and updates the widget automatically
+   * Requirements: 3.3, 3.5, 7.2, 7.3
+   * 
+   * @param data - The indices data from signal
+   * @param selectedSymbol - The currently selected index symbol from signal
+   */
+  private updateIndexListWidget(data: StockDataDto[], selectedSymbol: string): void {
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+
+    // Find all stock list widgets
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+
+    stockListWidgets.forEach(widget => {
+      // Create a new array to ensure change detection
+      const newStockDataArray = [...data];
+      
+      if (widget.data) {
+        // Update widget data with signal values
+        widget.data.stocks = newStockDataArray;
+        widget.data.isLoadingStocks = false;
+        // Preserve selected index highlighting using signal
+        widget.data.selectedStockSymbol = selectedSymbol;
+      } else {
+        // Initialize widget data if it doesn't exist
+        widget.data = {
+          stocks: newStockDataArray,
+          isLoadingStocks: false,
+          selectedStockSymbol: selectedSymbol
+        };
+      }
+    });
+    
+    // Note: No manual change detection calls needed - signals handle this automatically
+    // The Angular signals system will trigger UI updates when signal values change
   }
   
   /**
@@ -612,7 +658,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
 
-    // Update selected index symbol for highlighting (use symbol field to match stock list table)
+    // Update selected index symbol signal for highlighting (use symbol field to match stock list table)
+    // This will automatically trigger the effect that updates the widget
+    this.selectedIndexSymbolSignal.set(symbol || name);
+    
+    // Also update the legacy property for backward compatibility
     this.selectedIndexSymbol = symbol || name;
 
     // Show loading indicator
@@ -731,7 +781,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Unsubscribe from previous WebSocket topic if any
     this.unsubscribeFromCurrentWebSocketTopic();
     
-    // Update selected index symbol for highlighting in Index List widget
+    // Update selected index symbol signal for highlighting in Index List widget
+    // This will automatically trigger the effect that updates the widget
+    this.selectedIndexSymbolSignal.set(selectedIndex.symbol || selectedIndex.name || '');
+    
+    // Also update the legacy property for backward compatibility
     this.selectedIndexSymbol = selectedIndex.symbol || selectedIndex.name || '';
     
     // Update dashboard title with selected index name or symbol
