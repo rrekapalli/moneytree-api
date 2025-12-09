@@ -204,7 +204,7 @@
   - Commit changes to local git
   - _Requirements: 8.4, 8.5_
 
-- [-] 14. Optimize signal performance
+- [x] 14. Optimize signal performance
   - Ensure computed signals are used for derived data
   - Verify signal batching for rapid updates
   - Test that only affected components update
@@ -230,20 +230,20 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 15. Add connection reuse verification
+- [x] 15. Add connection reuse verification
   - Verify WebSocketService reuses existing connection
   - Test with multiple component instances
   - Verify app builds without errors/warnings
   - Commit changes to local git
   - _Requirements: 2.4_
 
-- [ ] 15.1 Write property test for connection reuse
+- [x] 15.1 Write property test for connection reuse
   - **Property 4: Connection reuse**
   - **Validates: Requirements 2.4**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 16. Update component template for signal binding
+- [-] 16. Update component template for signal binding
   - Replace direct property access with signal calls
   - Use computed signals in template expressions
   - Remove manual change detection triggers

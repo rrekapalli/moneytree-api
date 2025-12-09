@@ -150,8 +150,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   // Currently selected index symbol for highlighting in Index List widget
   public selectedIndexSymbol: string = '';
 
-  // Loading state for candlestick chart
-  public isCandlestickLoading: boolean = false;
+  // Loading state for candlestick chart (converted to signal for reactive UI updates)
+  protected isCandlestickLoadingSignal = signal<boolean>(false);
 
   // WebSocket connection state tracking
   private isWebSocketConnected: boolean = false;
@@ -829,7 +829,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.selectedIndexSymbol = symbol || name;
 
     // Show loading indicator
-    this.isCandlestickLoading = true;
+    this.isCandlestickLoadingSignal.set(true);
 
     const selectedIndexData: SelectedIndexData = {
       id: selectedIndex.id || symbol || name,
@@ -866,16 +866,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         next: (historicalData: IndexHistoricalData[]) => {
           this.historicalData = this.normalizeHistoricalData(historicalData || []);
           this.updateCandlestickChartWithHistoricalData();
-          this.isCandlestickLoading = false; // Hide loading indicator
-          this.cdr.detectChanges();
+          this.isCandlestickLoadingSignal.set(false); // Hide loading indicator
           this.ensureWidgetTimeRangeFilters();
         },
         error: (error) => {
           console.warn('Failed to load historical data for', indexName, ':', error);
           this.historicalData = [];
           this.updateCandlestickChartWithHistoricalData();
-          this.isCandlestickLoading = false; // Hide loading indicator even on error
-          this.cdr.detectChanges();
+          this.isCandlestickLoadingSignal.set(false); // Hide loading indicator even on error
           this.ensureWidgetTimeRangeFilters();
         }
       });
@@ -2441,21 +2439,18 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const { startDate, endDate } = this.calculateDateRangeFromTimeRange(event.range);
     
     // Show loading indicator
-    this.isCandlestickLoading = true;
-    this.cdr.detectChanges();
+    this.isCandlestickLoadingSignal.set(true);
     
     // Make API call with date range (pass undefined for days to force date range usage)
     this.indicesService.getIndexHistoricalData(indexName, undefined, startDate, endDate).subscribe({
       next: (historicalData: IndexHistoricalData[]) => {
         this.historicalData = this.normalizeHistoricalData(historicalData || []);
         this.updateCandlestickChartWithHistoricalData();
-        this.isCandlestickLoading = false;
-        this.cdr.detectChanges();
+        this.isCandlestickLoadingSignal.set(false);
         this.ensureWidgetTimeRangeFilters();
       },
       error: (error) => {
-        this.isCandlestickLoading = false;
-        this.cdr.detectChanges();
+        this.isCandlestickLoadingSignal.set(false);
         this.ensureWidgetTimeRangeFilters();
       }
     });
