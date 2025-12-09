@@ -363,11 +363,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected onChildInit(): void {
-    // WebSocket initialization disabled - WebSockets are not yet implemented
-    // TODO: Re-enable when WebSocket server is available
-    // this.initializeWebSocket();
-    // this.monitorWebSocketConnectionState();
-
     // Clear any existing subscription
     if (this.selectedIndexSubscription) {
       this.selectedIndexSubscription.unsubscribe();
@@ -395,13 +390,20 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       });
 
-    // Load default data if no index selected
+    // Load default data if no index selected (fallback data loads first)
     setTimeout(() => {
       const currentSelectedIndex = this.componentCommunicationService.getSelectedIndex();
       if (!currentSelectedIndex) {
         this.loadDefaultNifty50Data();
       }
     }, 100);
+
+    // Initialize WebSocket subscription (non-blocking, after fallback data)
+    // This ensures the component displays fallback data immediately while
+    // WebSocket connection is being established in the background
+    setTimeout(() => {
+      this.initializeWebSocketSubscription();
+    }, 150);
 
     // Wait for widget header to be fully rendered
     setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
@@ -478,6 +480,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           return;
         }
 
+        // Update signals with fallback data
+        this.indicesDataSignal.set(mappedData);
+        
+        // Update legacy properties for backward compatibility
         this.updateIndexListData(mappedData);
         this.indicesLoaded = true;
         this.setDefaultIndexFromData(mappedData);

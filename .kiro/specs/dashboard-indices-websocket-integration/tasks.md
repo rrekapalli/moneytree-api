@@ -53,7 +53,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 4. Implement data merging logic
+- [x] 4. Implement data merging logic
   - Create `mergeIndicesData()` method
   - Use Map for efficient O(n) merging
   - Preserve all fallback entries not in incoming data
@@ -63,19 +63,19 @@
   - Commit changes to local git
   - _Requirements: 1.3, 3.4_
 
-- [ ] 4.1 Write property test for data merge
+- [x] 4.1 Write property test for data merge
   - **Property 2: Data merge preserves fallback**
   - **Validates: Requirements 1.3, 3.4**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 4.2 Write property test for missing fields
+- [x] 4.2 Write property test for missing fields
   - **Property 11: Missing fields use defaults**
   - **Validates: Requirements 5.4**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 5. Integrate WebSocket subscription into component lifecycle
+- [-] 5. Integrate WebSocket subscription into component lifecycle
   - Call `initializeWebSocketSubscription()` in `onChildInit()`
   - Ensure fallback data loads first (before WebSocket)
   - Make WebSocket initialization non-blocking
