@@ -251,7 +251,7 @@
   - Commit changes to local git
   - _Requirements: 7.3_
 
-- [-] 17. Add debug logging configuration
+- [x] 17. Add debug logging configuration
   - Create debug flag for verbose logging
   - Add conditional logging throughout WebSocket flow
   - Log all WebSocket operations in debug mode
@@ -259,7 +259,7 @@
   - Commit changes to local git
   - _Requirements: 8.5_
 
-- [ ] 18. Checkpoint - Ensure all tests pass
+- [-] 18. Checkpoint - Ensure all tests pass
   - Run all tests and verify they pass
   - Verify app builds without errors/warnings
   - Commit changes to local git
