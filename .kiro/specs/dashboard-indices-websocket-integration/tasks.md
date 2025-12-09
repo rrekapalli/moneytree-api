@@ -75,7 +75,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [-] 5. Integrate WebSocket subscription into component lifecycle
+- [x] 5. Integrate WebSocket subscription into component lifecycle
   - Call `initializeWebSocketSubscription()` in `onChildInit()`
   - Ensure fallback data loads first (before WebSocket)
   - Make WebSocket initialization non-blocking
@@ -84,14 +84,14 @@
   - Commit changes to local git
   - _Requirements: 1.1, 2.1_
 
-- [-] 5.1 Write unit test for lifecycle integration
+- [x] 5.1 Write unit test for lifecycle integration
   - Test that WebSocket subscription occurs after fallback data loads
   - Test that component displays fallback data immediately
   - Verify app builds without errors/warnings
   - Commit changes to local git
   - _Requirements: 1.1, 2.1_
 
-- [ ] 6. Implement WebSocket cleanup method
+- [-] 6. Implement WebSocket cleanup method
   - Create `cleanupWebSocketSubscription()` method
   - Unsubscribe from `allIndicesSubscription` if active
   - Call `webSocketService.unsubscribeFromAll()`
@@ -101,7 +101,7 @@
   - Commit changes to local git
   - _Requirements: 1.4, 1.5, 2.2, 2.5_
 
-- [ ] 6.1 Write unit test for cleanup
+- [-] 6.1 Write unit test for cleanup
   - Test that all subscriptions are unsubscribed
   - Test that connection state is updated
   - Test that no memory leaks occur

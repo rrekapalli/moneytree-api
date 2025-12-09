@@ -357,6 +357,35 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.selectedIndexSymbol = symbol;
     });
   }
+  
+  /**
+   * Cleanup WebSocket subscription for all indices
+   * This method unsubscribes from the /topic/nse-indices subscription and updates connection state.
+   * It ensures proper resource cleanup when the component is destroyed or when switching contexts.
+   * 
+   * Requirements: 1.4, 1.5, 2.2, 2.5
+   */
+  private cleanupWebSocketSubscription(): void {
+    // Unsubscribe from all indices subscription if active
+    if (this.allIndicesSubscription) {
+      this.allIndicesSubscription.unsubscribe();
+      this.allIndicesSubscription = null;
+      
+      if (this.enableDebugLogging) {
+        console.log('[WebSocket] Unsubscribed from all indices subscription');
+      }
+    }
+    
+    // Call WebSocket service to unsubscribe from all topics
+    this.webSocketService.unsubscribeFromAll();
+    
+    // Update connection state signal to DISCONNECTED
+    this.wsConnectionStateSignal.set(WebSocketConnectionState.DISCONNECTED);
+    
+    if (this.enableDebugLogging) {
+      console.log('[WebSocket] Cleanup completed - connection state set to DISCONNECTED');
+    }
+  }
 
   override ngOnInit(): void {
     super.ngOnInit?.();

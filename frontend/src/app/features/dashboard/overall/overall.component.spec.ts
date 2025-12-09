@@ -43,6 +43,8 @@ describe('OverallComponent - WebSocket Integration', () => {
     // Set up default mock return values
     mockComponentCommunicationService.getSelectedIndex.and.returnValue(of(null));
     mockIndicesService.getIndicesByExchangeSegment.and.returnValue(of([]));
+    mockIndicesService.getIndexHistoricalData.and.returnValue(of([]));
+    mockIndicesService.getPreviousDayIndexData.and.returnValue(of({ indices: [] }));
     mockWebSocketService.connect.and.returnValue(Promise.resolve());
     mockWebSocketService.subscribeToAllIndices.and.returnValue(of({ indices: [] }));
 
@@ -875,6 +877,172 @@ describe('OverallComponent - WebSocket Integration', () => {
       expect(item.companyName).toBe('Unknown Index');
       expect(item.lastPrice).toBe(0);
       expect(item.percentChange).toBe(0);
+    });
+  });
+
+  describe('WebSocket Cleanup', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration
+     * Task: 6.1 Write unit test for cleanup
+     * Requirements: 2.2, 2.5
+     * 
+     * Tests that all subscriptions are unsubscribed, connection state is updated,
+     * and no memory leaks occur
+     */
+    it('should unsubscribe from allIndicesSubscription when cleanup is called', () => {
+      const componentAny = component as any;
+
+      // Create a mock subscription
+      const mockSubscription = jasmine.createSpyObj('Subscription', ['unsubscribe']);
+      componentAny.allIndicesSubscription = mockSubscription;
+
+      // Call cleanup
+      componentAny.cleanupWebSocketSubscription();
+
+      // Verify unsubscribe was called
+      expect(mockSubscription.unsubscribe).toHaveBeenCalled();
+
+      // Verify subscription reference is set to null
+      expect(componentAny.allIndicesSubscription).toBeNull();
+    });
+
+    it('should call webSocketService.unsubscribeFromAll when cleanup is called', () => {
+      const componentAny = component as any;
+
+      // Call cleanup
+      componentAny.cleanupWebSocketSubscription();
+
+      // Verify unsubscribeFromAll was called
+      expect(mockWebSocketService.unsubscribeFromAll).toHaveBeenCalled();
+    });
+
+    it('should update connection state signal to DISCONNECTED when cleanup is called', () => {
+      const componentAny = component as any;
+
+      // Set connection state to CONNECTED
+      componentAny.wsConnectionStateSignal.set('CONNECTED');
+      expect(componentAny.wsConnectionStateSignal()).toBe('CONNECTED');
+
+      // Call cleanup
+      componentAny.cleanupWebSocketSubscription();
+
+      // Verify connection state is DISCONNECTED
+      expect(componentAny.wsConnectionStateSignal()).toBe('DISCONNECTED');
+    });
+
+    it('should handle cleanup when allIndicesSubscription is null', () => {
+      const componentAny = component as any;
+
+      // Ensure subscription is null
+      componentAny.allIndicesSubscription = null;
+
+      // Call cleanup - should not throw error
+      expect(() => {
+        componentAny.cleanupWebSocketSubscription();
+      }).not.toThrow();
+
+      // Verify unsubscribeFromAll was still called
+      expect(mockWebSocketService.unsubscribeFromAll).toHaveBeenCalled();
+
+      // Verify connection state is DISCONNECTED
+      expect(componentAny.wsConnectionStateSignal()).toBe('DISCONNECTED');
+    });
+
+    it('should handle cleanup when allIndicesSubscription is undefined', () => {
+      const componentAny = component as any;
+
+      // Set subscription to undefined
+      componentAny.allIndicesSubscription = undefined;
+
+      // Call cleanup - should not throw error
+      expect(() => {
+        componentAny.cleanupWebSocketSubscription();
+      }).not.toThrow();
+
+      // Verify unsubscribeFromAll was still called
+      expect(mockWebSocketService.unsubscribeFromAll).toHaveBeenCalled();
+    });
+
+    it('should prevent memory leaks by setting subscription reference to null', () => {
+      const componentAny = component as any;
+
+      // Create a mock subscription
+      const mockSubscription = jasmine.createSpyObj('Subscription', ['unsubscribe']);
+      componentAny.allIndicesSubscription = mockSubscription;
+
+      // Call cleanup
+      componentAny.cleanupWebSocketSubscription();
+
+      // Verify subscription reference is null (prevents memory leak)
+      expect(componentAny.allIndicesSubscription).toBeNull();
+    });
+
+    it('should complete full cleanup sequence in correct order', () => {
+      const componentAny = component as any;
+
+      // Create a mock subscription
+      const mockSubscription = jasmine.createSpyObj('Subscription', ['unsubscribe']);
+      componentAny.allIndicesSubscription = mockSubscription;
+
+      // Set connection state to CONNECTED
+      componentAny.wsConnectionStateSignal.set('CONNECTED');
+
+      // Track call order
+      const callOrder: string[] = [];
+      
+      mockSubscription.unsubscribe.and.callFake(() => {
+        callOrder.push('unsubscribe');
+      });
+
+      mockWebSocketService.unsubscribeFromAll.and.callFake(() => {
+        callOrder.push('unsubscribeFromAll');
+      });
+
+      // Spy on signal set to track when it's called
+      const originalSet = componentAny.wsConnectionStateSignal.set.bind(componentAny.wsConnectionStateSignal);
+      spyOn(componentAny.wsConnectionStateSignal, 'set').and.callFake((value: any) => {
+        callOrder.push('setConnectionState');
+        originalSet(value);
+      });
+
+      // Call cleanup
+      componentAny.cleanupWebSocketSubscription();
+
+      // Verify correct order: unsubscribe -> unsubscribeFromAll -> setConnectionState
+      expect(callOrder).toEqual(['unsubscribe', 'unsubscribeFromAll', 'setConnectionState']);
+
+      // Verify final state
+      expect(componentAny.allIndicesSubscription).toBeNull();
+      expect(componentAny.wsConnectionStateSignal()).toBe('DISCONNECTED');
+    });
+
+    it('should be idempotent - calling cleanup multiple times should be safe', () => {
+      const componentAny = component as any;
+
+      // Create a mock subscription
+      const mockSubscription = jasmine.createSpyObj('Subscription', ['unsubscribe']);
+      componentAny.allIndicesSubscription = mockSubscription;
+
+      // Call cleanup first time
+      componentAny.cleanupWebSocketSubscription();
+
+      // Reset mock call counts
+      mockSubscription.unsubscribe.calls.reset();
+      mockWebSocketService.unsubscribeFromAll.calls.reset();
+
+      // Call cleanup second time - should not throw error
+      expect(() => {
+        componentAny.cleanupWebSocketSubscription();
+      }).not.toThrow();
+
+      // Verify unsubscribe was not called again (subscription is null)
+      expect(mockSubscription.unsubscribe).not.toHaveBeenCalled();
+
+      // Verify unsubscribeFromAll was called again (safe to call multiple times)
+      expect(mockWebSocketService.unsubscribeFromAll).toHaveBeenCalled();
+
+      // Verify connection state remains DISCONNECTED
+      expect(componentAny.wsConnectionStateSignal()).toBe('DISCONNECTED');
     });
   });
 
