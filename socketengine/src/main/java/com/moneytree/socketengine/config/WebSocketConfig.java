@@ -70,7 +70,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 "/ws/stocks",            // Selective stock subscriptions
                 "/ws/indices/all",       // All indices auto-stream
                 "/ws/stocks/nse/all")    // All NSE stocks auto-stream
-            .setAllowedOrigins(origins)  // Configure for production security
+            .setAllowedOriginPatterns(origins)  // Use patterns to support wildcards with credentials
             .withSockJS();  // Enable SockJS fallback for older browsers
         
         log.info("WebSocket endpoints registered successfully:");

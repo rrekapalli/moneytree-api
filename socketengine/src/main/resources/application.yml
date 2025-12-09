@@ -66,6 +66,13 @@ socketengine:
     # Example: http://localhost:4200,https://yourdomain.com
     # Using "*" allows all origins (development only)
     allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
+  
+  cors:
+    # CORS configuration for REST endpoints
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
 
 # Actuator configuration
 management:

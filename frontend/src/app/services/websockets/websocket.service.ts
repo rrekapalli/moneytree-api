@@ -56,8 +56,10 @@ export class WebSocketService {
   private createStompClient(): Client {
     const client = new Client({
       webSocketFactory: () => {
-        const baseUrl = environment.enginesHttpUrl + '/ws/nse-indices';
-        return new SockJS(baseUrl);
+        // Use native WebSocket connection to socketengine
+        // Connect to /ws/indices/all for all NSE indices streaming
+        const wsUrl = 'ws://localhost:8081/ws/indices/all';
+        return new WebSocket(wsUrl) as any;
       },
       debug: () => {
         // Debug logging disabled for production

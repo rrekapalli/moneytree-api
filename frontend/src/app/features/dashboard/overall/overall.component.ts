@@ -96,7 +96,7 @@ import { IndexHistoricalData } from '../../../services/entities/index-historical
 import { IndexResponseDto } from '../../../services/entities/indices';
 
 // Import consolidated WebSocket service and entities
-import { WebSocketService, IndexDataDto, IndicesDto, WebSocketConnectionState } from '../../../services/websockets';
+import { NativeWebSocketService, IndexDataDto, IndicesDto, WebSocketConnectionState } from '../../../services/websockets';
 
 
 @Component({
@@ -222,7 +222,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     filterService: FilterService,
     private componentCommunicationService: ComponentCommunicationService,
     private indicesService: IndicesService,
-    private webSocketService: WebSocketService,
+    private webSocketService: NativeWebSocketService,
     private ngZone: NgZone
 
   ) {
@@ -1041,6 +1041,32 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
 
+    // UPDATED: Prioritize WebSocket data over REST API
+    // Check if WebSocket has already provided data via the signal
+    const webSocketData = this.indicesDataSignal();
+    if (webSocketData && webSocketData.length > 0) {
+      if (this.enableDebugLogging) {
+        console.log('[WebSocket] Using WebSocket data for initial load', {
+          dataCount: webSocketData.length,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      // Update legacy properties for backward compatibility
+      this.updateIndexListData(webSocketData);
+      this.indicesLoaded = true;
+      this.setDefaultIndexFromData(webSocketData);
+      return;
+    }
+
+    // FALLBACK: Only use REST API if WebSocket data is not available yet
+    // This ensures we show data immediately while WebSocket is connecting
+    if (this.enableDebugLogging) {
+      console.log('[WebSocket] WebSocket data not available, using REST API fallback', {
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').subscribe({
       next: (indices) => {
         const mappedData = this.mapIndicesToStockData(indices || []);
@@ -1049,13 +1075,33 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           return;
         }
 
-        // Update signals with fallback data
-        this.indicesDataSignal.set(mappedData);
+        // Only update if WebSocket hasn't provided data yet
+        // This prevents REST API data from overwriting WebSocket data
+        const currentWebSocketData = this.indicesDataSignal();
+        if (!currentWebSocketData || currentWebSocketData.length === 0) {
+          if (this.enableDebugLogging) {
+            console.log('[WebSocket] Updating with REST API fallback data', {
+              dataCount: mappedData.length,
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          // Update signals with fallback data
+          this.indicesDataSignal.set(mappedData);
+          
+          // Update legacy properties for backward compatibility
+          this.updateIndexListData(mappedData);
+        } else {
+          if (this.enableDebugLogging) {
+            console.log('[WebSocket] Skipping REST API data - WebSocket data already available', {
+              webSocketDataCount: currentWebSocketData.length,
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
         
-        // Update legacy properties for backward compatibility
-        this.updateIndexListData(mappedData);
         this.indicesLoaded = true;
-        this.setDefaultIndexFromData(mappedData);
+        this.setDefaultIndexFromData(this.indicesDataSignal());
       },
       error: (error) => {
         console.warn('Failed to list indices, using fallback:', error);
@@ -2402,10 +2448,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.indicesWebSocketSubscription = this.webSocketService
             .subscribeToIndex(webSocketIndexName)
             .subscribe({
-              next: (indicesData) => {
+              next: (indicesData: IndexDataDto) => {
                 this.handleWebSocketData(indicesData, indexName);
               },
-              error: (error) => {
+              error: (error: any) => {
                 console.warn(`Specific index subscription failed for ${webSocketIndexName}, falling back to all indices:`, error.message || error);
                 // Fallback to all indices subscription
                 this.subscribeToAllIndicesAsFallback(indexName);
