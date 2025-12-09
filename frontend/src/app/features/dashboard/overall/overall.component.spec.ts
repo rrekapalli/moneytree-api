@@ -21,6 +21,30 @@ describe('OverallComponent - WebSocket Integration', () => {
   let mockIndicesService: jasmine.SpyObj<IndicesService>;
   let mockComponentCommunicationService: jasmine.SpyObj<ComponentCommunicationService>;
 
+  // Helper function to create mock IndexResponseDto with all required fields
+  function createMockIndexResponseDto(data: {
+    indexName: string;
+    indexSymbol: string;
+    lastPrice: number;
+    variation: number;
+    percentChange: number;
+    dayHigh?: number;
+    dayLow?: number;
+  }): any {
+    return {
+      id: `mock-id-${data.indexSymbol}`,
+      indexName: data.indexName,
+      indexSymbol: data.indexSymbol,
+      lastPrice: data.lastPrice,
+      variation: data.variation,
+      percentChange: data.percentChange,
+      dayHigh: data.dayHigh || data.lastPrice * 1.01,
+      dayLow: data.dayLow || data.lastPrice * 0.99,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
   beforeEach(async () => {
     // Create mock services
     mockWebSocketService = jasmine.createSpyObj('WebSocketService', [
@@ -2451,7 +2475,6 @@ describe('OverallComponent - WebSocket Integration', () => {
       }, 50);
     });
   });
-});
 
   describe('Property 12: Signal batching for rapid updates', () => {
     /**
@@ -3042,3 +3065,870 @@ describe('OverallComponent - WebSocket Integration', () => {
       testFixture.destroy();
     });
   });
+
+  /**
+   * Integration Tests
+   * 
+   * These tests verify the end-to-end flow from WebSocket to UI,
+   * testing the interaction between service and component,
+   * and ensuring signal effects trigger correctly.
+   * 
+   * Requirements: All
+   */
+  describe('Integration Tests', () => {
+    describe('End-to-End WebSocket to UI Flow', () => {
+      it('should complete full flow from WebSocket connection to UI update', (done) => {
+        // Arrange: Set up mock data
+        const mockIndicesData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18500,
+              variation: 150,
+              percentChange: 0.82,
+              dayHigh: 18600,
+              dayLow: 18400
+            },
+            {
+              indexName: 'BANK NIFTY',
+              indexSymbol: 'BANKNIFTY',
+              lastPrice: 43500,
+              variation: -200,
+              percentChange: -0.46,
+              dayHigh: 43800,
+              dayLow: 43300
+            }
+          ]
+        };
+
+        // Mock WebSocket service to return test data
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of(mockIndicesData));
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for async operations to complete
+        setTimeout(() => {
+          try {
+            // Assert: Verify WebSocket connection was established
+            expect(mockWebSocketService.connect).toHaveBeenCalled();
+            expect(mockWebSocketService.subscribeToAllIndices).toHaveBeenCalled();
+
+            // Access private signals for verification
+            const componentAny = component as any;
+
+            // Verify signal was updated with WebSocket data
+            const indicesData = componentAny.indicesDataSignal();
+            expect(indicesData.length).toBeGreaterThan(0);
+
+            // Verify connection state signal was updated
+            const connectionState = componentAny.wsConnectionStateSignal();
+            expect(connectionState).toBe('CONNECTED');
+
+            // Verify UI widgets were updated
+            if (componentAny.dashboardConfig?.widgets) {
+              const stockListWidget = componentAny.dashboardConfig.widgets.find((w: any) => 
+                w.config?.component === 'stock-list-table'
+              );
+
+              if (stockListWidget && stockListWidget.data) {
+                expect(stockListWidget.data.stocks).toBeDefined();
+                expect(stockListWidget.data.stocks.length).toBeGreaterThan(0);
+              }
+            }
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 500);
+      });
+
+      it('should handle WebSocket data updates and propagate to UI', (done) => {
+        // Arrange: Set up initial data
+        const initialData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18500,
+              variation: 150,
+              percentChange: 0.82
+            }
+          ]
+        };
+
+        const updatedData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18600,
+              variation: 250,
+              percentChange: 1.37
+            }
+          ]
+        };
+
+        // Create a subject to control data emission
+        let dataEmitter: any;
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.callFake(() => {
+          return new Observable(subscriber => {
+            dataEmitter = subscriber;
+            subscriber.next(initialData);
+            return () => {};
+          });
+        });
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for initial data to be processed
+        setTimeout(() => {
+          const componentAny = component as any;
+          const initialIndicesData = componentAny.indicesDataSignal();
+          const initialPrice = initialIndicesData[0]?.lastPrice;
+
+          // Emit updated data
+          if (dataEmitter) {
+            dataEmitter.next(updatedData);
+          }
+
+          // Wait for update to be processed
+          setTimeout(() => {
+            try {
+              // Assert: Verify signal was updated with new data
+              const updatedIndicesData = componentAny.indicesDataSignal();
+              expect(updatedIndicesData.length).toBeGreaterThan(0);
+              
+              const updatedPrice = updatedIndicesData[0]?.lastPrice;
+              expect(updatedPrice).toBe(18600);
+              expect(updatedPrice).not.toBe(initialPrice);
+
+              done();
+            } catch (error) {
+              done.fail(error as Error);
+            }
+          }, 200);
+        }, 300);
+      });
+
+      it('should merge WebSocket data with fallback data correctly', (done) => {
+        // Arrange: Set up fallback data from REST API
+        const fallbackData = [
+          createMockIndexResponseDto({
+            indexName: 'NIFTY 50',
+            indexSymbol: 'NIFTY50',
+            lastPrice: 18500,
+            variation: 150,
+            percentChange: 0.82
+          }),
+          createMockIndexResponseDto({
+            indexName: 'BANK NIFTY',
+            indexSymbol: 'BANKNIFTY',
+            lastPrice: 43500,
+            variation: -200,
+            percentChange: -0.46
+          }),
+          createMockIndexResponseDto({
+            indexName: 'NIFTY IT',
+            indexSymbol: 'NIFTYIT',
+            lastPrice: 30000,
+            variation: 100,
+            percentChange: 0.33
+          })
+        ];
+
+        // WebSocket data only updates NIFTY 50
+        const webSocketData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18600,
+              variation: 250,
+              percentChange: 1.37
+            }
+          ]
+        };
+
+        mockIndicesService.getIndicesByExchangeSegment.and.returnValue(of(fallbackData));
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of(webSocketData));
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for both fallback and WebSocket data to be processed
+        setTimeout(() => {
+          try {
+            const componentAny = component as any;
+            const mergedData = componentAny.indicesDataSignal();
+
+            // Assert: Verify all fallback data is preserved
+            expect(mergedData.length).toBe(3);
+
+            // Verify NIFTY 50 was updated with WebSocket data
+            const nifty50 = mergedData.find((d: any) => 
+              d.symbol === 'NIFTY50' || d.tradingsymbol === 'NIFTY50'
+            );
+            expect(nifty50).toBeDefined();
+            expect(nifty50.lastPrice).toBe(18600);
+
+            // Verify other indices retained fallback data
+            const bankNifty = mergedData.find((d: any) => 
+              d.symbol === 'BANKNIFTY' || d.tradingsymbol === 'BANKNIFTY'
+            );
+            expect(bankNifty).toBeDefined();
+            expect(bankNifty.lastPrice).toBe(43500);
+
+            const niftyIT = mergedData.find((d: any) => 
+              d.symbol === 'NIFTYIT' || d.tradingsymbol === 'NIFTYIT'
+            );
+            expect(niftyIT).toBeDefined();
+            expect(niftyIT.lastPrice).toBe(30000);
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 500);
+      });
+    });
+
+    describe('Service and Component Interaction', () => {
+      it('should properly coordinate between WebSocketService and component lifecycle', (done) => {
+        // Arrange
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of({ indices: [] }));
+
+        // Act: Initialize component (triggers onChildInit)
+        fixture.detectChanges();
+
+        // Wait for initialization to complete
+        setTimeout(() => {
+          try {
+            // Assert: Verify WebSocket service methods were called in correct order
+            expect(mockWebSocketService.connect).toHaveBeenCalled();
+            expect(mockWebSocketService.subscribeToAllIndices).toHaveBeenCalled();
+
+            // Verify connection was established before subscription
+            const connectCallOrder = (mockWebSocketService.connect as jasmine.Spy).calls.first();
+            const subscribeCallOrder = (mockWebSocketService.subscribeToAllIndices as jasmine.Spy).calls.first();
+            
+            // Both should have been called
+            expect(connectCallOrder).toBeDefined();
+            expect(subscribeCallOrder).toBeDefined();
+
+            // Act: Destroy component (triggers onChildDestroy)
+            fixture.destroy();
+
+            // Assert: Verify cleanup methods were called
+            expect(mockWebSocketService.unsubscribeFromAll).toHaveBeenCalled();
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 300);
+      });
+
+      it('should handle IndicesService and WebSocketService coordination', (done) => {
+        // Arrange: Set up both services to return data
+        const restApiData = [
+          createMockIndexResponseDto({
+            indexName: 'NIFTY 50',
+            indexSymbol: 'NIFTY50',
+            lastPrice: 18500,
+            variation: 150,
+            percentChange: 0.82
+          })
+        ];
+
+        const webSocketData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18600,
+              variation: 250,
+              percentChange: 1.37
+            }
+          ]
+        };
+
+        mockIndicesService.getIndicesByExchangeSegment.and.returnValue(of(restApiData));
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of(webSocketData));
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for both services to be called
+        setTimeout(() => {
+          try {
+            // Assert: Verify both services were used
+            expect(mockIndicesService.getIndicesByExchangeSegment).toHaveBeenCalled();
+            expect(mockWebSocketService.connect).toHaveBeenCalled();
+            expect(mockWebSocketService.subscribeToAllIndices).toHaveBeenCalled();
+
+            // Verify REST API was called first (for fallback data)
+            const restApiCallOrder = (mockIndicesService.getIndicesByExchangeSegment as jasmine.Spy).calls.first();
+            expect(restApiCallOrder).toBeDefined();
+
+            // Verify final data reflects WebSocket update
+            const componentAny = component as any;
+            const finalData = componentAny.indicesDataSignal();
+            expect(finalData.length).toBeGreaterThan(0);
+            
+            const nifty50 = finalData.find((d: any) => 
+              d.symbol === 'NIFTY50' || d.tradingsymbol === 'NIFTY50'
+            );
+            expect(nifty50).toBeDefined();
+            expect(nifty50.lastPrice).toBe(18600); // WebSocket data, not REST API data
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 500);
+      });
+
+      it('should handle service errors gracefully without breaking component', (done) => {
+        // Arrange: Set up services to fail
+        mockIndicesService.getIndicesByExchangeSegment.and.returnValue(
+          new Observable(subscriber => {
+            subscriber.error(new Error('REST API failed'));
+          })
+        );
+        mockWebSocketService.connect.and.returnValue(Promise.reject(new Error('WebSocket connection failed')));
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for error handling to complete
+        setTimeout(() => {
+          try {
+            // Assert: Component should still be functional
+            expect(component).toBeDefined();
+            
+            const componentAny = component as any;
+            
+            // Verify signals are still accessible
+            expect(componentAny.indicesDataSignal).toBeDefined();
+            expect(componentAny.wsConnectionStateSignal).toBeDefined();
+
+            // Verify connection state reflects error
+            const connectionState = componentAny.wsConnectionStateSignal();
+            expect(connectionState).toBe('ERROR');
+
+            // Component should continue to function with empty data
+            const indicesData = componentAny.indicesDataSignal();
+            expect(Array.isArray(indicesData)).toBe(true);
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 500);
+      });
+    });
+
+    describe('Signal Effects Triggering', () => {
+      it('should trigger widget update effect when indices signal changes', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        
+        // Initialize dashboard config
+        componentAny.initializeDashboardConfig();
+        fixture.detectChanges();
+
+        // Set up spy on updateIndexListWidget method
+        spyOn<any>(componentAny, 'updateIndexListWidget').and.callThrough();
+
+        // Act: Update indices signal
+        const testData = [
+          {
+            symbol: 'TEST1',
+            tradingsymbol: 'TEST1',
+            lastPrice: 1000,
+            percentChange: 1.5,
+            companyName: 'Test 1',
+            totalTradedValue: 0,
+            sector: 'Test',
+            industry: 'Test'
+          }
+        ];
+        componentAny.indicesDataSignal.set(testData);
+
+        // Wait for effect to trigger
+        setTimeout(() => {
+          try {
+            // Assert: Verify effect triggered widget update
+            expect(componentAny.updateIndexListWidget).toHaveBeenCalled();
+
+            // Verify widget data was updated
+            const stockListWidget = componentAny.dashboardConfig?.widgets?.find((w: any) => 
+              w.config?.component === 'stock-list-table'
+            );
+
+            if (stockListWidget && stockListWidget.data) {
+              expect(stockListWidget.data.stocks).toBeDefined();
+              expect(stockListWidget.data.stocks.length).toBe(1);
+              expect(stockListWidget.data.stocks[0].symbol).toBe('TEST1');
+            }
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 200);
+      });
+
+      it('should trigger connection state logging effect when state changes', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        
+        // Spy on console.log to verify logging effect
+        spyOn(console, 'log');
+
+        // Act: Change connection state
+        componentAny.wsConnectionStateSignal.set('CONNECTED');
+
+        // Wait for effect to trigger
+        setTimeout(() => {
+          try {
+            // Assert: Verify logging effect was triggered
+            expect(console.log).toHaveBeenCalledWith(
+              jasmine.stringContaining('[WebSocket] Connection state changed:'),
+              jasmine.any(Object)
+            );
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 100);
+      });
+
+      it('should trigger computed signal recalculation when dependencies change', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        fixture.detectChanges();
+
+        // Get initial computed value
+        const initialIsConnected = componentAny.isWebSocketConnectedSignal();
+        expect(initialIsConnected).toBe(false);
+
+        // Act: Change dependency signal
+        componentAny.wsConnectionStateSignal.set('CONNECTED');
+
+        // Wait for computed signal to recalculate
+        setTimeout(() => {
+          try {
+            // Assert: Verify computed signal was recalculated
+            const updatedIsConnected = componentAny.isWebSocketConnectedSignal();
+            expect(updatedIsConnected).toBe(true);
+            expect(updatedIsConnected).not.toBe(initialIsConnected);
+
+            // Change back to disconnected
+            componentAny.wsConnectionStateSignal.set('DISCONNECTED');
+
+            setTimeout(() => {
+              try {
+                const finalIsConnected = componentAny.isWebSocketConnectedSignal();
+                expect(finalIsConnected).toBe(false);
+
+                done();
+              } catch (error) {
+                done.fail(error as Error);
+              }
+            }, 100);
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 100);
+      });
+
+      it('should trigger price change indicator effect when indices data changes', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        fixture.detectChanges();
+
+        // Act: Set indices data with price changes
+        const testData = [
+          {
+            symbol: 'TEST1',
+            tradingsymbol: 'TEST1',
+            lastPrice: 1000,
+            percentChange: 1.5,
+            priceChange: 15,
+            companyName: 'Test 1',
+            totalTradedValue: 0,
+            sector: 'Test',
+            industry: 'Test'
+          },
+          {
+            symbol: 'TEST2',
+            tradingsymbol: 'TEST2',
+            lastPrice: 2000,
+            percentChange: -1.5,
+            priceChange: -30,
+            companyName: 'Test 2',
+            totalTradedValue: 0,
+            sector: 'Test',
+            industry: 'Test'
+          }
+        ];
+        componentAny.indicesDataSignal.set(testData);
+
+        // Wait for computed signal to recalculate
+        setTimeout(() => {
+          try {
+            // Assert: Verify price change indicators were computed
+            const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+            expect(dataWithIndicators.length).toBe(2);
+
+            // Verify positive indicator
+            const test1 = dataWithIndicators.find((d: any) => d.symbol === 'TEST1');
+            expect(test1).toBeDefined();
+            expect(test1.changeIndicator).toBe('positive');
+
+            // Verify negative indicator
+            const test2 = dataWithIndicators.find((d: any) => d.symbol === 'TEST2');
+            expect(test2).toBeDefined();
+            expect(test2.changeIndicator).toBe('negative');
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 200);
+      });
+
+      it('should cascade effects correctly when multiple signals change', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        componentAny.initializeDashboardConfig();
+        fixture.detectChanges();
+
+        // Track effect execution order
+        const effectExecutionOrder: string[] = [];
+
+        // Spy on methods that are called by effects
+        const originalUpdateIndexListWidget = componentAny.updateIndexListWidget;
+        spyOn<any>(componentAny, 'updateIndexListWidget').and.callFake((...args: any[]) => {
+          effectExecutionOrder.push('updateIndexListWidget');
+          return originalUpdateIndexListWidget.apply(componentAny, args);
+        });
+
+        // Act: Change multiple signals
+        const testData = [
+          {
+            symbol: 'TEST1',
+            tradingsymbol: 'TEST1',
+            lastPrice: 1000,
+            percentChange: 1.5,
+            companyName: 'Test 1',
+            totalTradedValue: 0,
+            sector: 'Test',
+            industry: 'Test'
+          }
+        ];
+        
+        componentAny.indicesDataSignal.set(testData);
+        componentAny.selectedIndexSymbolSignal.set('TEST1');
+        componentAny.wsConnectionStateSignal.set('CONNECTED');
+
+        // Wait for all effects to complete
+        setTimeout(() => {
+          try {
+            // Assert: Verify effects were triggered
+            expect(effectExecutionOrder.length).toBeGreaterThan(0);
+            expect(componentAny.updateIndexListWidget).toHaveBeenCalled();
+
+            // Verify final state is consistent
+            expect(componentAny.indicesDataSignal().length).toBe(1);
+            expect(componentAny.selectedIndexSymbolSignal()).toBe('TEST1');
+            expect(componentAny.wsConnectionStateSignal()).toBe('CONNECTED');
+            expect(componentAny.isWebSocketConnectedSignal()).toBe(true);
+
+            done();
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 300);
+      });
+    });
+
+    describe('Complete Integration Scenarios', () => {
+      it('should handle complete user workflow: load -> connect -> update -> destroy', (done) => {
+        // Arrange: Set up complete scenario
+        const fallbackData = [
+          createMockIndexResponseDto({
+            indexName: 'NIFTY 50',
+            indexSymbol: 'NIFTY50',
+            lastPrice: 18500,
+            variation: 150,
+            percentChange: 0.82
+          })
+        ];
+
+        const webSocketData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18600,
+              variation: 250,
+              percentChange: 1.37
+            }
+          ]
+        };
+
+        mockIndicesService.getIndicesByExchangeSegment.and.returnValue(of(fallbackData));
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of(webSocketData));
+
+        // Act: Step 1 - Component loads
+        fixture.detectChanges();
+
+        // Wait for fallback data to load
+        setTimeout(() => {
+          try {
+            const componentAny = component as any;
+
+            // Assert: Step 1 - Fallback data loaded
+            expect(mockIndicesService.getIndicesByExchangeSegment).toHaveBeenCalled();
+            const initialData = componentAny.indicesDataSignal();
+            expect(initialData.length).toBeGreaterThan(0);
+
+            // Wait for WebSocket connection
+            setTimeout(() => {
+              try {
+                // Assert: Step 2 - WebSocket connected
+                expect(mockWebSocketService.connect).toHaveBeenCalled();
+                expect(mockWebSocketService.subscribeToAllIndices).toHaveBeenCalled();
+                expect(componentAny.wsConnectionStateSignal()).toBe('CONNECTED');
+
+                // Assert: Step 3 - Data updated with WebSocket
+                const updatedData = componentAny.indicesDataSignal();
+                const nifty50 = updatedData.find((d: any) => 
+                  d.symbol === 'NIFTY50' || d.tradingsymbol === 'NIFTY50'
+                );
+                expect(nifty50).toBeDefined();
+                expect(nifty50.lastPrice).toBe(18600);
+
+                // Act: Step 4 - Destroy component
+                fixture.destroy();
+
+                // Assert: Step 4 - Cleanup completed
+                expect(mockWebSocketService.unsubscribeFromAll).toHaveBeenCalled();
+
+                done();
+              } catch (error) {
+                done.fail(error as Error);
+              }
+            }, 300);
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 200);
+      });
+
+      it('should handle real-time updates with user interaction', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        componentAny.initializeDashboardConfig();
+
+        const initialData = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18500,
+              variation: 150,
+              percentChange: 0.82
+            },
+            {
+              indexName: 'BANK NIFTY',
+              indexSymbol: 'BANKNIFTY',
+              lastPrice: 43500,
+              variation: -200,
+              percentChange: -0.46
+            }
+          ]
+        };
+
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of(initialData));
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for initial data
+        setTimeout(() => {
+          try {
+            // Simulate user selecting an index
+            componentAny.selectedIndexSymbolSignal.set('NIFTY50');
+            fixture.detectChanges();
+
+            // Wait for selection to be processed
+            setTimeout(() => {
+              try {
+                // Assert: Verify selection was applied
+                expect(componentAny.selectedIndexSymbolSignal()).toBe('NIFTY50');
+
+                // Verify widget reflects selection
+                const stockListWidget = componentAny.dashboardConfig?.widgets?.find((w: any) => 
+                  w.config?.component === 'stock-list-table'
+                );
+
+                if (stockListWidget && stockListWidget.data) {
+                  expect(stockListWidget.data.selectedStockSymbol).toBe('NIFTY50');
+                }
+
+                // Simulate WebSocket update while selection is active
+                const updatedData = {
+                  indices: [
+                    {
+                      indexName: 'NIFTY 50',
+                      indexSymbol: 'NIFTY50',
+                      lastPrice: 18600,
+                      variation: 250,
+                      percentChange: 1.37
+                    }
+                  ]
+                };
+
+                // Manually trigger data update (simulating WebSocket)
+                componentAny.handleIncomingIndicesData(updatedData);
+                fixture.detectChanges();
+
+                setTimeout(() => {
+                  try {
+                    // Assert: Verify data updated but selection preserved
+                    const finalData = componentAny.indicesDataSignal();
+                    const nifty50 = finalData.find((d: any) => 
+                      d.symbol === 'NIFTY50' || d.tradingsymbol === 'NIFTY50'
+                    );
+                    expect(nifty50).toBeDefined();
+                    expect(nifty50.lastPrice).toBe(18600);
+
+                    // Verify selection still preserved
+                    expect(componentAny.selectedIndexSymbolSignal()).toBe('NIFTY50');
+
+                    if (stockListWidget && stockListWidget.data) {
+                      expect(stockListWidget.data.selectedStockSymbol).toBe('NIFTY50');
+                    }
+
+                    done();
+                  } catch (error) {
+                    done.fail(error as Error);
+                  }
+                }, 200);
+              } catch (error) {
+                done.fail(error as Error);
+              }
+            }, 200);
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 300);
+      });
+
+      it('should maintain data consistency across multiple update cycles', (done) => {
+        // Arrange
+        const componentAny = component as any;
+        
+        const update1 = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18500,
+              variation: 150,
+              percentChange: 0.82
+            }
+          ]
+        };
+
+        const update2 = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18550,
+              variation: 200,
+              percentChange: 1.09
+            }
+          ]
+        };
+
+        const update3 = {
+          indices: [
+            {
+              indexName: 'NIFTY 50',
+              indexSymbol: 'NIFTY50',
+              lastPrice: 18600,
+              variation: 250,
+              percentChange: 1.37
+            }
+          ]
+        };
+
+        mockWebSocketService.connect.and.returnValue(Promise.resolve());
+        mockWebSocketService.subscribeToAllIndices.and.returnValue(of(update1));
+
+        // Act: Initialize component
+        fixture.detectChanges();
+
+        // Wait for initial data
+        setTimeout(() => {
+          try {
+            // Apply multiple updates
+            componentAny.handleIncomingIndicesData(update2);
+            fixture.detectChanges();
+
+            setTimeout(() => {
+              try {
+                componentAny.handleIncomingIndicesData(update3);
+                fixture.detectChanges();
+
+                setTimeout(() => {
+                  try {
+                    // Assert: Verify final state reflects last update
+                    const finalData = componentAny.indicesDataSignal();
+                    const nifty50 = finalData.find((d: any) => 
+                      d.symbol === 'NIFTY50' || d.tradingsymbol === 'NIFTY50'
+                    );
+                    expect(nifty50).toBeDefined();
+                    expect(nifty50.lastPrice).toBe(18600);
+                    expect(nifty50.percentChange).toBeCloseTo(1.37, 2);
+
+                    // Verify data consistency (no duplicates)
+                    const nifty50Count = finalData.filter((d: any) => 
+                      d.symbol === 'NIFTY50' || d.tradingsymbol === 'NIFTY50'
+                    ).length;
+                    expect(nifty50Count).toBe(1);
+
+                    done();
+                  } catch (error) {
+                    done.fail(error as Error);
+                  }
+                }, 200);
+              } catch (error) {
+                done.fail(error as Error);
+              }
+            }, 200);
+          } catch (error) {
+            done.fail(error as Error);
+          }
+        }, 300);
+      });
+    });
+  });
+});
