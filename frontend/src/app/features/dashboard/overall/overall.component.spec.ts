@@ -1595,4 +1595,273 @@ describe('OverallComponent - WebSocket Integration', () => {
       }, 50);
     });
   });
+
+  describe('Property 5: Price increase shows positive indicator', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 5: Price increase shows positive indicator
+     * Validates: Requirements 3.1
+     * 
+     * Property: For any index where the new price is greater than the previous price,
+     * the system should display a positive change indicator
+     */
+    it('should show positive indicator for price increases (property-based test)', () => {
+      // Arbitrary generator for StockDataDto with positive price changes
+      const arbitraryPositivePriceChange = fc.record({
+        symbol: fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0),
+        tradingsymbol: fc.option(fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0)),
+        companyName: fc.option(fc.string({ minLength: 1, maxLength: 100 })),
+        lastPrice: fc.double({ min: 1, max: 100000, noNaN: true }),
+        priceChange: fc.double({ min: 0.01, max: 1000, noNaN: true }), // Positive price change
+        percentChange: fc.double({ min: 0.01, max: 100, noNaN: true }), // Positive percent change
+        totalTradedValue: fc.option(fc.double({ min: 0, max: 1e12, noNaN: true })),
+        sector: fc.option(fc.string({ minLength: 1, maxLength: 50 })),
+        industry: fc.option(fc.string({ minLength: 1, maxLength: 50 }))
+      });
+
+      fc.assert(
+        fc.property(
+          fc.array(arbitraryPositivePriceChange, { minLength: 1, maxLength: 20 }),
+          (indicesData) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Set indices data signal
+            componentAny.indicesDataSignal.set(indicesData);
+
+            // Get computed signal with change indicators
+            const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+            // Verify all indices have positive change indicator
+            dataWithIndicators.forEach((index: any, i: number) => {
+              expect(index.changeIndicator).toBe('positive', 
+                `Index ${i} (${index.symbol}) with priceChange=${indicesData[i].priceChange} ` +
+                `and percentChange=${indicesData[i].percentChange} should have positive indicator`
+              );
+            });
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      );
+    });
+
+    it('should show positive indicator when priceChange is positive', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18100,
+          priceChange: 100, // Positive price change
+          percentChange: 0.55,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('positive');
+    });
+
+    it('should show positive indicator when percentChange is positive', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY BANK',
+          tradingsymbol: 'NIFTY BANK',
+          companyName: 'NIFTY BANK',
+          lastPrice: 42500,
+          priceChange: 0, // Zero price change
+          percentChange: 1.2, // Positive percent change
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('positive');
+    });
+
+    it('should show positive indicator when both priceChange and percentChange are positive', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY IT',
+          tradingsymbol: 'NIFTY IT',
+          companyName: 'NIFTY IT',
+          lastPrice: 30500,
+          priceChange: 250, // Positive price change
+          percentChange: 0.82, // Positive percent change
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('positive');
+    });
+  });
+
+  describe('Property 6: Price decrease shows negative indicator', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 6: Price decrease shows negative indicator
+     * Validates: Requirements 3.2
+     * 
+     * Property: For any index where the new price is less than the previous price,
+     * the system should display a negative change indicator
+     */
+    it('should show negative indicator for price decreases (property-based test)', () => {
+      // Arbitrary generator for StockDataDto with negative price changes
+      const arbitraryNegativePriceChange = fc.record({
+        symbol: fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0),
+        tradingsymbol: fc.option(fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0)),
+        companyName: fc.option(fc.string({ minLength: 1, maxLength: 100 })),
+        lastPrice: fc.double({ min: 1, max: 100000, noNaN: true }),
+        priceChange: fc.double({ min: -1000, max: -0.01, noNaN: true }), // Negative price change
+        percentChange: fc.double({ min: -100, max: -0.01, noNaN: true }), // Negative percent change
+        totalTradedValue: fc.option(fc.double({ min: 0, max: 1e12, noNaN: true })),
+        sector: fc.option(fc.string({ minLength: 1, maxLength: 50 })),
+        industry: fc.option(fc.string({ minLength: 1, maxLength: 50 }))
+      });
+
+      fc.assert(
+        fc.property(
+          fc.array(arbitraryNegativePriceChange, { minLength: 1, maxLength: 20 }),
+          (indicesData) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Set indices data signal
+            componentAny.indicesDataSignal.set(indicesData);
+
+            // Get computed signal with change indicators
+            const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+            // Verify all indices have negative change indicator
+            dataWithIndicators.forEach((index: any, i: number) => {
+              expect(index.changeIndicator).toBe('negative', 
+                `Index ${i} (${index.symbol}) with priceChange=${indicesData[i].priceChange} ` +
+                `and percentChange=${indicesData[i].percentChange} should have negative indicator`
+              );
+            });
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      );
+    });
+
+    it('should show negative indicator when priceChange is negative', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 17900,
+          priceChange: -100, // Negative price change
+          percentChange: -0.55,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('negative');
+    });
+
+    it('should show negative indicator when percentChange is negative', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY BANK',
+          tradingsymbol: 'NIFTY BANK',
+          companyName: 'NIFTY BANK',
+          lastPrice: 41500,
+          priceChange: 0, // Zero price change
+          percentChange: -1.2, // Negative percent change
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('negative');
+    });
+
+    it('should show negative indicator when both priceChange and percentChange are negative', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY IT',
+          tradingsymbol: 'NIFTY IT',
+          companyName: 'NIFTY IT',
+          lastPrice: 30000,
+          priceChange: -250, // Negative price change
+          percentChange: -0.82, // Negative percent change
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('negative');
+    });
+
+    it('should show neutral indicator when priceChange and percentChange are zero', () => {
+      const componentAny = component as any;
+
+      const testData = [
+        {
+          symbol: 'NIFTY PHARMA',
+          tradingsymbol: 'NIFTY PHARMA',
+          companyName: 'NIFTY PHARMA',
+          lastPrice: 15000,
+          priceChange: 0, // Zero price change
+          percentChange: 0, // Zero percent change
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(testData);
+      const dataWithIndicators = componentAny.indicesWithChangeIndicatorsSignal();
+
+      expect(dataWithIndicators[0].changeIndicator).toBe('neutral');
+    });
+  });
 });
