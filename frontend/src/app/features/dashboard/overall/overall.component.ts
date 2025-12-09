@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
@@ -96,7 +96,7 @@ import { IndexHistoricalData } from '../../../services/entities/index-historical
 import { IndexResponseDto } from '../../../services/entities/indices';
 
 // Import consolidated WebSocket service and entities
-import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
+import { WebSocketService, IndexDataDto, IndicesDto, WebSocketConnectionState } from '../../../services/websockets';
 
 
 @Component({
@@ -164,6 +164,30 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   // Track the last index for which previous-day data was fetched (to avoid repeated calls)
   private lastPrevDayFetchIndex: string | null = null;
 
+  // ========== Angular Signals for Reactive State Management ==========
+  
+  // Writable signals for mutable state
+  private indicesDataSignal = signal<StockDataDto[]>([]);
+  private selectedIndexSymbolSignal = signal<string>('');
+  private wsConnectionStateSignal = signal<WebSocketConnectionState>(
+    WebSocketConnectionState.DISCONNECTED
+  );
+  
+  // Computed signals for derived state
+  protected filteredIndicesSignal = computed(() => {
+    const data = this.indicesDataSignal();
+    const selected = this.selectedIndexSymbolSignal();
+    // Return filtered data based on current filters
+    // For now, return all data - filtering logic can be added later
+    return data;
+  });
+  
+  protected isWebSocketConnectedSignal = computed(() => 
+    this.wsConnectionStateSignal() === WebSocketConnectionState.CONNECTED
+  );
+  
+  // Subscription for all indices WebSocket data
+  private allIndicesSubscription: Subscription | null = null;
 
   constructor(
     cdr: ChangeDetectorRef,
@@ -176,6 +200,41 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   ) {
     super(cdr, excelExportService, filterService);
+    
+    // Set up effects for reactive side effects
+    this.setupSignalEffects();
+  }
+  
+  /**
+   * Set up Angular signal effects for logging and widget updates
+   */
+  private setupSignalEffects(): void {
+    // Effect: Log WebSocket connection state changes
+    effect(() => {
+      const state = this.wsConnectionStateSignal();
+      if (this.enableDebugLogging) {
+        console.log('[WebSocket] Connection state changed:', {
+          state,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+    
+    // Effect: Update widgets when indices data changes
+    effect(() => {
+      const data = this.indicesDataSignal();
+      if (data && data.length > 0) {
+        // Update the Index List widget with new data
+        this.updateStockListWithFilteredData();
+      }
+    });
+    
+    // Effect: Sync selected index symbol with signal
+    effect(() => {
+      const symbol = this.selectedIndexSymbolSignal();
+      // Keep the existing property in sync for backward compatibility
+      this.selectedIndexSymbol = symbol;
+    });
   }
 
   override ngOnInit(): void {
