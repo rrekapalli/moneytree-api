@@ -439,6 +439,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected onChildDestroy(): void {
+    // CRITICAL: Cleanup WebSocket subscription FIRST before any other cleanup
+    // This ensures proper resource cleanup and prevents memory leaks
+    // Requirements: 1.4, 1.5, 2.2
+    this.cleanupWebSocketSubscription();
+    
     // Clean up chart update timer
     if (this.chartUpdateTimer) {
       clearTimeout(this.chartUpdateTimer);

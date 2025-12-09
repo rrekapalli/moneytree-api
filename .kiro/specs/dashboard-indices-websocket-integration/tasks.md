@@ -91,7 +91,7 @@
   - Commit changes to local git
   - _Requirements: 1.1, 2.1_
 
-- [-] 6. Implement WebSocket cleanup method
+- [x] 6. Implement WebSocket cleanup method
   - Create `cleanupWebSocketSubscription()` method
   - Unsubscribe from `allIndicesSubscription` if active
   - Call `webSocketService.unsubscribeFromAll()`
@@ -101,7 +101,7 @@
   - Commit changes to local git
   - _Requirements: 1.4, 1.5, 2.2, 2.5_
 
-- [-] 6.1 Write unit test for cleanup
+- [x] 6.1 Write unit test for cleanup
   - Test that all subscriptions are unsubscribed
   - Test that connection state is updated
   - Test that no memory leaks occur
