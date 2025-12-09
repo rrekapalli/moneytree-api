@@ -269,19 +269,33 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       })
       .catch((error) => {
-        // Connection failed - log error and continue with fallback data
-        if (this.enableDebugLogging) {
-          console.warn('[WebSocket] Connection failed:', {
-            error: error.message || error,
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-        // Update connection state signal to ERROR
-        this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
-        
-        // Continue with fallback data - application remains functional
+        // Connection failed - use centralized error handler
+        this.handleConnectionError(error);
       });
+  }
+  
+  /**
+   * Handle WebSocket connection errors
+   * This method logs connection errors with context and updates the connection state signal.
+   * The application continues to function with fallback data - no user-facing error is displayed.
+   * 
+   * Requirements: 2.3, 4.1
+   * 
+   * @param error - The error object from the failed connection attempt
+   */
+  private handleConnectionError(error: any): void {
+    // Log error with context information
+    console.error('[WebSocket] Connection error:', {
+      message: error?.message || String(error),
+      timestamp: new Date().toISOString(),
+      state: this.wsConnectionStateSignal()
+    });
+    
+    // Update connection state signal to ERROR
+    this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
+    
+    // Continue displaying fallback data - no user-facing error
+    // The application remains fully functional with REST API data
   }
   
   /**

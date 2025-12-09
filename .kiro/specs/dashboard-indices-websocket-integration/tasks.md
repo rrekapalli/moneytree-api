@@ -159,7 +159,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 10. Implement error handling for connection failures
+- [-] 10. Implement error handling for connection failures
   - Create `handleConnectionError()` method
   - Log error with context (message, timestamp, state)
   - Update connection state signal to ERROR
@@ -168,7 +168,7 @@
   - Commit changes to local git
   - _Requirements: 2.3, 4.1_
 
-- [ ] 10.1 Write property test for connection failure
+- [-] 10.1 Write property test for connection failure
   - **Property 3: Connection failure preserves data**
   - **Validates: Requirements 2.3, 4.1**
   - Verify app builds without errors/warnings

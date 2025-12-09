@@ -261,6 +261,173 @@ describe('OverallComponent - WebSocket Integration', () => {
     });
   });
 
+  describe('Property 3: Connection failure preserves data', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 3: Connection failure preserves data
+     * Validates: Requirements 2.3, 4.1
+     * 
+     * Property: For any WebSocket connection failure, the existing fallback data should remain 
+     * unchanged and displayed
+     */
+    it('should preserve fallback data when connection fails (property-based test)', (done) => {
+      // Arbitrary generator for StockDataDto (fallback data)
+      const arbitraryStockData = fc.record({
+        symbol: fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0),
+        tradingsymbol: fc.option(fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0)),
+        companyName: fc.option(fc.string({ minLength: 1, maxLength: 100 })),
+        lastPrice: fc.double({ min: 0, max: 100000, noNaN: true }),
+        percentChange: fc.option(fc.double({ min: -100, max: 100, noNaN: true })),
+        priceChange: fc.option(fc.double({ min: -10000, max: 10000, noNaN: true })),
+        totalTradedValue: fc.option(fc.double({ min: 0, max: 1e12, noNaN: true })),
+        sector: fc.option(fc.string({ minLength: 1, maxLength: 50 })),
+        industry: fc.option(fc.string({ minLength: 1, maxLength: 50 }))
+      });
+
+      fc.assert(
+        fc.asyncProperty(
+          fc.array(arbitraryStockData, { minLength: 1, maxLength: 50 }),
+          async (fallbackData) => {
+            // Reset mocks
+            mockWebSocketService.connect.calls.reset();
+            mockWebSocketService.subscribeToAllIndices.calls.reset();
+            
+            // Set up mock to reject connection
+            mockWebSocketService.connect.and.returnValue(Promise.reject(new Error('Connection failed')));
+
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Set fallback data in signal before attempting WebSocket connection
+            componentAny.indicesDataSignal.set(fallbackData);
+
+            // Store original data for comparison
+            const originalData = componentAny.indicesDataSignal();
+            const originalLength = originalData.length;
+
+            // Call initializeWebSocketSubscription (which will fail)
+            componentAny.initializeWebSocketSubscription();
+
+            // Wait for promise to reject
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            // Verify fallback data is preserved (unchanged)
+            const currentData = componentAny.indicesDataSignal();
+            expect(currentData.length).toBe(originalLength);
+            
+            // Verify data content is identical
+            currentData.forEach((item: any, index: number) => {
+              const originalItem = originalData[index];
+              expect(item.symbol || item.tradingsymbol).toBe(
+                originalItem.symbol || originalItem.tradingsymbol
+              );
+              expect(item.lastPrice).toBe(originalItem.lastPrice);
+            });
+
+            // Verify connection state was updated to ERROR
+            expect(componentAny.wsConnectionStateSignal()).toEqual('ERROR');
+
+            // Verify handleConnectionError was called (indirectly verified by ERROR state)
+            // The error handler should have logged the error and set state to ERROR
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      ).then(() => done()).catch((error: any) => done.fail(error));
+    });
+
+    it('should call handleConnectionError when connection fails', (done) => {
+      // Create a fresh component instance
+      const testFixture = TestBed.createComponent(OverallComponent);
+      const testComponent = testFixture.componentInstance;
+      const componentAny = testComponent as any;
+
+      // Spy on handleConnectionError
+      spyOn(componentAny, 'handleConnectionError').and.callThrough();
+
+      // Set up mock to reject connection
+      mockWebSocketService.connect.and.returnValue(Promise.reject(new Error('Test connection error')));
+
+      // Call initializeWebSocketSubscription
+      componentAny.initializeWebSocketSubscription();
+
+      // Wait for promise to reject
+      setTimeout(() => {
+        // Verify handleConnectionError was called
+        expect(componentAny.handleConnectionError).toHaveBeenCalled();
+        
+        // Verify it was called with an error object
+        const callArgs = (componentAny.handleConnectionError as jasmine.Spy).calls.mostRecent().args;
+        expect(callArgs[0]).toBeDefined();
+        expect(callArgs[0].message).toBe('Test connection error');
+
+        // Cleanup
+        testFixture.destroy();
+        done();
+      }, 50);
+    });
+
+    it('should log error with context when handleConnectionError is called', () => {
+      const componentAny = component as any;
+      
+      // Spy on console.error
+      spyOn(console, 'error');
+
+      // Create a test error
+      const testError = new Error('Test connection failure');
+
+      // Call handleConnectionError
+      componentAny.handleConnectionError(testError);
+
+      // Verify console.error was called with context
+      expect(console.error).toHaveBeenCalledWith(
+        '[WebSocket] Connection error:',
+        jasmine.objectContaining({
+          message: 'Test connection failure',
+          timestamp: jasmine.any(String),
+          state: jasmine.any(String)
+        })
+      );
+    });
+
+    it('should update connection state to ERROR when handleConnectionError is called', () => {
+      const componentAny = component as any;
+
+      // Set initial state to DISCONNECTED
+      componentAny.wsConnectionStateSignal.set('DISCONNECTED');
+      expect(componentAny.wsConnectionStateSignal()).toBe('DISCONNECTED');
+
+      // Call handleConnectionError
+      const testError = new Error('Test error');
+      componentAny.handleConnectionError(testError);
+
+      // Verify state was updated to ERROR
+      expect(componentAny.wsConnectionStateSignal()).toBe('ERROR');
+    });
+
+    it('should handle error objects without message property', () => {
+      const componentAny = component as any;
+      
+      // Spy on console.error
+      spyOn(console, 'error');
+
+      // Create an error without a message property
+      const testError = { code: 'CONNECTION_FAILED' };
+
+      // Call handleConnectionError
+      componentAny.handleConnectionError(testError);
+
+      // Verify console.error was called and handled the error gracefully
+      expect(console.error).toHaveBeenCalled();
+      
+      // Verify state was still updated to ERROR
+      expect(componentAny.wsConnectionStateSignal()).toBe('ERROR');
+    });
+  });
+
   describe('Property 9: Data validation against interface', () => {
     /**
      * Feature: dashboard-indices-websocket-integration, Property 9: Data validation against interface
