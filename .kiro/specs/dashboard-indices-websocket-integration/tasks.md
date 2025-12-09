@@ -117,7 +117,7 @@
   - Commit changes to local git
   - _Requirements: 1.4, 1.5, 2.2_
 
-- [-] 8. Update widget update logic to use signals
+- [x] 8. Update widget update logic to use signals
   - Modify `updateIndexListWidget()` to read from signals
   - Use effect to automatically update widget when signal changes
   - Remove manual change detection calls (signals handle this)
@@ -126,13 +126,13 @@
   - Commit changes to local git
   - _Requirements: 3.3, 3.5, 7.2, 7.3_
 
-- [-] 8.1 Write property test for selection persistence
+- [x] 8.1 Write property test for selection persistence
   - **Property 7: Selection persists across updates**
   - **Validates: Requirements 3.3**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 8.2 Write property test for automatic UI updates
+- [x] 8.2 Write property test for automatic UI updates
   - **Property 15: Signal triggers automatic UI updates**
   - **Validates: Requirements 7.3**
   - Verify app builds without errors/warnings

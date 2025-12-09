@@ -186,6 +186,31 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.wsConnectionStateSignal() === WebSocketConnectionState.CONNECTED
   );
   
+  // Computed signal for price change indicators
+  // Requirements: 3.1, 3.2
+  protected indicesWithChangeIndicatorsSignal = computed(() => {
+    const data = this.indicesDataSignal();
+    
+    return data.map(index => {
+      const priceChange = index.priceChange || 0;
+      const percentChange = index.percentChange || 0;
+      
+      // Determine change indicator based on price change
+      let changeIndicator: 'positive' | 'negative' | 'neutral' = 'neutral';
+      
+      if (priceChange > 0 || percentChange > 0) {
+        changeIndicator = 'positive';
+      } else if (priceChange < 0 || percentChange < 0) {
+        changeIndicator = 'negative';
+      }
+      
+      return {
+        ...index,
+        changeIndicator
+      };
+    });
+  });
+  
   // Subscription for all indices WebSocket data
   private allIndicesSubscription: Subscription | null = null;
 
@@ -344,13 +369,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Effect: Update widgets when indices data changes
     // This effect automatically triggers UI updates without manual change detection
     effect(() => {
-      const data = this.indicesDataSignal();
+      const dataWithIndicators = this.indicesWithChangeIndicatorsSignal();
       const selectedSymbol = this.selectedIndexSymbolSignal();
       
-      if (data && data.length > 0) {
-        // Update the Index List widget with new data
+      if (dataWithIndicators && dataWithIndicators.length > 0) {
+        // Update the Index List widget with new data including change indicators
         // The signal-based approach ensures automatic UI updates
-        this.updateIndexListWidget(data, selectedSymbol);
+        this.updateIndexListWidget(dataWithIndicators, selectedSymbol);
       }
     });
     
@@ -365,12 +390,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   /**
    * Update Index List widget with signal-based data
    * This method reads from signals and updates the widget automatically
-   * Requirements: 3.3, 3.5, 7.2, 7.3
+   * Requirements: 3.1, 3.2, 3.3, 3.5, 7.2, 7.3
    * 
-   * @param data - The indices data from signal
+   * @param data - The indices data from signal with change indicators
    * @param selectedSymbol - The currently selected index symbol from signal
    */
-  private updateIndexListWidget(data: StockDataDto[], selectedSymbol: string): void {
+  private updateIndexListWidget(data: (StockDataDto & { changeIndicator?: 'positive' | 'negative' | 'neutral' })[], selectedSymbol: string): void {
     if (!this.dashboardConfig?.widgets) {
       return;
     }
