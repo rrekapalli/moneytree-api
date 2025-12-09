@@ -31,7 +31,7 @@
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 3. Implement incoming data handler
+- [x] 3. Implement incoming data handler
   - Create `handleIncomingIndicesData()` method
   - Validate incoming `IndicesDto` structure
   - Map indices data using existing `mapIndicesToStockData()` method
@@ -41,13 +41,13 @@
   - Commit changes to local git
   - _Requirements: 1.3, 5.1, 5.2, 5.5_
 
-- [ ] 3.1 Write property test for data validation
+- [x] 3.1 Write property test for data validation
   - **Property 9: Data validation against interface**
   - **Validates: Requirements 5.2**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 3.2 Write property test for invalid data handling
+- [x] 3.2 Write property test for invalid data handling
   - **Property 10: Invalid data skipped**
   - **Validates: Requirements 5.3**
   - Verify app builds without errors/warnings

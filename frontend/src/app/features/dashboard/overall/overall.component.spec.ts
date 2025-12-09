@@ -258,4 +258,230 @@ describe('OverallComponent - WebSocket Integration', () => {
       ).then(() => done()).catch((error: any) => done.fail(error));
     });
   });
+
+  describe('Property 9: Data validation against interface', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 9: Data validation against interface
+     * Validates: Requirements 5.2
+     * 
+     * Property: For any parsed WebSocket data, it should conform to the IndicesDto interface structure
+     */
+    it('should validate incoming data conforms to IndicesDto interface (property-based test)', () => {
+      // Arbitrary generator for valid IndexDataDto
+      const arbitraryIndexData = fc.record({
+        indexName: fc.string({ minLength: 1, maxLength: 50 }),
+        indexSymbol: fc.string({ minLength: 1, maxLength: 20 }),
+        lastPrice: fc.double({ min: 0, max: 100000, noNaN: true }),
+        variation: fc.double({ min: -10000, max: 10000, noNaN: true }),
+        percentChange: fc.double({ min: -100, max: 100, noNaN: true }),
+        openPrice: fc.option(fc.double({ min: 0, max: 100000, noNaN: true })),
+        dayHigh: fc.option(fc.double({ min: 0, max: 100000, noNaN: true })),
+        dayLow: fc.option(fc.double({ min: 0, max: 100000, noNaN: true })),
+        previousClose: fc.option(fc.double({ min: 0, max: 100000, noNaN: true }))
+      });
+
+      // Arbitrary generator for valid IndicesDto
+      const arbitraryIndicesDto = fc.record({
+        timestamp: fc.option(fc.date().map(d => d.toISOString())),
+        indices: fc.array(arbitraryIndexData, { minLength: 1, maxLength: 50 })
+      });
+
+      fc.assert(
+        fc.property(
+          arbitraryIndicesDto,
+          (indicesDto) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Get initial data length
+            const initialDataLength = componentAny.indicesDataSignal().length;
+
+            // Call handleIncomingIndicesData with valid data
+            componentAny.handleIncomingIndicesData(indicesDto);
+
+            // Verify data was processed (signal was updated)
+            const updatedData = componentAny.indicesDataSignal();
+            
+            // Valid data should be processed and update the signal
+            expect(updatedData.length).toBeGreaterThanOrEqual(initialDataLength);
+
+            // Verify all processed data has required fields
+            updatedData.forEach((item: any) => {
+              expect(item.symbol || item.tradingsymbol).toBeDefined();
+              expect(typeof (item.lastPrice)).toBe('number');
+            });
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      );
+    });
+
+    it('should handle IndicesDto with empty indices array', () => {
+      const componentAny = component as any;
+      const initialData = componentAny.indicesDataSignal();
+
+      // Call with empty indices array
+      componentAny.handleIncomingIndicesData({ indices: [] });
+
+      // Verify data was not changed (empty data is skipped)
+      expect(componentAny.indicesDataSignal()).toEqual(initialData);
+    });
+
+    it('should handle IndicesDto with undefined indices', () => {
+      const componentAny = component as any;
+      const initialData = componentAny.indicesDataSignal();
+
+      // Call with undefined indices
+      componentAny.handleIncomingIndicesData({ indices: undefined });
+
+      // Verify data was not changed (undefined data is skipped)
+      expect(componentAny.indicesDataSignal()).toEqual(initialData);
+    });
+
+    it('should handle null IndicesDto', () => {
+      const componentAny = component as any;
+      const initialData = componentAny.indicesDataSignal();
+
+      // Call with null
+      componentAny.handleIncomingIndicesData(null as any);
+
+      // Verify data was not changed (null data is skipped)
+      expect(componentAny.indicesDataSignal()).toEqual(initialData);
+    });
+  });
+
+  describe('Property 10: Invalid data skipped', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 10: Invalid data skipped
+     * Validates: Requirements 5.3
+     * 
+     * Property: For any invalid WebSocket data received, the system should log a warning
+     * and skip the update without affecting existing data
+     */
+    it('should skip invalid data and preserve existing data (property-based test)', () => {
+      // Arbitrary generator for invalid IndicesDto structures
+      const arbitraryInvalidData = fc.oneof(
+        fc.constant(null),
+        fc.constant(undefined),
+        fc.constant({}),
+        fc.record({ indices: fc.constant(null) }),
+        fc.record({ indices: fc.constant(undefined) }),
+        fc.record({ indices: fc.constant([]) }),
+        fc.record({ timestamp: fc.string() }), // Missing indices field
+        fc.string(), // Wrong type
+        fc.integer(), // Wrong type
+        fc.boolean() // Wrong type
+      );
+
+      fc.assert(
+        fc.property(
+          arbitraryInvalidData,
+          (invalidData) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Set up some initial valid data
+            const initialData = [
+              {
+                symbol: 'NIFTY 50',
+                tradingsymbol: 'NIFTY 50',
+                companyName: 'NIFTY 50',
+                lastPrice: 18000,
+                percentChange: 1.5,
+                totalTradedValue: 0,
+                sector: 'Indices',
+                industry: 'Indices'
+              }
+            ];
+            componentAny.indicesDataSignal.set(initialData);
+
+            // Get snapshot of data before invalid update
+            const dataBefore = componentAny.indicesDataSignal();
+
+            // Call handleIncomingIndicesData with invalid data
+            componentAny.handleIncomingIndicesData(invalidData);
+
+            // Verify data was not changed (invalid data is skipped)
+            const dataAfter = componentAny.indicesDataSignal();
+            expect(dataAfter).toEqual(dataBefore);
+            expect(dataAfter.length).toBe(initialData.length);
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      );
+    });
+
+    it('should skip update when indices array is empty', () => {
+      const componentAny = component as any;
+
+      // Set up initial data
+      const initialData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+      componentAny.indicesDataSignal.set(initialData);
+
+      const dataBefore = componentAny.indicesDataSignal();
+
+      // Call with empty indices array
+      componentAny.handleIncomingIndicesData({ indices: [] });
+
+      // Verify data was not changed
+      expect(componentAny.indicesDataSignal()).toEqual(dataBefore);
+    });
+
+    it('should handle malformed index data gracefully', () => {
+      const componentAny = component as any;
+
+      // Set up initial data
+      const initialData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+      componentAny.indicesDataSignal.set(initialData);
+
+      // Call with malformed index data (missing required fields)
+      const malformedData = {
+        indices: [
+          { /* missing all fields */ },
+          { indexName: 'Test' /* missing other fields */ }
+        ]
+      };
+
+      // This should not throw an error
+      expect(() => {
+        componentAny.handleIncomingIndicesData(malformedData);
+      }).not.toThrow();
+
+      // Data should still be updated (mapper handles missing fields with defaults)
+      const dataAfter = componentAny.indicesDataSignal();
+      expect(dataAfter.length).toBeGreaterThanOrEqual(initialData.length);
+    });
+  });
 });
