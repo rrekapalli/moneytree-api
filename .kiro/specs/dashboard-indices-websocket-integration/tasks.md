@@ -126,7 +126,7 @@
   - Commit changes to local git
   - _Requirements: 3.3, 3.5, 7.2, 7.3_
 
-- [ ] 8.1 Write property test for selection persistence
+- [-] 8.1 Write property test for selection persistence
   - **Property 7: Selection persists across updates**
   - **Validates: Requirements 3.3**
   - Verify app builds without errors/warnings

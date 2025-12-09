@@ -1046,6 +1046,408 @@ describe('OverallComponent - WebSocket Integration', () => {
     });
   });
 
+  describe('Property 7: Selection persists across updates', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 7: Selection persists across updates
+     * Validates: Requirements 3.3
+     * 
+     * Property: For any selected index, when WebSocket data updates occur,
+     * the selection highlighting should be preserved
+     */
+    it('should preserve selection highlighting across data updates (property-based test)', () => {
+      // Arbitrary generator for StockDataDto
+      const arbitraryStockData = fc.record({
+        symbol: fc.string({ minLength: 1, maxLength: 20 }),
+        tradingsymbol: fc.option(fc.string({ minLength: 1, maxLength: 20 })),
+        companyName: fc.option(fc.string({ minLength: 1, maxLength: 100 })),
+        lastPrice: fc.double({ min: 0, max: 100000, noNaN: true }),
+        percentChange: fc.double({ min: -100, max: 100, noNaN: true }),
+        totalTradedValue: fc.option(fc.double({ min: 0, max: 1e12, noNaN: true })),
+        sector: fc.option(fc.string({ minLength: 1, maxLength: 50 })),
+        industry: fc.option(fc.string({ minLength: 1, maxLength: 50 }))
+      });
+
+      fc.assert(
+        fc.property(
+          fc.array(arbitraryStockData, { minLength: 2, maxLength: 20 }),
+          fc.array(arbitraryStockData, { minLength: 1, maxLength: 20 }),
+          (initialData, updatedData) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Set initial data
+            componentAny.indicesDataSignal.set(initialData);
+
+            // Select a random index from initial data
+            const selectedIndex = initialData[0];
+            const selectedSymbol = selectedIndex.symbol || selectedIndex.tradingsymbol;
+            componentAny.selectedIndexSymbolSignal.set(selectedSymbol);
+
+            // Verify initial selection
+            expect(componentAny.selectedIndexSymbolSignal()).toBe(selectedSymbol);
+
+            // Update data (simulating WebSocket update)
+            componentAny.indicesDataSignal.set(updatedData);
+
+            // Verify selection is preserved after data update
+            expect(componentAny.selectedIndexSymbolSignal()).toBe(selectedSymbol);
+
+            // Verify the effect updates the widget with the preserved selection
+            // The updateIndexListWidget method should be called with the selected symbol
+            if (componentAny.dashboardConfig?.widgets) {
+              const stockListWidgets = componentAny.dashboardConfig.widgets.filter((widget: any) => 
+                widget.config?.component === 'stock-list-table'
+              );
+
+              stockListWidgets.forEach((widget: any) => {
+                if (widget.data) {
+                  // Verify the widget data has the selected symbol
+                  expect(widget.data.selectedStockSymbol).toBe(selectedSymbol);
+                }
+              });
+            }
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      );
+    });
+
+    it('should preserve selection when merging WebSocket data with fallback', () => {
+      const componentAny = component as any;
+
+      // Set up initial data
+      const initialData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        },
+        {
+          symbol: 'NIFTY BANK',
+          tradingsymbol: 'NIFTY BANK',
+          companyName: 'NIFTY BANK',
+          lastPrice: 42000,
+          percentChange: 2.0,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(initialData);
+
+      // Select NIFTY 50
+      componentAny.selectedIndexSymbolSignal.set('NIFTY 50');
+      expect(componentAny.selectedIndexSymbolSignal()).toBe('NIFTY 50');
+
+      // Simulate WebSocket update with new data
+      const updatedData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18100, // Updated price
+          percentChange: 2.0,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        },
+        {
+          symbol: 'NIFTY IT',
+          tradingsymbol: 'NIFTY IT',
+          companyName: 'NIFTY IT',
+          lastPrice: 30000,
+          percentChange: 1.0,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      const merged = componentAny.mergeIndicesData(initialData, updatedData);
+      componentAny.indicesDataSignal.set(merged);
+
+      // Verify selection is still NIFTY 50
+      expect(componentAny.selectedIndexSymbolSignal()).toBe('NIFTY 50');
+
+      // Verify the selected index data was updated
+      const nifty50 = merged.find((item: any) => item.symbol === 'NIFTY 50');
+      expect(nifty50).toBeDefined();
+      expect(nifty50.lastPrice).toBe(18100);
+    });
+
+    it('should update widget with preserved selection when data changes', () => {
+      const componentAny = component as any;
+
+      // Initialize dashboard config with a stock list widget
+      componentAny.dashboardConfig = {
+        widgets: [
+          {
+            config: { component: 'stock-list-table' },
+            data: {
+              stocks: [],
+              isLoadingStocks: false,
+              selectedStockSymbol: ''
+            }
+          }
+        ]
+      };
+
+      // Set up initial data
+      const initialData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      componentAny.indicesDataSignal.set(initialData);
+      componentAny.selectedIndexSymbolSignal.set('NIFTY 50');
+
+      // Call updateIndexListWidget directly
+      componentAny.updateIndexListWidget(initialData, 'NIFTY 50');
+
+      // Verify widget data has the selected symbol
+      const widget = componentAny.dashboardConfig.widgets[0];
+      expect(widget.data.selectedStockSymbol).toBe('NIFTY 50');
+      expect(widget.data.stocks.length).toBe(1);
+    });
+  });
+
+  describe('Property 15: Signal triggers automatic UI updates', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration, Property 15: Signal triggers automatic UI updates
+     * Validates: Requirements 7.3
+     * 
+     * Property: For any indices signal change, the UI should update automatically
+     * without manual change detection calls
+     */
+    it('should update widget without manual change detection calls (property-based test)', () => {
+      // Arbitrary generator for StockDataDto with valid symbols (no whitespace-only strings)
+      const arbitraryStockData = fc.record({
+        symbol: fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0),
+        tradingsymbol: fc.option(fc.string({ minLength: 1, maxLength: 20 }).filter(s => s.trim().length > 0)),
+        companyName: fc.option(fc.string({ minLength: 1, maxLength: 100 })),
+        lastPrice: fc.double({ min: 0, max: 100000, noNaN: true }),
+        percentChange: fc.double({ min: -100, max: 100, noNaN: true }),
+        totalTradedValue: fc.option(fc.double({ min: 0, max: 1e12, noNaN: true })),
+        sector: fc.option(fc.string({ minLength: 1, maxLength: 50 })),
+        industry: fc.option(fc.string({ minLength: 1, maxLength: 50 }))
+      });
+
+      fc.assert(
+        fc.property(
+          fc.array(arbitraryStockData, { minLength: 1, maxLength: 20 }),
+          fc.string({ minLength: 0, maxLength: 20 }),
+          (newData, selectedSymbol) => {
+            // Create a fresh component instance
+            const testFixture = TestBed.createComponent(OverallComponent);
+            const testComponent = testFixture.componentInstance;
+            const componentAny = testComponent as any;
+
+            // Initialize dashboard config with a stock list widget
+            componentAny.dashboardConfig = {
+              widgets: [
+                {
+                  config: { component: 'stock-list-table' },
+                  data: {
+                    stocks: [],
+                    isLoadingStocks: false,
+                    selectedStockSymbol: ''
+                  }
+                }
+              ]
+            };
+
+            // Spy on cdr.detectChanges to verify it's NOT called
+            const cdrSpy = spyOn(componentAny.cdr, 'detectChanges');
+
+            // Call updateIndexListWidget directly (simulating what the effect does)
+            componentAny.updateIndexListWidget(newData, selectedSymbol);
+
+            // Verify detectChanges was NOT called
+            // (signals handle change detection automatically)
+            expect(cdrSpy).not.toHaveBeenCalled();
+
+            // Verify widget data was updated
+            const widget = componentAny.dashboardConfig.widgets[0];
+            expect(widget.data.stocks.length).toBe(newData.length);
+            expect(widget.data.selectedStockSymbol).toBe(selectedSymbol);
+
+            // Cleanup
+            testFixture.destroy();
+          }
+        ),
+        { numRuns: 100 } // Run 100 iterations as specified in design
+      );
+    });
+
+    it('should not require manual change detection calls', () => {
+      const componentAny = component as any;
+
+      // Initialize dashboard config
+      componentAny.dashboardConfig = {
+        widgets: [
+          {
+            config: { component: 'stock-list-table' },
+            data: {
+              stocks: [],
+              isLoadingStocks: false,
+              selectedStockSymbol: ''
+            }
+          }
+        ]
+      };
+
+      // Spy on cdr.detectChanges to verify it's NOT called in updateIndexListWidget
+      const cdrSpy = spyOn(componentAny.cdr, 'detectChanges');
+
+      // Set up data
+      const newData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      // Call updateIndexListWidget directly
+      componentAny.updateIndexListWidget(newData, '');
+
+      // Verify detectChanges was NOT called in updateIndexListWidget
+      // (signals handle change detection automatically)
+      expect(cdrSpy).not.toHaveBeenCalled();
+
+      // Verify widget was still updated
+      const widget = componentAny.dashboardConfig.widgets[0];
+      expect(widget.data.stocks.length).toBe(1);
+    });
+
+    it('should update widget data correctly', () => {
+      const componentAny = component as any;
+
+      // Initialize dashboard config
+      componentAny.dashboardConfig = {
+        widgets: [
+          {
+            config: { component: 'stock-list-table' },
+            data: {
+              stocks: [],
+              isLoadingStocks: false,
+              selectedStockSymbol: ''
+            }
+          }
+        ]
+      };
+
+      // Set initial data
+      const initialData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      // Call updateIndexListWidget directly
+      componentAny.updateIndexListWidget(initialData, 'NIFTY 50');
+
+      // Verify widget was updated
+      const widget = componentAny.dashboardConfig.widgets[0];
+      expect(widget.data.stocks.length).toBe(1);
+      expect(widget.data.selectedStockSymbol).toBe('NIFTY 50');
+
+      // Update data
+      const updatedData = [
+        ...initialData,
+        {
+          symbol: 'NIFTY BANK',
+          tradingsymbol: 'NIFTY BANK',
+          companyName: 'NIFTY BANK',
+          lastPrice: 42000,
+          percentChange: 2.0,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      // Call updateIndexListWidget with updated data
+      componentAny.updateIndexListWidget(updatedData, 'NIFTY BANK');
+
+      // Verify widget was updated with new data
+      expect(widget.data.stocks.length).toBe(2);
+      expect(widget.data.selectedStockSymbol).toBe('NIFTY BANK');
+    });
+
+    it('should handle rapid updates efficiently', () => {
+      const componentAny = component as any;
+
+      // Initialize dashboard config
+      componentAny.dashboardConfig = {
+        widgets: [
+          {
+            config: { component: 'stock-list-table' },
+            data: {
+              stocks: [],
+              isLoadingStocks: false,
+              selectedStockSymbol: ''
+            }
+          }
+        ]
+      };
+
+      // Perform rapid updates
+      for (let i = 0; i < 10; i++) {
+        const data = [
+          {
+            symbol: 'NIFTY 50',
+            tradingsymbol: 'NIFTY 50',
+            companyName: 'NIFTY 50',
+            lastPrice: 18000 + i,
+            percentChange: 1.5,
+            totalTradedValue: 0,
+            sector: 'Indices',
+            industry: 'Indices'
+          }
+        ];
+        componentAny.updateIndexListWidget(data, 'NIFTY 50');
+      }
+
+      // Verify final state is correct
+      const widget = componentAny.dashboardConfig.widgets[0];
+      expect(widget.data.stocks.length).toBe(1);
+      expect(widget.data.stocks[0].lastPrice).toBe(18009); // Last update
+      expect(widget.data.selectedStockSymbol).toBe('NIFTY 50');
+    });
+  });
+
   describe('Lifecycle Integration', () => {
     /**
      * Feature: dashboard-indices-websocket-integration
