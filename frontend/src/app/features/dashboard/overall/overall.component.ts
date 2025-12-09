@@ -206,6 +206,127 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
   
   /**
+   * Initialize WebSocket connection and subscribe to all indices data
+   * This method establishes the WebSocket connection and subscribes to the /topic/nse-indices topic
+   * for real-time updates of all NSE indices data.
+   * 
+   * Error handling: Connection failures are logged but do not prevent the application from functioning.
+   * The component will continue to display fallback data from the REST API.
+   */
+  private initializeWebSocketSubscription(): void {
+    // Connect to WebSocket service
+    this.webSocketService.connect()
+      .then(() => {
+        // Connection successful - subscribe to all indices topic
+        this.allIndicesSubscription = this.webSocketService
+          .subscribeToAllIndices()
+          .subscribe({
+            next: (indicesDto: IndicesDto) => {
+              this.handleIncomingIndicesData(indicesDto);
+            },
+            error: (error) => {
+              // Log error but continue with fallback data
+              if (this.enableDebugLogging) {
+                console.warn('[WebSocket] Subscription error:', {
+                  error: error.message || error,
+                  timestamp: new Date().toISOString()
+                });
+              }
+              // Continue with fallback data - no user-facing error
+            }
+          });
+        
+        // Update connection state signal to CONNECTED
+        this.wsConnectionStateSignal.set(WebSocketConnectionState.CONNECTED);
+        
+        if (this.enableDebugLogging) {
+          console.log('[WebSocket] Successfully connected and subscribed to all indices');
+        }
+      })
+      .catch((error) => {
+        // Connection failed - log error and continue with fallback data
+        if (this.enableDebugLogging) {
+          console.warn('[WebSocket] Connection failed:', {
+            error: error.message || error,
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        // Update connection state signal to ERROR
+        this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
+        
+        // Continue with fallback data - application remains functional
+      });
+  }
+  
+  /**
+   * Handle incoming indices data from WebSocket
+   * This method processes real-time indices data received via WebSocket and updates the component state.
+   * 
+   * @param indicesDto - The indices data received from WebSocket
+   */
+  private handleIncomingIndicesData(indicesDto: IndicesDto): void {
+    // Validate incoming data
+    if (!indicesDto?.indices || indicesDto.indices.length === 0) {
+      if (this.enableDebugLogging) {
+        console.warn('[WebSocket] Received empty or invalid indices data');
+      }
+      return;
+    }
+    
+    // Map WebSocket data to component format using existing mapper
+    const newData = this.mapIndicesToStockData(indicesDto.indices as any);
+    
+    // Merge with existing data, preserving fallback entries
+    const merged = this.mergeIndicesData(this.indicesDataSignal(), newData);
+    
+    // Update signal - this automatically triggers UI updates via effects
+    this.indicesDataSignal.set(merged);
+    
+    if (this.enableDebugLogging) {
+      console.log('[WebSocket] Updated indices data:', {
+        receivedCount: indicesDto.indices.length,
+        mergedCount: merged.length,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+  
+  /**
+   * Merge WebSocket data with existing fallback data
+   * This method ensures that fallback data is preserved for indices not present in the WebSocket update.
+   * 
+   * @param existing - Current indices data (from fallback or previous updates)
+   * @param incoming - New indices data from WebSocket
+   * @returns Merged array with all unique indices
+   */
+  private mergeIndicesData(
+    existing: StockDataDto[], 
+    incoming: StockDataDto[]
+  ): StockDataDto[] {
+    const merged = new Map<string, StockDataDto>();
+    
+    // Add existing data to map
+    existing.forEach(item => {
+      const key = item.symbol || item.tradingsymbol;
+      if (key) {
+        merged.set(key, item);
+      }
+    });
+    
+    // Overlay incoming data (overwrites existing entries with same key)
+    incoming.forEach(item => {
+      const key = item.symbol || item.tradingsymbol;
+      if (key) {
+        merged.set(key, item);
+      }
+    });
+    
+    // Return merged array
+    return Array.from(merged.values());
+  }
+  
+  /**
    * Set up Angular signal effects for logging and widget updates
    */
   private setupSignalEffects(): void {

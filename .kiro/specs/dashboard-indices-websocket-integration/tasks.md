@@ -1,6 +1,6 @@
 # Implementation Plan
 
-- [-] 1. Set up Angular signals infrastructure in overall component
+- [x] 1. Set up Angular signals infrastructure in overall component
   - Import signal primitives from @angular/core (signal, computed, effect)
   - Create writable signals for indices data, selected index, and connection state
   - Create computed signals for filtered indices and connection status
@@ -9,13 +9,13 @@
   - Commit changes to local git
   - _Requirements: 7.1, 7.4, 7.5_
 
-- [-] 1.1 Write property test for signal initialization
+- [x] 1.1 Write property test for signal initialization
   - **Property 1: Signal initialization with defaults**
   - **Validates: Requirements 7.1**
   - Verify app builds without errors/warnings
   - Commit changes to local git
 
-- [ ] 2. Implement WebSocket subscription method
+- [x] 2. Implement WebSocket subscription method
   - Create `initializeWebSocketSubscription()` method
   - Call `webSocketService.connect()` with error handling
   - Subscribe to `subscribeToAllIndices()` observable
@@ -25,7 +25,7 @@
   - Commit changes to local git
   - _Requirements: 1.2, 2.1, 4.1_
 
-- [ ] 2.1 Write property test for WebSocket subscription
+- [x] 2.1 Write property test for WebSocket subscription
   - **Property 1: WebSocket subscription on connection**
   - **Validates: Requirements 1.2**
   - Verify app builds without errors/warnings
