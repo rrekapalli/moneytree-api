@@ -8,6 +8,8 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import * as fc from 'fast-check';
 import { of, Observable } from 'rxjs';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
 // Polyfill for SockJS global issue in tests
 (globalThis as any).global = globalThis;
@@ -56,7 +58,9 @@ describe('OverallComponent - WebSocket Integration', () => {
         { provide: ComponentCommunicationService, useValue: mockComponentCommunicationService },
         ExcelExportService,
         FilterService,
-        MessageService
+        MessageService,
+        provideHttpClient(),
+        provideHttpClientTesting()
       ],
       schemas: [NO_ERRORS_SCHEMA] // Ignore template errors for unit testing
     }).compileComponents();
@@ -2087,7 +2091,10 @@ describe('OverallComponent - WebSocket Integration', () => {
     });
 
     it('should calculate correct exponential backoff delays', () => {
-      const componentAny = component as any;
+      // Create a fresh component instance to avoid spy conflicts
+      const testFixture = TestBed.createComponent(OverallComponent);
+      const testComponent = testFixture.componentInstance;
+      const componentAny = testComponent as any;
 
       // Test exponential backoff calculation for each retry count
       const expectedDelays = [
@@ -2099,22 +2106,29 @@ describe('OverallComponent - WebSocket Integration', () => {
       ];
 
       expectedDelays.forEach(({ retryCount, expectedDelay }) => {
-        // Spy on setTimeout to capture the delay
-        const setTimeoutSpy = spyOn(window, 'setTimeout').and.callFake((fn: any, delay?: number) => {
-          expect(delay).toBe(expectedDelay);
+        // Track setTimeout calls
+        let capturedDelay: number | undefined;
+        const originalSetTimeout = window.setTimeout;
+        
+        // Temporarily replace setTimeout to capture the delay
+        (window as any).setTimeout = (fn: any, delay?: number) => {
+          capturedDelay = delay;
           return 0 as any;
-        });
+        };
 
         // Call handleSubscriptionError
         const testError = new Error('Test error');
         componentAny.handleSubscriptionError('/topic/nse-indices', testError, retryCount);
 
-        // Verify setTimeout was called with correct delay
-        expect(setTimeoutSpy).toHaveBeenCalled();
+        // Verify correct delay was used
+        expect(capturedDelay).toBe(expectedDelay);
 
-        // Reset spy for next iteration
-        setTimeoutSpy.calls.reset();
+        // Restore original setTimeout
+        window.setTimeout = originalSetTimeout;
       });
+
+      // Cleanup
+      testFixture.destroy();
     });
 
     it('should stop retrying after max attempts', () => {
@@ -2632,6 +2646,11 @@ describe('OverallComponent - WebSocket Integration', () => {
             const testComponent = testFixture.componentInstance;
             const componentAny = testComponent as any;
 
+            // Initialize dashboardConfig to prevent template errors
+            componentAny.dashboardConfig = {
+              widgets: []
+            };
+
             testFixture.detectChanges();
 
             // Get initial computed signal values
@@ -2681,6 +2700,11 @@ describe('OverallComponent - WebSocket Integration', () => {
       const testComponent = testFixture.componentInstance;
       const componentAny = testComponent as any;
 
+      // Initialize dashboardConfig to prevent template errors
+      componentAny.dashboardConfig = {
+        widgets: []
+      };
+
       testFixture.detectChanges();
 
       // Initial state should be DISCONNECTED
@@ -2714,6 +2738,11 @@ describe('OverallComponent - WebSocket Integration', () => {
       const testFixture = TestBed.createComponent(OverallComponent);
       const testComponent = testFixture.componentInstance;
       const componentAny = testComponent as any;
+
+      // Initialize dashboardConfig to prevent template errors
+      componentAny.dashboardConfig = {
+        widgets: []
+      };
 
       testFixture.detectChanges();
 
@@ -2752,6 +2781,11 @@ describe('OverallComponent - WebSocket Integration', () => {
       const testFixture = TestBed.createComponent(OverallComponent);
       const testComponent = testFixture.componentInstance;
       const componentAny = testComponent as any;
+
+      // Initialize dashboardConfig to prevent template errors
+      componentAny.dashboardConfig = {
+        widgets: []
+      };
 
       testFixture.detectChanges();
 

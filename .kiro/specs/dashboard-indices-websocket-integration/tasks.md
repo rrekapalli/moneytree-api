@@ -259,7 +259,7 @@
   - Commit changes to local git
   - _Requirements: 8.5_
 
-- [-] 18. Checkpoint - Ensure all tests pass
+- [x] 18. Checkpoint - Ensure all tests pass
   - Run all tests and verify they pass
   - Verify app builds without errors/warnings
   - Commit changes to local git
