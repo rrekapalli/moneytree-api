@@ -103,10 +103,20 @@ export class WebSocketService {
     client.onWebSocketClose = (event: CloseEvent) => {
       this.connectionState$.next(WebSocketConnectionState.DISCONNECTED);
       this.isConnected = false;
-      // Allow normal reconnection unless it's an error response
-      if (event.code >= 4000) { // Server error codes
+      this.clearSubscriptions();
+      
+      // Check if this is a clean close or an error
+      // 1000 = Normal closure
+      // 1001 = Going away (server shutdown)
+      // 1006 = Abnormal closure (no close frame received)
+      if (event.code === 1000 || event.code === 1001) {
+        // Clean close - don't retry
+        this.resetRetryState();
+      } else if (event.code >= 4000) {
+        // Server error codes - limit retries
         this.handleServerErrorResponse(event);
       }
+      // For other codes (like 1006), allow normal reconnection
     };
 
     return client;
@@ -252,12 +262,18 @@ export class WebSocketService {
       
       this.clearSubscriptions();
       
-      if (this.client && this.client.connected) {
-        this.client.deactivate();
+      if (this.client) {
+        // Force deactivation even if not connected
+        // This ensures cleanup of any lingering connection attempts
+        try {
+          this.client.deactivate();
+        } catch (deactivateError) {
+          // Ignore deactivation errors - we're cleaning up anyway
+        }
+        
+        // Destroy the client to prevent any lingering connections
+        this.client = null;
       }
-      
-      // Optionally destroy the client to prevent any lingering connections
-      // this.client = null;
       
       this.connectionState$.next(WebSocketConnectionState.DISCONNECTED);
       this.isConnected = false;
@@ -442,9 +458,11 @@ export class WebSocketService {
   public unregisterComponent(componentName: string): void {
     this.activeComponents.delete(componentName);
     
-    // If no components are active, cleanup all subscriptions
+    // If no components are active, cleanup all subscriptions and disconnect
     if (this.activeComponents.size === 0) {
       this.unsubscribeFromAll();
+      // Disconnect to ensure clean shutdown
+      this.disconnect();
     }
   }
 

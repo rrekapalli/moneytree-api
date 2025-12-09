@@ -248,6 +248,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       });
     }
     
+    // Register this component with WebSocket service
+    this.webSocketService.registerComponent('OverallComponent');
+    
     // Connect to WebSocket service
     this.webSocketService.connect()
       .then(() => {
@@ -800,6 +803,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Call WebSocket service to unsubscribe from all topics
     this.webSocketService.unsubscribeFromAll();
+    
+    // Unregister this component from WebSocket service
+    // This allows the service to disconnect if no other components are using it
+    this.webSocketService.unregisterComponent('OverallComponent');
     
     if (this.enableDebugLogging) {
       console.log('[WebSocket] Updating connection state to DISCONNECTED', {

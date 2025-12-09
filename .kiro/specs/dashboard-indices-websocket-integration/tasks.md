@@ -265,7 +265,7 @@
   - Commit changes to local git
   - Ask the user if questions arise
 
-- [ ] 19. Write integration tests
+- [x] 19. Write integration tests
   - Test end-to-end flow from WebSocket to UI
   - Test interaction between service and component
   - Test signal effects trigger correctly
@@ -273,7 +273,7 @@
   - Commit changes to local git
   - _Requirements: All_
 
-- [ ] 20. Perform manual testing
+- [x] 20. Perform manual testing
   - Load dashboard and verify fallback data displays
   - Observe WebSocket connection in DevTools
   - Verify real-time updates in Index List widget
@@ -283,7 +283,7 @@
   - Document any issues found
   - _Requirements: All_
 
-- [ ] 21. Final Checkpoint - Ensure all tests pass
+- [x] 21. Final Checkpoint - Ensure all tests pass
   - Run all tests and verify they pass
   - Verify app builds without errors/warnings
   - Create final commit with all changes
