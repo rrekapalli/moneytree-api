@@ -84,7 +84,7 @@
   - Commit changes to local git
   - _Requirements: 1.1, 2.1_
 
-- [ ] 5.1 Write unit test for lifecycle integration
+- [-] 5.1 Write unit test for lifecycle integration
   - Test that WebSocket subscription occurs after fallback data loads
   - Test that component displays fallback data immediately
   - Verify app builds without errors/warnings

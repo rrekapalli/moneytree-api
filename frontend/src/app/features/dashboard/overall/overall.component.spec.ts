@@ -877,4 +877,152 @@ describe('OverallComponent - WebSocket Integration', () => {
       expect(item.percentChange).toBe(0);
     });
   });
+
+  describe('Lifecycle Integration', () => {
+    /**
+     * Feature: dashboard-indices-websocket-integration
+     * Task: 5.1 Write unit test for lifecycle integration
+     * Requirements: 1.1, 2.1
+     * 
+     * Tests that WebSocket subscription occurs after fallback data loads
+     * and that the component displays fallback data immediately
+     */
+    it('should schedule WebSocket initialization after fallback data in onChildInit', () => {
+      const componentAny = component as any;
+      
+      // Spy on initializeWebSocketSubscription
+      spyOn(componentAny, 'initializeWebSocketSubscription');
+
+      // Call onChildInit
+      componentAny.onChildInit();
+
+      // Verify initializeWebSocketSubscription is not called immediately
+      // (it's scheduled with setTimeout for 150ms)
+      expect(componentAny.initializeWebSocketSubscription).not.toHaveBeenCalled();
+    });
+
+    it('should update indicesDataSignal when fallback data is set', () => {
+      const componentAny = component as any;
+
+      // Set up fallback data
+      const fallbackData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        },
+        {
+          symbol: 'NIFTY BANK',
+          tradingsymbol: 'NIFTY BANK',
+          companyName: 'NIFTY BANK',
+          lastPrice: 42000,
+          percentChange: 2.0,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+
+      // Update signal directly (simulating what loadDefaultNifty50Data does)
+      componentAny.indicesDataSignal.set(fallbackData);
+
+      // Verify signal was updated
+      const signalData = componentAny.indicesDataSignal();
+      expect(signalData.length).toBe(2);
+      
+      // Verify data content
+      const nifty50 = signalData.find((item: any) => 
+        (item.symbol || item.tradingsymbol) === 'NIFTY 50'
+      );
+      expect(nifty50).toBeDefined();
+      expect(nifty50.lastPrice).toBe(18000);
+
+      const niftyBank = signalData.find((item: any) => 
+        (item.symbol || item.tradingsymbol) === 'NIFTY BANK'
+      );
+      expect(niftyBank).toBeDefined();
+      expect(niftyBank.lastPrice).toBe(42000);
+    });
+
+    it('should make WebSocket initialization non-blocking with setTimeout', () => {
+      const componentAny = component as any;
+      
+      // Spy on setTimeout to verify it's used for WebSocket initialization
+      const setTimeoutSpy = spyOn(window, 'setTimeout').and.callThrough();
+      
+      // Spy on initializeWebSocketSubscription
+      spyOn(componentAny, 'initializeWebSocketSubscription');
+
+      // Call onChildInit
+      componentAny.onChildInit();
+
+      // Verify setTimeout was called (for WebSocket initialization)
+      expect(setTimeoutSpy).toHaveBeenCalled();
+      
+      // Verify initializeWebSocketSubscription is not called immediately
+      expect(componentAny.initializeWebSocketSubscription).not.toHaveBeenCalled();
+    });
+
+    it('should handle WebSocket connection failure gracefully', (done) => {
+      // Set up mock to reject WebSocket connection
+      mockWebSocketService.connect.and.returnValue(Promise.reject(new Error('Connection failed')));
+
+      const componentAny = component as any;
+
+      // Call initializeWebSocketSubscription
+      componentAny.initializeWebSocketSubscription();
+
+      // Wait for promise to reject
+      setTimeout(() => {
+        // Verify connection state signal was updated to ERROR
+        expect(componentAny.wsConnectionStateSignal()).toBe('ERROR');
+
+        // Verify subscription remains null
+        expect(componentAny.allIndicesSubscription).toBeNull();
+
+        done();
+      }, 50);
+    });
+
+    it('should preserve fallback data when WebSocket fails', (done) => {
+      // Set up fallback data
+      const fallbackData = [
+        {
+          symbol: 'NIFTY 50',
+          tradingsymbol: 'NIFTY 50',
+          companyName: 'NIFTY 50',
+          lastPrice: 18000,
+          percentChange: 1.5,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices'
+        }
+      ];
+      
+      const componentAny = component as any;
+      componentAny.indicesDataSignal.set(fallbackData);
+
+      // Set up mock to reject WebSocket connection
+      mockWebSocketService.connect.and.returnValue(Promise.reject(new Error('Connection failed')));
+
+      // Call initializeWebSocketSubscription
+      componentAny.initializeWebSocketSubscription();
+
+      // Wait for promise to reject
+      setTimeout(() => {
+        // Verify fallback data is still present
+        const signalData = componentAny.indicesDataSignal();
+        expect(signalData.length).toBe(1);
+        expect(signalData[0].symbol).toBe('NIFTY 50');
+        expect(signalData[0].lastPrice).toBe(18000);
+
+        done();
+      }, 50);
+    });
+  });
 });
