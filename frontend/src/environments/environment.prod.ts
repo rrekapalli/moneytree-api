@@ -4,7 +4,7 @@ export const environment = {
   enginesApiUrl: '/engines', // In production, engines might be served from the same domain
   enginesWebSocketUrl: '/engines', // In production, engines WebSocket is served from the same domain
   enginesHttpUrl: '/engines', // HTTP URL for SockJS connections in production
-  useMockData: false,
+
   
   // OAuth Configuration
   oauth: {

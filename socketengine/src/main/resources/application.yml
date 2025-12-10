@@ -1,0 +1,114 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: socketengine
+  
+  # Graceful shutdown configuration
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  
+  # Database configuration (TimescaleDB/PostgreSQL)
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://postgres.tailce422e.ts.net:5432/MoneyTree}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:mysecretpassword}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA configuration
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  
+  # Redis configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:redis.tailce422e.ts.net}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: -1ms
+
+# SocketEngine specific configuration
+socketengine:
+  kite:
+    websocket-url: ${KITE_WEBSOCKET_URL:wss://ws.kite.trade}
+    api-key: ${KITE_API_KEY:}
+    api-secret: ${KITE_API_SECRET:}
+    access-token: ${KITE_ACCESS_TOKEN:}
+  
+
+  
+  persistence:
+    batch-size: ${PERSISTENCE_BATCH_SIZE:1000}
+    max-buffer-size: ${PERSISTENCE_MAX_BUFFER_SIZE:100000}
+    batch-interval-minutes: ${PERSISTENCE_BATCH_INTERVAL_MINUTES:15}
+  
+  websocket:
+    max-sessions: ${WEBSOCKET_MAX_SESSIONS:1000}
+    max-message-size: ${WEBSOCKET_MAX_MESSAGE_SIZE:65536}
+    # SECURITY: In production, restrict allowed-origins to specific domains
+    # Example: http://localhost:4200,https://yourdomain.com
+    # Using "*" allows all origins (development only)
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:*}
+  
+  cors:
+    # CORS configuration for REST endpoints
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.moneytree.socketengine: DEBUG
+    org.springframework.web.socket: DEBUG
+    org.java_websocket: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# OpenAPI/Swagger configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true

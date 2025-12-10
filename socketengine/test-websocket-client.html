@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocketEngine WebSocket Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .connected { background-color: #4CAF50; color: white; }
+        .disconnected { background-color: #f44336; color: white; }
+        #messages {
+            height: 400px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .tick { background-color: #e3f2fd; }
+        .error { background-color: #ffebee; }
+        .info { background-color: #f1f8e9; }
+    </style>
+</head>
+<body>
+    <h1>SocketEngine WebSocket Test Client</h1>
+    
+    <div class="container">
+        <h2>Connection</h2>
+        <label>
+            Endpoint:
+            <select id="endpoint">
+                <option value="ws://localhost:8081/ws/indices">ws://localhost:8081/ws/indices (selective)</option>
+                <option value="ws://localhost:8081/ws/stocks">ws://localhost:8081/ws/stocks (selective)</option>
+                <option value="ws://localhost:8081/ws/indices/all">ws://localhost:8081/ws/indices/all (auto-stream)</option>
+                <option value="ws://localhost:8081/ws/stocks/nse/all">ws://localhost:8081/ws/stocks/nse/all (auto-stream)</option>
+            </select>
+        </label>
+        <button id="connectBtn" onclick="connect()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        <span id="status" class="disconnected">Disconnected</span>
+    </div>
+    
+    <div class="container">
+        <h2>Subscription (for selective endpoints only)</h2>
+        <label>
+            Symbols (comma-separated):
+            <input type="text" id="symbols" placeholder="NIFTY 50,BANKNIFTY" style="width: 300px;">
+        </label>
+        <button onclick="subscribe()">Subscribe</button>
+        <button onclick="unsubscribe()">Unsubscribe</button>
+    </div>
+    
+    <div class="container">
+        <h2>Messages</h2>
+        <button onclick="clearMessages()">Clear Messages</button>
+        <div id="messages"></div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let messageCount = 0;
+        
+        function connect() {
+            const endpoint = document.getElementById('endpoint').value;
+            addMessage('Connecting to ' + endpoint, 'info');
+            
+            ws = new WebSocket(endpoint);
+            
+            ws.onopen = function() {
+                addMessage('Connected successfully!', 'info');
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('status').className = 'connected';
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+            };
+            
+            ws.onmessage = function(event) {
+                messageCount++;
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.error) {
+                        addMessage('Error: ' + data.message, 'error');
+                    } else {
+                        addMessage('Tick #' + messageCount + ': ' + JSON.stringify(data, null, 2), 'tick');
+                    }
+                } catch (e) {
+                    addMessage('Raw message: ' + event.data, 'info');
+                }
+            };
+            
+            ws.onerror = function(error) {
+                addMessage('WebSocket error: ' + error, 'error');
+            };
+            
+            ws.onclose = function() {
+                addMessage('Connection closed', 'info');
+                document.getElementById('status').textContent = 'Disconnected';
+                document.getElementById('status').className = 'disconnected';
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function subscribe() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Please connect first');
+                return;
+            }
+            
+            const symbolsInput = document.getElementById('symbols').value;
+            const symbols = symbolsInput.split(',').map(s => s.trim()).filter(s => s);
+            
+            if (symbols.length === 0) {
+                alert('Please enter at least one symbol');
+                return;
+            }
+            
+            const message = {
+                action: 'SUBSCRIBE',
+                type: 'INDEX',
+                symbols: symbols
+            };
+            
+            ws.send(JSON.stringify(message));
+            addMessage('Sent SUBSCRIBE: ' + JSON.stringify(message), 'info');
+        }
+        
+        function unsubscribe() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Please connect first');
+                return;
+            }
+            
+            const symbolsInput = document.getElementById('symbols').value;
+            const symbols = symbolsInput.split(',').map(s => s.trim()).filter(s => s);
+            
+            if (symbols.length === 0) {
+                alert('Please enter at least one symbol');
+                return;
+            }
+            
+            const message = {
+                action: 'UNSUBSCRIBE',
+                type: 'INDEX',
+                symbols: symbols
+            };
+            
+            ws.send(JSON.stringify(message));
+            addMessage('Sent UNSUBSCRIBE: ' + JSON.stringify(message), 'info');
+        }
+        
+        function addMessage(text, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            messageDiv.textContent = new Date().toLocaleTimeString() + ' - ' + text;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            messageCount = 0;
+        }
+    </script>
+</body>
+</html>

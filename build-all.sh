@@ -8,5 +8,9 @@ SCRIPTS_DIR="${ROOT_DIR}/scripts"
 "${SCRIPTS_DIR}/build-frontend.sh"
 "${SCRIPTS_DIR}/build-backend.sh"
 
-echo "==> Frontend and backend builds completed successfully."
+echo "==> Building socketengine module..."
+cd "${ROOT_DIR}/socketengine" && ./mvnw clean package -DskipTests && cd "${ROOT_DIR}"
+echo "==> Socketengine build completed successfully."
+
+echo "==> All builds completed successfully."
 

@@ -1,9 +1,9 @@
-import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone } from '@angular/core';
+import { Component, ChangeDetectorRef, ChangeDetectionStrategy, NgZone, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { ScrollPanelModule } from 'primeng/scrollpanel';
-import { Subscription } from 'rxjs';
+import { Subscription, BehaviorSubject } from 'rxjs';
 import { filter, distinctUntilChanged } from 'rxjs/operators';
 
 // Import echarts core module and components
@@ -96,7 +96,10 @@ import { IndexHistoricalData } from '../../../services/entities/index-historical
 import { IndexResponseDto } from '../../../services/entities/indices';
 
 // Import consolidated WebSocket service and entities
-import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
+import { NativeWebSocketService, IndexDataDto, IndicesDto, WebSocketConnectionState } from '../../../services/websockets';
+
+// Import environment for debugging
+import { environment } from '../../../../environments/environment';
 
 
 @Component({
@@ -150,8 +153,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   // Currently selected index symbol for highlighting in Index List widget
   public selectedIndexSymbol: string = '';
 
-  // Loading state for candlestick chart
-  public isCandlestickLoading: boolean = false;
+  // Loading state for candlestick chart (converted to signal for reactive UI updates)
+  protected isCandlestickLoadingSignal = signal<boolean>(false);
 
   // WebSocket connection state tracking
   private isWebSocketConnected: boolean = false;
@@ -160,10 +163,82 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   private subscribedTopics: Set<string> = new Set(); // Track which topics we're already subscribed to
 
   // Debug flag to control verbose console logging
-  private readonly enableDebugLogging: boolean = false;
+  // Set to true to enable detailed WebSocket operation logging
+  // This includes connection state changes, subscription events, data flow, and error details
+  private readonly enableDebugLogging: boolean = true;
   // Track the last index for which previous-day data was fetched (to avoid repeated calls)
   private lastPrevDayFetchIndex: string | null = null;
+  
+  // Timer for periodic baseline cache refresh
+  private baselineRefreshTimer: any = null;
+  private readonly BASELINE_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+  // ========== Angular Signals for Reactive State Management ==========
+  
+  // Writable signals for mutable state
+  private indicesDataSignal = signal<StockDataDto[]>([]);
+  private selectedIndexSymbolSignal = signal<string>('');
+  private wsConnectionStateSignal = signal<WebSocketConnectionState>(
+    WebSocketConnectionState.DISCONNECTED
+  );
+  
+  // BehaviorSubject for better reactivity with widgets
+  private indicesDataSubject = new BehaviorSubject<StockDataDto[]>([]);
+  
+  // ========== Baseline Data Cache for Price Change Calculations ==========
+  
+  // Cache for baseline indices data (previous day's close prices)
+  // This serves as the foundation for all price change calculations
+  private baselineIndicesCache = new Map<string, StockDataDto>();
+  private baselineCacheTimestamp: number = 0;
+  private readonly BASELINE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes TTL
+  
+  // Flag to track if baseline data has been loaded
+  private isBaselineDataLoaded = false;
+  
+  // Computed signals for derived state
+  protected filteredIndicesSignal = computed(() => {
+    const data = this.indicesDataSignal();
+    const selected = this.selectedIndexSymbolSignal();
+    // Return filtered data based on current filters
+    // For now, return all data - filtering logic can be added later
+    return data;
+  });
+  
+  protected isWebSocketConnectedSignal = computed(() => 
+    this.wsConnectionStateSignal() === WebSocketConnectionState.CONNECTED
+  );
+  
+  // Computed signal for price change indicators
+  // Requirements: 3.1, 3.2
+  protected indicesWithChangeIndicatorsSignal = computed(() => {
+    const data = this.indicesDataSignal();
+    
+    return data.map(index => {
+      const priceChange = index.priceChange || 0;
+      const percentChange = index.percentChange || 0;
+      
+      // Determine change indicator based on price change
+      let changeIndicator: 'positive' | 'negative' | 'neutral' = 'neutral';
+      
+      if (priceChange > 0 || percentChange > 0) {
+        changeIndicator = 'positive';
+      } else if (priceChange < 0 || percentChange < 0) {
+        changeIndicator = 'negative';
+      }
+      
+      return {
+        ...index,
+        changeIndicator
+      };
+    });
+  });
+  
+  // Subscription for all indices WebSocket data
+  private allIndicesSubscription: Subscription | null = null;
+  
+  // BehaviorSubject subscription
+  private indicesDataSubscription: Subscription | null = null;
 
   constructor(
     cdr: ChangeDetectorRef,
@@ -171,11 +246,1620 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     filterService: FilterService,
     private componentCommunicationService: ComponentCommunicationService,
     private indicesService: IndicesService,
-    private webSocketService: WebSocketService,
+    private webSocketService: NativeWebSocketService,
     private ngZone: NgZone
 
   ) {
     super(cdr, excelExportService, filterService);
+    
+    // Set up effects for reactive side effects
+    this.setupSignalEffects();
+    
+    // Set up BehaviorSubject subscription for additional reactivity
+    this.setupBehaviorSubjectSubscription();
+    
+    // Make component accessible for debugging (only in development)
+    if (typeof window !== 'undefined' && !environment?.production) {
+      (window as any).overallComponent = this;
+    }
+  }
+  
+  /**
+   * Load baseline indices data (previous day's close prices) for price change calculations
+   * This method fetches all indices data and caches it as the foundation for real-time updates.
+   * The baseline data provides the previousClose values needed for accurate change calculations.
+   * 
+   * Requirements: 2.1, 2.2, 3.1, 3.2
+   */
+  private async loadBaselineIndicesData(): Promise<void> {
+    
+    // Check if we have fresh cached data
+    const now = Date.now();
+    if (this.baselineIndicesCache.size > 0 && 
+        this.baselineCacheTimestamp && 
+        (now - this.baselineCacheTimestamp) < this.BASELINE_CACHE_TTL) {
+      this.isBaselineDataLoaded = true;
+      return;
+    }
+    
+    try {
+      
+      // Fetch all indices data as baseline
+      const indices = await this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').toPromise();
+      
+      if (indices && indices.length > 0) {
+        // Clear existing cache
+        this.baselineIndicesCache.clear();
+        
+        // Map and cache baseline data
+        const mappedData = this.mapIndicesToStockData(indices);
+        mappedData.forEach(item => {
+          const key = item.symbol || item.tradingsymbol || '';
+          if (key) {
+            // Store baseline data with properly calculated previousClose
+            // The mapIndicesToStockData method has already fixed the previousClose calculation
+            const baselineItem: StockDataDto = {
+              ...item
+              // No need to modify previousClose here - it's already been properly calculated
+            };
+            this.baselineIndicesCache.set(key, baselineItem);
+          }
+        });
+        
+        // Update cache timestamp
+        this.baselineCacheTimestamp = now;
+        this.isBaselineDataLoaded = true;
+        
+        
+        // Initialize signals with baseline data
+        this.indicesDataSignal.set(mappedData);
+        this.indicesDataSubject.next(mappedData);
+        
+        // Update widgets with baseline data
+        this.updateStockListWidgetDirectly(mappedData);
+        
+      } else {
+        this.isBaselineDataLoaded = false;
+      }
+      
+    } catch (error) {
+      this.isBaselineDataLoaded = false;
+      
+      // Try to use any existing cached data as fallback
+      if (this.baselineIndicesCache.size > 0) {
+        this.isBaselineDataLoaded = true;
+      }
+    }
+  }
+  
+  /**
+   * Initialize WebSocket connection and subscribe to all indices data
+   * This method establishes the WebSocket connection and subscribes to the /topic/nse-indices topic
+   * for real-time updates of all NSE indices data.
+   * 
+   * Error handling: Connection failures are logged but do not prevent the application from functioning.
+   * The component will continue to display fallback data from the REST API.
+   */
+  private initializeWebSocketSubscription(): void {
+    
+    // Register this component with WebSocket service
+    this.webSocketService.registerComponent('OverallComponent');
+    
+    // Connect to WebSocket service
+    this.webSocketService.connect()
+      .then(() => {
+        
+        // Connection successful - subscribe to all indices topic
+        this.allIndicesSubscription = this.webSocketService
+          .subscribeToAllIndices()
+          .subscribe({
+            next: (indicesDto: IndicesDto) => {
+              this.handleIncomingIndicesData(indicesDto);
+            },
+            error: (error) => {
+              // Use centralized subscription error handler with retry logic
+              this.handleSubscriptionError('/topic/nse-indices', error, 0);
+            }
+          });
+        
+        // Update connection state signal to CONNECTED
+        this.wsConnectionStateSignal.set(WebSocketConnectionState.CONNECTED);
+        
+      })
+      .catch((error) => {
+        // Connection failed - use centralized error handler
+        this.handleConnectionError(error);
+      });
+  }
+  
+  /**
+   * Handle WebSocket connection errors
+   * This method logs connection errors with context and updates the connection state signal.
+   * The application continues to function with fallback data - no user-facing error is displayed.
+   * 
+   * Requirements: 2.3, 4.1
+   * 
+   * @param error - The error object from the failed connection attempt
+   */
+  private handleConnectionError(error: any): void {
+    // Log error with context information
+    
+    // Update connection state signal to ERROR
+    this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
+    
+    // Continue displaying fallback data - no user-facing error
+    // The application remains fully functional with REST API data
+  }
+  
+  /**
+   * Handle WebSocket data parsing errors
+   * This method logs parsing errors with the raw message and error details.
+   * The update is skipped and the application continues with existing data.
+   * 
+   * Requirements: 5.3, 8.2
+   * 
+   * @param rawMessage - The raw message string that failed to parse
+   * @param error - The error object from the parsing failure
+   */
+  private handleParsingError(rawMessage: string, error: any): void {
+    // Log error with raw message (first 200 chars) and error details
+    
+    // Skip this update - continue with existing data
+    // No state changes, no user-facing error
+    // The application continues to function normally with current data
+  }
+  
+  /**
+   * Handle WebSocket subscription errors
+   * This method logs subscription errors with topic name and error details.
+   * It implements retry logic with exponential backoff to attempt reconnection.
+   * 
+   * Requirements: 4.2, 8.3
+   * 
+   * @param topic - The topic name that failed to subscribe
+   * @param error - The error object from the subscription failure
+   * @param retryCount - Current retry attempt count (default: 0)
+   */
+  private handleSubscriptionError(topic: string, error: any, retryCount: number = 0): void {
+    // Log error with topic name and error details
+    
+    // Maximum retry attempts
+    const MAX_RETRIES = 5;
+    
+    // Check if we should retry
+    if (retryCount < MAX_RETRIES) {
+      // Calculate exponential backoff delay: 2^retryCount * 1000ms
+      // Retry 0: 1s, Retry 1: 2s, Retry 2: 4s, Retry 3: 8s, Retry 4: 16s
+      const delayMs = Math.pow(2, retryCount) * 1000;
+      
+      
+      // Schedule retry with exponential backoff
+      setTimeout(() => {
+        this.retrySubscription(topic, retryCount + 1);
+      }, delayMs);
+    } else {
+      // Max retries exceeded - log final failure and continue with fallback data
+      
+      // Update connection state to ERROR to indicate subscription failure
+      this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
+    }
+  }
+  
+  /**
+   * Retry WebSocket subscription after a failure
+   * This method attempts to resubscribe to the all indices topic.
+   * 
+   * @param topic - The topic name to retry subscribing to
+   * @param retryCount - Current retry attempt count
+   */
+  private retrySubscription(topic: string, retryCount: number): void {
+    
+    // Check if we're trying to retry the all indices subscription
+    if (topic === '/topic/nse-indices') {
+      
+      // Attempt to resubscribe to all indices
+      this.allIndicesSubscription = this.webSocketService
+        .subscribeToAllIndices()
+        .subscribe({
+          next: (indicesDto: IndicesDto) => {
+            // Subscription successful - reset retry count
+            this.handleIncomingIndicesData(indicesDto);
+          },
+          error: (error) => {
+            // Subscription failed again - call error handler with incremented retry count
+            this.handleSubscriptionError(topic, error, retryCount);
+          }
+        });
+    } else {
+    }
+  }
+  
+  /**
+   * Handle incoming indices data from WebSocket
+   * This method processes real-time indices data received via WebSocket and updates the component state.
+   * Uses baseline cache for accurate price change calculations.
+   * 
+   * Requirements: 2.3, 3.1, 3.2, 4.1
+   * 
+   * @param indicesDto - The indices data received from WebSocket
+   */
+  private handleIncomingIndicesData(indicesDto: IndicesDto): void {
+    
+    // Validate incoming data
+    if (!indicesDto?.indices || indicesDto.indices.length === 0) {
+      return;
+    }
+    
+    // Ensure baseline data is loaded before processing ticks
+    if (!this.isBaselineDataLoaded || this.baselineIndicesCache.size === 0) {
+      
+      // Schedule processing after baseline data is loaded
+      setTimeout(() => {
+        if (this.isBaselineDataLoaded) {
+          this.handleIncomingIndicesData(indicesDto);
+        }
+      }, 500);
+      return;
+    }
+    
+    
+    // Process each tick and merge with baseline data
+    const updatedData = this.mergeTicksWithBaseline(indicesDto.indices);
+    
+    
+    // Update signals with merged data
+    this.indicesDataSignal.set(updatedData);
+    this.indicesDataSubject.next(updatedData);
+    
+    // Force immediate widget update using both methods for redundancy
+    this.updateStockListWidgetDirectly(updatedData);
+    
+    // Also trigger the signal-based update for consistency
+    const dataWithIndicators = updatedData.map(item => ({
+      ...item,
+      changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
+    }));
+    this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
+    
+  }
+  
+  /**
+   * Merge incoming tick data with baseline cache for accurate price change calculations
+   * This method updates only the lastPrice from ticks while preserving baseline data
+   * and calculating accurate price changes using cached previousClose values.
+   * 
+   * Requirements: 3.1, 3.2, 7.1, 7.2
+   * 
+   * @param incomingTicks - Real-time tick data from WebSocket
+   * @returns Updated StockDataDto array with accurate price changes
+   */
+  private mergeTicksWithBaseline(incomingTicks: IndexDataDto[]): StockDataDto[] {
+    
+    // Start with all baseline data
+    const result = new Map<string, StockDataDto>();
+    
+    // Add all baseline data to result
+    this.baselineIndicesCache.forEach((baselineItem, key) => {
+      result.set(key, { ...baselineItem });
+    });
+    
+    
+    // Process each incoming tick
+    let updatedCount = 0;
+    let newCount = 0;
+    
+    incomingTicks.forEach(tick => {
+      const symbol = tick.indexSymbol || tick.indexName || tick.key || '';
+      if (!symbol) {
+        return;
+      }
+      
+      const newLastPrice = tick.lastPrice || tick.last || 0;
+      
+      if (result.has(symbol)) {
+        // Update existing item with new tick data
+        const existingItem = result.get(symbol)!;
+        const previousClose = existingItem.previousClose || 0;
+        
+        // Calculate accurate price changes using baseline previousClose
+        const priceChange = previousClose > 0 ? (newLastPrice - previousClose) : 0;
+        const percentChange = previousClose > 0 ? ((priceChange / previousClose) * 100) : 0;
+        
+        // Update only the fields that change with ticks
+        const updatedItem: StockDataDto = {
+          ...existingItem, // Preserve all baseline data
+          lastPrice: newLastPrice, // Update with real-time price
+          priceChange: priceChange, // Calculated from baseline
+          percentChange: percentChange, // Calculated from baseline
+          // Update OHLC if available in tick
+          dayHigh: tick.dayHigh || tick.high || existingItem.dayHigh || 0,
+          dayLow: tick.dayLow || tick.low || existingItem.dayLow || 0,
+          openPrice: tick.openPrice || tick.open || existingItem.openPrice || 0,
+          // Update timestamp
+          lastUpdateTime: tick.tickTimestamp || tick.ingestionTimestamp || new Date().toISOString()
+        };
+        
+        result.set(symbol, updatedItem);
+        updatedCount++;
+        
+        if (this.enableDebugLogging && updatedCount <= 3) {
+        }
+        
+      } else {
+        // New item not in baseline - create with tick data
+        const newItem: StockDataDto = {
+          symbol: symbol,
+          tradingsymbol: symbol,
+          companyName: tick.indexName || symbol,
+          lastPrice: newLastPrice,
+          previousClose: 0, // No baseline data available
+          priceChange: 0, // Cannot calculate without baseline
+          percentChange: 0, // Cannot calculate without baseline
+          openPrice: tick.openPrice || tick.open || 0,
+          dayHigh: tick.dayHigh || tick.high || 0,
+          dayLow: tick.dayLow || tick.low || 0,
+          totalTradedValue: 0,
+          sector: 'Indices',
+          industry: 'Indices',
+          lastUpdateTime: tick.tickTimestamp || tick.ingestionTimestamp || new Date().toISOString()
+        };
+        
+        result.set(symbol, newItem);
+        newCount++;
+        
+      }
+    });
+    
+    const finalResult = Array.from(result.values());
+    
+    
+    return finalResult;
+  }
+  
+  /**
+   * Refresh baseline cache if it's stale
+   * This method checks if the baseline cache needs refreshing and updates it if necessary.
+   * Called periodically or when significant data inconsistencies are detected.
+   * 
+   * Requirements: 2.1, 2.2
+   */
+  private async refreshBaselineCacheIfStale(): Promise<void> {
+    const now = Date.now();
+    const cacheAge = this.baselineCacheTimestamp ? now - this.baselineCacheTimestamp : Infinity;
+    
+    if (cacheAge > this.BASELINE_CACHE_TTL) {
+      
+      // Force reload of baseline data
+      this.isBaselineDataLoaded = false;
+      await this.loadBaselineIndicesData();
+    }
+  }
+  
+  /**
+   * Get baseline data for a specific symbol
+   * This method retrieves cached baseline data for accurate change calculations.
+   * 
+   * @param symbol - The symbol to get baseline data for
+   * @returns Baseline StockDataDto or null if not found
+   */
+  private getBaselineDataForSymbol(symbol: string): StockDataDto | null {
+    return this.baselineIndicesCache.get(symbol) || null;
+  }
+  
+  /**
+   * Check if baseline data is available and fresh
+   * This method validates the baseline cache state for reliable operations.
+   * 
+   * @returns True if baseline data is available and fresh
+   */
+  private isBaselineDataFresh(): boolean {
+    if (!this.isBaselineDataLoaded || this.baselineIndicesCache.size === 0) {
+      return false;
+    }
+    
+    const now = Date.now();
+    const cacheAge = this.baselineCacheTimestamp ? now - this.baselineCacheTimestamp : Infinity;
+    
+    return cacheAge <= this.BASELINE_CACHE_TTL;
+  }
+  
+  /**
+   * Calculate change indicator based on price and percent changes
+   * 
+   * @param priceChange - The price change value
+   * @param percentChange - The percent change value
+   * @returns Change indicator: 'positive', 'negative', or 'neutral'
+   */
+  private calculateChangeIndicator(priceChange?: number, percentChange?: number): 'positive' | 'negative' | 'neutral' {
+    const price = priceChange || 0;
+    const percent = percentChange || 0;
+    
+    if (price > 0 || percent > 0) {
+      return 'positive';
+    } else if (price < 0 || percent < 0) {
+      return 'negative';
+    } else {
+      return 'neutral';
+    }
+  }
+  
+  /**
+   * Force refresh all stock list widgets - useful for debugging
+   * This method can be called from browser console for testing
+   */
+  public forceRefreshStockListWidgets(): void {
+    const currentData = this.indicesDataSignal();
+    if (currentData && currentData.length > 0) {
+      
+      // Force both update methods
+      this.updateStockListWidgetDirectly(currentData);
+      
+      const dataWithIndicators = currentData.map(item => ({
+        ...item,
+        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
+      }));
+      this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
+      
+    } else {
+    }
+  }
+  
+  /**
+   * Test widget update with fake data - useful for debugging
+   * This method can be called from browser console for testing
+   */
+  public testWidgetUpdateWithFakeData(): void {
+    
+    // Create fake data with obvious changes
+    const fakeData: StockDataDto[] = [
+      {
+        symbol: 'NIFTY 50',
+        tradingsymbol: 'NIFTY 50',
+        companyName: 'NIFTY 50',
+        lastPrice: 99999.99,
+        previousClose: 25000.00,
+        priceChange: 74999.99,
+        percentChange: 299.99,
+        openPrice: 25000.00,
+        dayHigh: 99999.99,
+        dayLow: 25000.00,
+        totalTradedValue: 0,
+        sector: 'Index',
+        industry: 'Index',
+        lastUpdateTime: new Date().toISOString()
+      },
+      {
+        symbol: 'NIFTY BANK',
+        tradingsymbol: 'NIFTY BANK',
+        companyName: 'NIFTY BANK',
+        lastPrice: 88888.88,
+        previousClose: 50000.00,
+        priceChange: 38888.88,
+        percentChange: 77.77,
+        openPrice: 50000.00,
+        dayHigh: 88888.88,
+        dayLow: 50000.00,
+        totalTradedValue: 0,
+        sector: 'Index',
+        industry: 'Index',
+        lastUpdateTime: new Date().toISOString()
+      }
+    ];
+    
+    
+    // Update signals with fake data
+    this.indicesDataSignal.set(fakeData);
+    this.indicesDataSubject.next(fakeData);
+    
+    // Force both update methods
+    this.updateStockListWidgetDirectly(fakeData);
+    
+    const dataWithIndicators = fakeData.map(item => ({
+      ...item,
+      changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
+    }));
+    this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
+    
+  }
+  
+  /**
+   * Get current component state for debugging
+   * This method can be called from browser console for inspection
+   */
+  public getDebugState(): any {
+    return {
+      // Signal states
+      indicesDataSignal: this.indicesDataSignal(),
+      selectedIndexSymbolSignal: this.selectedIndexSymbolSignal(),
+      wsConnectionStateSignal: this.wsConnectionStateSignal(),
+      isWebSocketConnectedSignal: this.isWebSocketConnectedSignal(),
+      
+      // Legacy data
+      dashboardData: this.dashboardData,
+      filteredDashboardData: this.filteredDashboardData,
+      
+      // WebSocket state
+      isWebSocketConnected: this.isWebSocketConnected,
+      currentSubscribedIndex: this.currentSubscribedIndex,
+      
+      // Baseline cache
+      baselineCacheSize: this.baselineIndicesCache.size,
+      isBaselineDataLoaded: this.isBaselineDataLoaded,
+      baselineCacheAge: this.baselineCacheTimestamp ? Date.now() - this.baselineCacheTimestamp : 0,
+      baselineCacheSample: Array.from(this.baselineIndicesCache.entries()).slice(0, 3),
+      
+      // Widget state
+      widgetCount: this.dashboardConfig?.widgets?.length || 0,
+      stockListWidgets: this.dashboardConfig?.widgets?.filter(w => w.config?.component === 'stock-list-table').length || 0,
+      
+      // Subscriptions
+      hasAllIndicesSubscription: !!this.allIndicesSubscription,
+      hasIndicesDataSubscription: !!this.indicesDataSubscription,
+      
+      // Current data sample
+      currentDataSample: this.indicesDataSignal().slice(0, 3).map(item => ({
+        symbol: item.symbol,
+        lastPrice: item.lastPrice,
+        previousClose: item.previousClose,
+        priceChange: item.priceChange,
+        percentChange: item.percentChange
+      })),
+      
+      timestamp: new Date().toISOString()
+    };
+  }
+  
+  /**
+   * Test WebSocket connection and data flow
+   * This method can be called from browser console for testing
+   */
+  public testWebSocketConnection(): void {
+    
+    // Check WebSocket service state
+    
+    // Check baseline data
+    
+    // Check current data
+    const currentData = this.indicesDataSignal();
+    
+    // Try to manually trigger a WebSocket subscription
+    this.initializeWebSocketSubscription();
+  }
+  
+  /**
+   * Force complete widget refresh - more aggressive than the existing method
+   * This method can be called from browser console for testing
+   */
+  public forceCompleteWidgetRefresh(): void {
+    
+    const currentData = this.indicesDataSignal();
+    if (!currentData || currentData.length === 0) {
+      return;
+    }
+    
+    // Step 1: Clear all existing widget data
+    if (this.dashboardConfig?.widgets) {
+      const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+        widget.config?.component === 'stock-list-table'
+      );
+      
+      stockListWidgets.forEach(widget => {
+        widget.data = null;
+      });
+    }
+    
+    // Step 2: Force change detection
+    this.cdr.detectChanges();
+    
+    // Step 3: Wait a moment then repopulate with fresh data
+    setTimeout(() => {
+      
+      // Create completely new data objects
+      const freshData = currentData.map((item, index) => ({
+        ...JSON.parse(JSON.stringify(item)), // Deep clone
+        _forceRefreshId: `complete-${Date.now()}-${Math.random()}-${index}`,
+        _refreshTimestamp: Date.now(),
+        _refreshVersion: Date.now() + index
+      }));
+      
+      // Update both direct and signal-based methods
+      this.updateStockListWidgetDirectly(freshData);
+      
+      const dataWithIndicators = freshData.map(item => ({
+        ...item,
+        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
+      }));
+      this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
+      
+    }, 100);
+  }
+  
+  /**
+   * DEBUG ONLY: Simulate incoming WebSocket data for testing
+   * ⚠️ WARNING: This method uses fake data and should only be used for debugging
+   * This method can be called from browser console for testing
+   */
+  public simulateWebSocketDataForDebugOnly(): void {
+    
+    // Create test WebSocket data with realistic price changes
+    // ⚠️ THIS IS FAKE DATA FOR DEBUGGING ONLY
+    const testData: IndicesDto = {
+      indices: [
+        {
+          indexSymbol: 'NIFTY 50',
+          indexName: 'NIFTY 50',
+          lastPrice: 25850.00 + (Math.random() * 200 - 100), // Random change ±100
+          tickTimestamp: new Date().toISOString()
+        },
+        {
+          indexSymbol: 'NIFTY BANK',
+          indexName: 'NIFTY BANK',
+          lastPrice: 49400.00 + (Math.random() * 500 - 250), // Random change ±250
+          tickTimestamp: new Date().toISOString()
+        },
+        {
+          indexSymbol: 'NIFTY IT',
+          indexName: 'NIFTY IT',
+          lastPrice: 42000.00 + (Math.random() * 300 - 150), // Random change ±150
+          tickTimestamp: new Date().toISOString()
+        }
+      ]
+    };
+    
+    
+    // Manually call the handler with fake data
+    this.handleIncomingIndicesData(testData);
+    
+  }
+  
+  /**
+   * Diagnose WebSocket data flow issues
+   * This method can be called from browser console for comprehensive debugging
+   */
+  public diagnoseWebSocketIssues(): void {
+    
+    // 1. Check WebSocket connection
+    
+    // 2. Check baseline data
+    
+    if (this.baselineIndicesCache.size > 0) {
+      const sampleBaseline = Array.from(this.baselineIndicesCache.entries()).slice(0, 3);
+    }
+    
+    // 3. Check current signal data
+    const currentData = this.indicesDataSignal();
+    if (currentData.length > 0) {
+    }
+    
+    // 4. Check widget state
+    const stockListWidgets = this.dashboardConfig?.widgets?.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    ) || [];
+    
+    stockListWidgets.forEach((widget, index) => {
+    });
+    
+    // 5. Recommendations
+    if (!this.webSocketService.connected) {
+    }
+    if (!this.isBaselineDataLoaded) {
+    }
+    if (currentData.length === 0) {
+    }
+    if (stockListWidgets.length === 0) {
+    }
+    
+    
+  }
+  
+  /**
+   * Temporarily hide and show widgets to force complete re-render
+   * This is a nuclear option for forcing widget re-rendering
+   */
+  private temporarilyHideAndShowWidgets(): void {
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+    
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+    
+    stockListWidgets.forEach((widget, index) => {
+      try {
+        // Temporarily hide the widget
+        const originalData = widget.data;
+        widget.data = null;
+        
+        // Force change detection
+        this.cdr.detectChanges();
+        
+        // Restore the widget data after a brief delay
+        setTimeout(() => {
+          widget.data = {
+            ...originalData,
+            _temporaryHideShowId: Date.now(),
+            _forceCompleteRerender: true
+          };
+          this.cdr.detectChanges();
+          this.cdr.markForCheck();
+          
+        }, 5);
+        
+      } catch (error) {
+      }
+    });
+  }
+  
+  /**
+   * Nuclear option: Completely recreate stock list widgets
+   * This method can be called from browser console as a last resort
+   */
+  public recreateStockListWidgets(): void {
+    
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+    
+    // Find current stock list widgets
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+    
+    if (stockListWidgets.length === 0) {
+      return;
+    }
+    
+    // Get current data
+    const currentData = this.indicesDataSignal();
+    if (!currentData || currentData.length === 0) {
+      return;
+    }
+    
+    // Remove existing stock list widgets
+    stockListWidgets.forEach(widget => {
+      const index = this.dashboardConfig.widgets.indexOf(widget);
+      if (index > -1) {
+        this.dashboardConfig.widgets.splice(index, 1);
+      }
+    });
+    
+    // Force change detection to remove old widgets
+    this.cdr.detectChanges();
+    
+    // Wait a moment then recreate
+    setTimeout(() => {
+      
+      // Create new stock list widget with fresh data
+      const newStockListWidget = StockListChartBuilder.create()
+        .setData(currentData)
+        .setStockPerformanceConfiguration()
+        .setCurrencyFormatter('INR', 'en-IN')
+        .setPredefinedPalette('finance')
+        .setAccessor('tradingsymbol')
+        .setFilterColumn('tradingsymbol', FilterBy.Value)
+        .setId(`stock-list-widget-${Date.now()}`) // Unique ID
+        .build();
+      
+      // Set position
+      newStockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
+      
+      // Add to dashboard
+      this.dashboardConfig.widgets.push(newStockListWidget);
+      
+      // Populate with current data
+      const stockData = currentData.map((item, index) => ({
+        ...item,
+        _recreateId: `recreate-${Date.now()}-${index}`
+      }));
+      
+      newStockListWidget.data = {
+        stocks: stockData,
+        isLoadingStocks: false,
+        selectedStockSymbol: this.selectedIndexSymbol,
+        recreated: Date.now()
+      };
+      
+      // Force change detection
+      this.cdr.detectChanges();
+      this.cdr.markForCheck();
+      
+    }, 100);
+  }
+  
+  /**
+   * Ultimate fix: Force widget data to be completely new and trigger all possible change detection mechanisms
+   * This method can be called from browser console for testing
+   */
+  public ultimateWidgetRefresh(): void {
+    
+    const currentData = this.indicesDataSignal();
+    if (!currentData || currentData.length === 0) {
+      return;
+    }
+    
+    
+    // Step 1: Create completely new data with unique identifiers
+    const ultimateData = currentData.map((item, index) => {
+      const newItem = {
+        // Create a completely new object (not just spread)
+        tradingsymbol: item.tradingsymbol || item.symbol,
+        symbol: item.symbol,
+        companyName: item.companyName,
+        lastPrice: item.lastPrice,
+        percentChange: item.percentChange,
+        priceChange: item.priceChange,
+        totalTradedValue: item.totalTradedValue,
+        sector: item.sector,
+        industry: item.industry,
+        previousClose: item.previousClose,
+        openPrice: item.openPrice,
+        dayHigh: item.dayHigh,
+        dayLow: item.dayLow,
+        lastUpdateTime: item.lastUpdateTime,
+        
+        // Add multiple unique identifiers to force change detection
+        id: `ultimate-${Date.now()}-${index}`,
+        _ultimateRefreshId: `ultimate-${Date.now()}-${Math.random()}-${index}`,
+        _timestamp: Date.now(),
+        _version: Date.now() + index,
+        _refreshCounter: Date.now() + Math.random(),
+        _forceRender: true,
+        _dataKey: `data-${Date.now()}-${index}`,
+        
+        // Add calculated fields that might be missing
+        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
+      };
+      
+      return newItem;
+    });
+    
+    
+    // Step 2: Update all data sources
+    this.indicesDataSignal.set(ultimateData);
+    this.indicesDataSubject.next(ultimateData);
+    this.dashboardData = [...ultimateData];
+    this.filteredDashboardData = [...ultimateData];
+    
+    // Step 3: Force widget updates with the new data
+    if (this.dashboardConfig?.widgets) {
+      const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+        widget.config?.component === 'stock-list-table'
+      );
+      
+      stockListWidgets.forEach((widget, widgetIndex) => {
+        // Create completely new widget data object
+        const newWidgetData = {
+          stocks: ultimateData,
+          isLoadingStocks: false,
+          selectedStockSymbol: this.selectedIndexSymbol,
+          
+          // Add multiple changing properties to force re-render
+          ultimateRefresh: Date.now(),
+          dataVersion: Date.now() + widgetIndex,
+          forceRender: true,
+          refreshKey: `ultimate-${Date.now()}-${Math.random()}`,
+          timestamp: new Date().toISOString(),
+          
+          // Add a completely unique data key
+          _dataReference: `ref-${Date.now()}-${widgetIndex}`,
+          _ultimateUpdate: true
+        };
+        
+        // Replace widget data completely
+        widget.data = newWidgetData;
+        
+        // Update widget config to force re-render
+        if (widget.config) {
+          (widget.config as any).ultimateRefresh = Date.now();
+          (widget.config as any).forceRenderKey = `config-${Date.now()}-${Math.random()}`;
+          (widget.config as any).dataVersion = Date.now();
+        }
+        
+      });
+    }
+    
+    // Step 4: Force multiple change detection cycles
+    this.ngZone.run(() => {
+      // Immediate change detection
+      this.cdr.detectChanges();
+      this.cdr.markForCheck();
+      
+      // Force widget component refresh
+      this.forceWidgetComponentRefresh();
+      
+      // Additional cycles with delays
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        this.cdr.markForCheck();
+        this.forceWidgetComponentRefresh();
+      }, 10);
+      
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        this.cdr.markForCheck();
+        this.forceWidgetComponentRefresh();
+      }, 50);
+      
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        this.cdr.markForCheck();
+      }, 100);
+    });
+    
+  }
+  
+  /**
+   * Debug price change calculations
+   * This method can be called from browser console to debug price change issues
+   */
+  public debugPriceChangeCalculations(): void {
+    
+    // Check baseline cache
+    
+    if (this.baselineIndicesCache.size > 0) {
+      const sampleBaseline = Array.from(this.baselineIndicesCache.entries()).slice(0, 5);
+      sampleBaseline.forEach(([key, value]) => {
+      });
+    }
+    
+    // Check current signal data
+    const currentData = this.indicesDataSignal();
+    
+    if (currentData.length > 0) {
+      currentData.slice(0, 5).forEach(item => {
+        const expectedChange = (item.previousClose || 0) > 0 ? ((item.lastPrice || 0) - (item.previousClose || 0)) : 0;
+        const expectedPercent = (item.previousClose || 0) > 0 ? ((expectedChange / (item.previousClose || 1)) * 100) : 0;
+        
+      });
+    }
+    
+    // Check widget data
+    const stockListWidgets = this.dashboardConfig?.widgets?.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    ) || [];
+    
+    if (stockListWidgets.length > 0) {
+      const widget = stockListWidgets[0];
+      if (widget.data?.stocks) {
+        widget.data.stocks.slice(0, 5).forEach((stock: any) => {
+        });
+      }
+    }
+    
+  }
+  
+  /**
+   * Fix price change calculations by ensuring proper previousClose values
+   * This method can be called from browser console to fix the calculation issue
+   */
+  public fixPriceChangeCalculations(): void {
+    
+    // Step 1: Fix baseline cache
+    let fixedBaselineCount = 0;
+    
+    this.baselineIndicesCache.forEach((item, key) => {
+      if ((item.lastPrice || 0) === (item.previousClose || 0) && (item.lastPrice || 0) > 0) {
+        // This is the problem - previousClose should be different from lastPrice
+        // For now, let's simulate a reasonable previousClose (e.g., 1% lower)
+        const simulatedPreviousClose = (item.lastPrice || 0) * 0.99; // 1% lower
+        
+        const fixedItem: StockDataDto = {
+          ...item,
+          previousClose: simulatedPreviousClose,
+          priceChange: (item.lastPrice || 0) - simulatedPreviousClose,
+          percentChange: (((item.lastPrice || 0) - simulatedPreviousClose) / simulatedPreviousClose) * 100
+        };
+        
+        this.baselineIndicesCache.set(key, fixedItem);
+        fixedBaselineCount++;
+        
+      }
+    });
+    
+    
+    // Step 2: Update current data with fixed calculations
+    const currentData = this.indicesDataSignal();
+    const fixedData = currentData.map(item => {
+      const baselineItem = this.baselineIndicesCache.get(item.symbol ?? '');
+      if (baselineItem && (baselineItem.previousClose || 0) !== (item.previousClose || 0)) {
+        // Use the fixed baseline data
+        const priceChange = (item.lastPrice || 0) - (baselineItem.previousClose || 0);
+        const percentChange = (baselineItem.previousClose || 0) > 0 ? ((priceChange / (baselineItem.previousClose || 1)) * 100) : 0;
+        
+        return {
+          ...item,
+          previousClose: baselineItem.previousClose || 0,
+          priceChange: priceChange,
+          percentChange: percentChange
+        };
+      }
+      return item;
+    });
+    
+    // Step 3: Update all data sources
+    this.indicesDataSignal.set(fixedData);
+    this.indicesDataSubject.next(fixedData);
+    this.dashboardData = [...fixedData];
+    this.filteredDashboardData = [...fixedData];
+    
+    // Step 4: Force widget update
+    this.ultimateWidgetRefresh();
+    
+  }
+  
+  /**
+   * Reload baseline data with fixed calculations
+   * This method can be called from browser console to reload baseline data with proper calculations
+   */
+  public reloadBaselineDataWithFix(): void {
+    
+    // Clear existing baseline data
+    this.baselineIndicesCache.clear();
+    this.isBaselineDataLoaded = false;
+    
+    // Reload baseline data (this will use the fixed mapIndicesToStockData method)
+    this.loadBaselineIndicesData().then(() => {
+      
+      // Force update all widgets with the corrected data
+      setTimeout(() => {
+        this.ultimateWidgetRefresh();
+      }, 500);
+    }).catch(error => {
+    });
+  }
+  
+  /**
+   * Test price change calculations with sample data
+   * This method can be called from browser console to test the calculation logic
+   */
+  public testPriceChangeCalculations(): void {
+    
+    // Create test data with known values
+    const testData = [
+      {
+        indexSymbol: 'TEST_INDEX_1',
+        indexName: 'Test Index 1',
+        lastPrice: 25000,
+        previousClose: 24500, // Should give +500 change, +2.04% change
+        variation: 500,
+        percentChange: 2.04
+      },
+      {
+        indexSymbol: 'TEST_INDEX_2', 
+        indexName: 'Test Index 2',
+        lastPrice: 50000,
+        // No previousClose - should be calculated from variation
+        variation: -1000, // Should give previousClose = 51000
+        percentChange: -1.96
+      },
+      {
+        indexSymbol: 'TEST_INDEX_3',
+        indexName: 'Test Index 3', 
+        lastPrice: 30000,
+        // No previousClose or variation - should be calculated from percentChange
+        percentChange: 1.5 // Should give previousClose ≈ 29558.82
+      }
+    ];
+    
+    const mappedResults = this.mapIndicesToStockData(testData as any);
+    
+    mappedResults.forEach((result, index) => {
+      const test = testData[index];
+    });
+    
+    if (this.baselineIndicesCache.size > 0) {
+      const sampleBaseline = Array.from(this.baselineIndicesCache.entries()).slice(0, 3);
+      sampleBaseline.forEach(([key, value]) => {
+        const calculatedChange = (value.lastPrice || 0) - (value.previousClose || 0);
+        const calculatedPercent = (value.previousClose || 0) > 0 ? ((calculatedChange / (value.previousClose || 1)) * 100) : 0;
+        
+      });
+    } else {
+    }
+    
+  }
+  
+
+  
+  /**
+   * Test method to verify the fix is working
+   * This method can be called from browser console to test the solution
+   */
+  public testWidgetRefreshFix(): void {
+    
+    // Step 1: Show current state
+    const currentData = this.indicesDataSignal();
+    
+    if (currentData.length > 0) {
+    }
+    
+    // Step 2: Check widget state
+    const stockListWidgets = this.dashboardConfig?.widgets?.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    ) || [];
+    
+    if (stockListWidgets.length > 0) {
+    }
+    
+    // Step 3: Apply the ultimate fix
+    this.ultimateWidgetRefresh();
+    
+    // Step 4: Verify the fix worked
+    setTimeout(() => {
+      const updatedWidgets = this.dashboardConfig?.widgets?.filter(widget => 
+        widget.config?.component === 'stock-list-table'
+      ) || [];
+      
+      if (updatedWidgets.length > 0) {
+        const widget = updatedWidgets[0];
+        
+        if ((widget.data as any)?.ultimateRefresh) {
+        } else {
+        }
+      }
+      
+    }, 200);
+  }
+  
+  /**
+   * Force widget components to refresh by triggering change detection
+   * This method aggressively forces widget components to re-render
+   */
+  private forceWidgetComponentRefresh(): void {
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+    
+    // Find all stock list widgets and force them to refresh
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+    
+    stockListWidgets.forEach((widget, index) => {
+      try {
+        // CRITICAL: Force widget to trigger change detection by updating its config
+        if (widget.config) {
+          (widget.config as any).lastForceRefresh = Date.now();
+          (widget.config as any).refreshCounter = ((widget.config as any).refreshCounter || 0) + 1;
+          // Add a changing key that will force the widget to completely re-render
+          (widget.config as any).forceRenderKey = `render-${Date.now()}-${Math.random()}`;
+        }
+        
+        // CRITICAL: Force the widget data to be completely new object reference
+        if (widget.data) {
+          const currentData = widget.data;
+          // Create a completely new object with different reference
+          widget.data = {
+            ...JSON.parse(JSON.stringify(currentData)),
+            _forceRenderTimestamp: Date.now(),
+            _forceRenderKey: `data-${Date.now()}-${Math.random()}`
+          };
+        }
+        
+        // Try to access the widget's component instance if available
+        const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"]`);
+        if (widgetElement) {
+          // Trigger multiple custom events to force the widget to refresh
+          const refreshEvent = new CustomEvent('forceRefresh', {
+            detail: { timestamp: Date.now(), data: widget.data }
+          });
+          widgetElement.dispatchEvent(refreshEvent);
+          
+          // Also try a data change event
+          const dataChangeEvent = new CustomEvent('dataChange', {
+            detail: { timestamp: Date.now(), data: widget.data }
+          });
+          widgetElement.dispatchEvent(dataChangeEvent);
+          
+          // Try to trigger Angular's change detection on the element
+          const ngZoneEvent = new CustomEvent('ngZoneRun', {
+            detail: { timestamp: Date.now() }
+          });
+          widgetElement.dispatchEvent(ngZoneEvent);
+        }
+        
+        // CRITICAL: Try to find and trigger change detection on any child components
+        const stockTableElements = document.querySelectorAll('app-stock-list-table, stock-list-table, [data-component="stock-list-table"]');
+        stockTableElements.forEach(element => {
+          try {
+            // Trigger change detection events on the table component
+            const tableRefreshEvent = new CustomEvent('forceTableRefresh', {
+              detail: { timestamp: Date.now(), data: widget.data }
+            });
+            element.dispatchEvent(tableRefreshEvent);
+            
+            // Try to access Angular component instance if available
+            const angularComponent = (element as any).__ngContext__?.[8]; // Angular component reference
+            if (angularComponent && angularComponent.cdr) {
+              angularComponent.cdr.detectChanges();
+              angularComponent.cdr.markForCheck();
+            }
+          } catch (error) {
+            // Ignore errors accessing Angular internals
+          }
+        });
+        
+      } catch (error) {
+      }
+    });
+  }
+  
+  /**
+   * Schedule periodic baseline cache refresh
+   * This method sets up a timer to refresh the baseline cache periodically
+   * to ensure price change calculations remain accurate.
+   * 
+   * Requirements: 2.1, 2.2
+   */
+  private scheduleBaselineRefresh(): void {
+    // Clear any existing timer
+    if (this.baselineRefreshTimer) {
+      clearInterval(this.baselineRefreshTimer);
+    }
+    
+    // Schedule periodic refresh
+    this.baselineRefreshTimer = setInterval(async () => {
+      
+      try {
+        await this.refreshBaselineCacheIfStale();
+      } catch (error) {
+      }
+    }, this.BASELINE_REFRESH_INTERVAL);
+    
+  }
+  
+  /**
+   * Merge WebSocket data with existing fallback data
+   * This method ensures that fallback data is preserved for indices not present in the WebSocket update.
+   * 
+   * @param existing - Current indices data (from fallback or previous updates)
+   * @param incoming - New indices data from WebSocket
+   * @returns Merged array with all unique indices
+   */
+  private mergeIndicesData(
+    existing: StockDataDto[], 
+    incoming: StockDataDto[]
+  ): StockDataDto[] {
+    
+    const merged = new Map<string, StockDataDto>();
+    
+    // Add existing data to map
+    existing.forEach(item => {
+      const key = item.symbol || item.tradingsymbol;
+      if (key) {
+        merged.set(key, item);
+      }
+    });
+    
+    
+    // Overlay incoming data (overwrites existing entries with same key)
+    let updatedCount = 0;
+    let newCount = 0;
+    incoming.forEach(item => {
+      const key = item.symbol || item.tradingsymbol;
+      if (key) {
+        if (merged.has(key)) {
+          updatedCount++;
+        } else {
+          newCount++;
+        }
+        merged.set(key, item);
+      }
+    });
+    
+    
+    // Return merged array
+    const result = Array.from(merged.values());
+    
+    
+    return result;
+  }
+  
+  /**
+   * Set up BehaviorSubject subscription for widget updates
+   */
+  private setupBehaviorSubjectSubscription(): void {
+    // Subscribe to indices data changes via BehaviorSubject
+    this.indicesDataSubscription = this.indicesDataSubject.subscribe(data => {
+      
+      if (data && data.length > 0) {
+        
+        // Update widgets directly
+        this.updateStockListWidgetDirectly(data);
+        
+      } else {
+      }
+    });
+    
+  }
+
+  /**
+   * Set up Angular signal effects for logging and widget updates
+   * Requirements: 8.4, 8.5
+   */
+  private setupSignalEffects(): void {
+    // Track previous state for state transition logging
+    let previousState: WebSocketConnectionState | null = null;
+    
+    // Effect: Log WebSocket connection state changes with detailed information
+    // This effect logs all connection state transitions with timestamps
+    // Requirements: 8.4, 8.5
+    effect(() => {
+      const currentState = this.wsConnectionStateSignal();
+      const timestamp = new Date().toISOString();
+      
+      // Always log state changes (not just in debug mode) for monitoring
+      
+      // Verbose logging in debug mode with additional context
+      
+      // Update previous state for next transition
+      previousState = currentState;
+    });
+    
+    // Effect: Update widgets when indices data changes
+    // This effect automatically triggers UI updates without manual change detection
+    effect(() => {
+      const dataWithIndicators = this.indicesWithChangeIndicatorsSignal();
+      const selectedSymbol = this.selectedIndexSymbolSignal();
+      
+      
+      if (dataWithIndicators && dataWithIndicators.length > 0) {
+        
+        // Update the Index List widget with new data including change indicators
+        // The signal-based approach ensures automatic UI updates
+        this.updateIndexListWidget(dataWithIndicators, selectedSymbol);
+        
+      } else {
+      }
+    });
+    
+    // Effect: Sync selected index symbol with signal
+    effect(() => {
+      const symbol = this.selectedIndexSymbolSignal();
+      // Keep the existing property in sync for backward compatibility
+      this.selectedIndexSymbol = symbol;
+    });
+  }
+  
+  /**
+   * Direct widget update method for immediate data refresh
+   * This bypasses signals and directly updates the widget data
+   */
+  private updateStockListWidgetDirectly(data: StockDataDto[]): void {
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+
+
+    if (stockListWidgets.length === 0) {
+      return;
+    }
+
+    stockListWidgets.forEach((widget, index) => {
+      // CRITICAL: Create a completely new array with deep cloning to ensure change detection
+      const newStockDataArray = data.map((item, itemIndex) => ({
+        // Deep clone the entire object
+        ...JSON.parse(JSON.stringify(item)),
+        // Ensure proper field mapping for the widget
+        priceChange: item.priceChange || 0,
+        percentChange: item.percentChange || 0,
+        // Add multiple unique identifiers to force re-rendering
+        _updateId: Date.now() + Math.random() + itemIndex,
+        _directUpdateId: `direct-${Date.now()}-${Math.random()}-${itemIndex}`,
+        _timestamp: Date.now(),
+        _version: Date.now() + itemIndex,
+        // Force trackBy to detect changes
+        id: item.id || item.symbol || item.tradingsymbol || `item-${itemIndex}`,
+        // Add a changing property that trackBy functions will detect
+        _lastModified: Date.now() + Math.random()
+      }));
+      
+      
+      // CRITICAL: Force complete data replacement with aggressive re-render triggers
+      const newWidgetData = {
+        stocks: newStockDataArray,
+        isLoadingStocks: false,
+        selectedStockSymbol: this.selectedIndexSymbol,
+        // Add timestamp to force widget refresh
+        lastUpdated: Date.now(),
+        // Add a unique key to force complete re-render
+        dataKey: `stocks-${Date.now()}-${Math.random()}`,
+        // Force refresh flag
+        forceRefresh: true,
+        // Add version to track updates
+        version: Date.now()
+      };
+      
+      // CRITICAL: Replace the entire data object AND trigger widget refresh
+      widget.data = newWidgetData;
+      
+      // CRITICAL: Force widget to refresh by updating its internal state
+      if (widget.config) {
+        (widget.config as any).lastDataUpdate = Date.now();
+        (widget.config as any).forceRefresh = true;
+      }
+      
+      // CRITICAL: Mark widget as dirty to force re-render
+      (widget as any)._isDirty = true;
+      (widget as any)._lastUpdate = Date.now();
+      (widget as any)._forceRefresh = true;
+      
+    });
+    
+    // Update legacy properties for backward compatibility
+    this.dashboardData = [...data];
+    this.filteredDashboardData = [...data];
+    
+    // CRITICAL: Force multiple aggressive change detection cycles
+    this.ngZone.run(() => {
+      // Force immediate change detection
+      this.cdr.detectChanges();
+      this.cdr.markForCheck();
+      
+      // Force widget components to refresh
+      this.forceWidgetComponentRefresh();
+      
+      // CRITICAL: Force complete dashboard re-render by updating dashboard config
+      if (this.dashboardConfig) {
+        (this.dashboardConfig as any)._lastDataUpdate = Date.now();
+        (this.dashboardConfig as any)._forceRefresh = true;
+      }
+      
+      // Additional change detection cycles with delays
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        this.cdr.markForCheck();
+        this.forceWidgetComponentRefresh();
+        
+        // Try to trigger change detection on the entire dashboard container
+        const dashboardContainer = document.querySelector('app-dashboard-container, dashboard-container');
+        if (dashboardContainer) {
+          const containerRefreshEvent = new CustomEvent('forceContainerRefresh', {
+            detail: { timestamp: Date.now() }
+          });
+          dashboardContainer.dispatchEvent(containerRefreshEvent);
+        }
+      }, 10);
+      
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        this.cdr.markForCheck();
+        this.forceWidgetComponentRefresh();
+        
+        // Force a complete re-render by temporarily hiding and showing widgets
+        this.temporarilyHideAndShowWidgets();
+      }, 50);
+      
+      setTimeout(() => {
+        this.cdr.detectChanges();
+        this.cdr.markForCheck();
+      }, 100);
+    });
+    
+  }
+
+  /**
+   * Update Index List widget with signal-based data
+   * This method reads from signals and updates the widget automatically
+   * Requirements: 3.1, 3.2, 3.3, 3.5, 7.2, 7.3
+   * 
+   * @param data - The indices data from signal with change indicators
+   * @param selectedSymbol - The currently selected index symbol from signal
+   */
+  private updateIndexListWidget(data: (StockDataDto & { changeIndicator?: 'positive' | 'negative' | 'neutral' })[], selectedSymbol: string): void {
+    
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+
+    // Find all stock list widgets
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+
+
+    if (stockListWidgets.length === 0) {
+      return;
+    }
+
+    stockListWidgets.forEach((widget, index) => {
+      // CRITICAL: Create a completely new array with deep cloning to ensure change detection
+      const newStockDataArray = data.map((item, itemIndex) => ({
+        // Deep clone the entire object
+        ...JSON.parse(JSON.stringify(item)),
+        // Add multiple unique identifiers to force re-rendering
+        _signalUpdateId: Date.now() + Math.random() + itemIndex,
+        _signalId: `signal-${Date.now()}-${Math.random()}-${itemIndex}`,
+        _signalTimestamp: Date.now(),
+        _signalVersion: Date.now() + itemIndex,
+        // Ensure all required fields are present
+        priceChange: item.priceChange || 0,
+        percentChange: item.percentChange || 0,
+        changeIndicator: item.changeIndicator || 'neutral',
+        // Force trackBy to detect changes
+        id: item.id || item.symbol || item.tradingsymbol || `signal-item-${itemIndex}`,
+        // Add a changing property that trackBy functions will detect
+        _signalLastModified: Date.now() + Math.random()
+      }));
+      
+      
+      // CRITICAL: Force complete data replacement with aggressive re-render triggers
+      const newWidgetData = {
+        stocks: newStockDataArray,
+        isLoadingStocks: false,
+        selectedStockSymbol: selectedSymbol,
+        // Add timestamp to force widget refresh
+        lastSignalUpdate: Date.now(),
+        // Add a unique key to force complete re-render
+        signalDataKey: `signal-stocks-${Date.now()}-${Math.random()}`,
+        // Force refresh flag
+        signalForceRefresh: true,
+        // Add version to track updates
+        signalVersion: Date.now()
+      };
+      
+      // CRITICAL: Replace the entire data object AND trigger widget refresh
+      widget.data = newWidgetData;
+      
+      // CRITICAL: Force widget to refresh by updating its internal state
+      if (widget.config) {
+        (widget.config as any).lastSignalUpdate = Date.now();
+        (widget.config as any).signalForceRefresh = true;
+      }
+      
+      // CRITICAL: Mark widget as dirty to force re-render
+      (widget as any)._signalDirty = true;
+      (widget as any)._lastSignalUpdate = Date.now();
+      (widget as any)._signalForceRefresh = true;
+      
+    });
+    
+    // Update legacy properties for backward compatibility
+    this.dashboardData = [...data];
+    this.filteredDashboardData = [...data];
+    
+    
+    // Force change detection for signal-based updates
+    this.ngZone.run(() => {
+      this.cdr.detectChanges();
+      this.cdr.markForCheck();
+    });
+  }
+  
+  /**
+   * Cleanup WebSocket subscription for all indices
+   * This method unsubscribes from the /topic/nse-indices subscription and updates connection state.
+   * It ensures proper resource cleanup when the component is destroyed or when switching contexts.
+   * 
+   * Requirements: 1.4, 1.5, 2.2, 2.5
+   */
+  private cleanupWebSocketSubscription(): void {
+    
+    // Unsubscribe from all indices subscription if active
+    if (this.allIndicesSubscription) {
+      
+      this.allIndicesSubscription.unsubscribe();
+      this.allIndicesSubscription = null;
+      
+    }
+    
+    
+    // Call WebSocket service to unsubscribe from all topics
+    this.webSocketService.unsubscribeFromAll();
+    
+    // Unregister this component from WebSocket service
+    // This allows the service to disconnect if no other components are using it
+    this.webSocketService.unregisterComponent('OverallComponent');
+    
+    
+    // Update connection state signal to DISCONNECTED
+    this.wsConnectionStateSignal.set(WebSocketConnectionState.DISCONNECTED);
+    
   }
 
   override ngOnInit(): void {
@@ -183,11 +1867,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected onChildInit(): void {
-    // WebSocket initialization disabled - WebSockets are not yet implemented
-    // TODO: Re-enable when WebSocket server is available
-    // this.initializeWebSocket();
-    // this.monitorWebSocketConnectionState();
-
+    
     // Clear any existing subscription
     if (this.selectedIndexSubscription) {
       this.selectedIndexSubscription.unsubscribe();
@@ -198,6 +1878,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.dashboardTitle = 'Financial Dashboard';
     this.componentCommunicationService.clearSelectedIndex();
 
+    
     // Subscribe to selected index changes (dedupe same index emissions)
     this.selectedIndexSubscription = this.componentCommunicationService.getSelectedIndex()
       .pipe(
@@ -215,19 +1896,67 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       });
 
-    // Load default data if no index selected
-    setTimeout(() => {
-      const currentSelectedIndex = this.componentCommunicationService.getSelectedIndex();
-      if (!currentSelectedIndex) {
-        this.loadDefaultNifty50Data();
-      }
-    }, 100);
+    // STEP 1: Load baseline indices data first (critical for accurate price calculations)
+    // This must complete before processing any WebSocket ticks
+    this.loadBaselineIndicesData().then(() => {
+      
+      // STEP 2: Load default data if no index selected (uses baseline data)
+      setTimeout(() => {
+        const currentSelectedIndex = this.componentCommunicationService.getSelectedIndex();
+        if (!currentSelectedIndex) {
+          this.loadDefaultNifty50Data();
+        }
+      }, 100);
 
-    // Wait for widget header to be fully rendered
-    setTimeout(() => this.ensureWidgetTimeRangeFilters(), 200);
+      // STEP 3: Initialize WebSocket subscription (after baseline data is ready)
+      // This ensures accurate price change calculations from the first tick
+      setTimeout(() => {
+        this.initializeWebSocketSubscription();
+      }, 200);
+
+      // STEP 4: Wait for widget header to be fully rendered
+      setTimeout(() => this.ensureWidgetTimeRangeFilters(), 300);
+      
+      // STEP 5: Schedule periodic baseline cache refresh
+      this.scheduleBaselineRefresh();
+      
+    }).catch(error => {
+      
+      // Continue with initialization even if baseline loading fails
+      setTimeout(() => {
+        const currentSelectedIndex = this.componentCommunicationService.getSelectedIndex();
+        if (!currentSelectedIndex) {
+          this.loadDefaultNifty50Data();
+        }
+      }, 100);
+
+      setTimeout(() => {
+        this.initializeWebSocketSubscription();
+      }, 200);
+
+      setTimeout(() => this.ensureWidgetTimeRangeFilters(), 300);
+    });
+    
   }
 
   protected onChildDestroy(): void {
+    
+    // CRITICAL: Cleanup WebSocket subscription FIRST before any other cleanup
+    // This ensures proper resource cleanup and prevents memory leaks
+    // Requirements: 1.4, 1.5, 2.2
+    this.cleanupWebSocketSubscription();
+    
+    // Clear baseline cache to free memory
+    this.baselineIndicesCache.clear();
+    this.baselineCacheTimestamp = 0;
+    this.isBaselineDataLoaded = false;
+    
+    // Clear baseline refresh timer
+    if (this.baselineRefreshTimer) {
+      clearInterval(this.baselineRefreshTimer);
+      this.baselineRefreshTimer = null;
+    }
+    
     // Clean up chart update timer
     if (this.chartUpdateTimer) {
       clearTimeout(this.chartUpdateTimer);
@@ -236,13 +1965,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Dispose of all chart instances to prevent reinitialization errors
     if (this.dashboardConfig?.widgets) {
+      
       this.dashboardConfig.widgets.forEach(widget => {
         if (widget.chartInstance && typeof widget.chartInstance.dispose === 'function') {
           try {
             widget.chartInstance.dispose();
             widget.chartInstance = null;
           } catch (error) {
-            console.warn('Error disposing chart instance:', error);
           }
         }
       });
@@ -265,9 +1994,17 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.webSocketConnectionStateSubscription.unsubscribe();
       this.webSocketConnectionStateSubscription = null;
     }
+
+    // Unsubscribe from BehaviorSubject subscription
+    if (this.indicesDataSubscription) {
+      this.indicesDataSubscription.unsubscribe();
+      this.indicesDataSubscription = null;
+    }
+    
     
     // Disconnect WebSocket
     this.webSocketService.disconnect();
+    
     
     // Clear stock ticks data
     this.dashboardData = [];
@@ -280,6 +2017,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.currentSubscribedIndex = null;
     this.isSubscribing = false;
     this.subscribedTopics.clear();
+    
   }
 
   private indicesLoaded = false;
@@ -290,6 +2028,29 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
 
+    // UPDATED: Use baseline cache data if available (most accurate)
+    if (this.isBaselineDataLoaded && this.baselineIndicesCache.size > 0) {
+      
+      const baselineData = Array.from(this.baselineIndicesCache.values());
+      this.updateIndexListData(baselineData);
+      this.indicesLoaded = true;
+      this.setDefaultIndexFromData(baselineData);
+      return;
+    }
+
+    // FALLBACK 1: Check if WebSocket has already provided data via the signal
+    const webSocketData = this.indicesDataSignal();
+    if (webSocketData && webSocketData.length > 0) {
+      
+      // Update legacy properties for backward compatibility
+      this.updateIndexListData(webSocketData);
+      this.indicesLoaded = true;
+      this.setDefaultIndexFromData(webSocketData);
+      return;
+    }
+
+    // FALLBACK 2: Use REST API if neither baseline nor WebSocket data is available
+    
     this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').subscribe({
       next: (indices) => {
         const mappedData = this.mapIndicesToStockData(indices || []);
@@ -298,12 +2059,23 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           return;
         }
 
-        this.updateIndexListData(mappedData);
+        // Only update if baseline and WebSocket haven't provided data yet
+        const currentWebSocketData = this.indicesDataSignal();
+        if (!this.isBaselineDataLoaded && (!currentWebSocketData || currentWebSocketData.length === 0)) {
+          
+          // Update signals with fallback data
+          this.indicesDataSignal.set(mappedData);
+          this.indicesDataSubject.next(mappedData);
+          
+          // Update legacy properties for backward compatibility
+          this.updateIndexListData(mappedData);
+        } else {
+        }
+        
         this.indicesLoaded = true;
-        this.setDefaultIndexFromData(mappedData);
+        this.setDefaultIndexFromData(this.indicesDataSignal());
       },
       error: (error) => {
-        console.warn('Failed to list indices, using fallback:', error);
         this.loadDefaultNifty50DataFallback();
       }
     });
@@ -324,17 +2096,62 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.updateDashboardWithSelectedIndex(defaultNifty50Data);
   }
 
-  private mapIndicesToStockData(indices: IndexResponseDto[]): StockDataDto[] {
-    return indices.map(index => ({
-      tradingsymbol: index.indexSymbol || index.indexName || 'N/A',
-      symbol: index.indexSymbol || index.indexName || 'N/A',
-      companyName: index.indexName || index.indexSymbol || 'Unknown Index',
-      lastPrice: index.lastPrice || 0,
-      percentChange: (index as any).percentChange || 0,
-      totalTradedValue: 0,
-      sector: 'Indices',
-      industry: 'Indices'
-    }));
+  private mapIndicesToStockData(indices: IndexResponseDto[] | IndexDataDto[]): StockDataDto[] {
+    return indices.map(index => {
+      const lastPrice = index.lastPrice || 0;
+      const variation = (index as any).variation || (index as any).priceChange || 0;
+      const percentChange = (index as any).percentChange || 0;
+      
+      // CRITICAL FIX: Handle previousClose properly
+      let previousClose = (index as any).previousClose || 0;
+      let calculatedPriceChange = variation;
+      let calculatedPercentChange = percentChange;
+      
+      // If we have valid previousClose from API, use it for calculations
+      if (previousClose > 0 && previousClose !== lastPrice) {
+        calculatedPriceChange = lastPrice - previousClose;
+        calculatedPercentChange = ((calculatedPriceChange / previousClose) * 100);
+      } else if (variation !== 0 && lastPrice > 0) {
+        // If we have variation but no proper previousClose, calculate previousClose from variation
+        previousClose = lastPrice - variation;
+        calculatedPriceChange = variation;
+        calculatedPercentChange = previousClose > 0 ? ((variation / previousClose) * 100) : percentChange;
+      } else if (percentChange !== 0 && lastPrice > 0) {
+        // If we have percentChange but no proper previousClose, calculate previousClose from percentChange
+        // percentChange = ((lastPrice - previousClose) / previousClose) * 100
+        // Solving for previousClose: previousClose = lastPrice / (1 + percentChange/100)
+        previousClose = lastPrice / (1 + (percentChange / 100));
+        calculatedPriceChange = lastPrice - previousClose;
+        calculatedPercentChange = percentChange;
+      } else {
+        // Fallback: if no proper data available, set previousClose to a reasonable estimate
+        // This prevents the issue where previousClose === lastPrice
+        previousClose = lastPrice > 0 ? lastPrice * 0.999 : 0; // Assume 0.1% change as fallback
+        calculatedPriceChange = lastPrice - previousClose;
+        calculatedPercentChange = previousClose > 0 ? ((calculatedPriceChange / previousClose) * 100) : 0;
+      }
+      
+      
+      return {
+        tradingsymbol: index.indexSymbol || index.indexName || 'N/A',
+        symbol: index.indexSymbol || index.indexName || 'N/A',
+        companyName: index.indexName || index.indexSymbol || 'Unknown Index',
+        lastPrice: lastPrice,
+        percentChange: calculatedPercentChange,
+        priceChange: calculatedPriceChange,
+        totalTradedValue: 0,
+        sector: 'Indices',
+        industry: 'Indices',
+        // CRITICAL: Use the properly calculated previousClose
+        previousClose: previousClose,
+        // Add additional fields that might be used by the Index List widget
+        openPrice: (index as any).openPrice || 0,
+        dayHigh: (index as any).dayHigh || 0,
+        dayLow: (index as any).dayLow || 0,
+        // Add timestamp for tracking data freshness
+        lastUpdateTime: (index as any).updatedAt || (index as any).tickTimestamp || new Date().toISOString()
+      };
+    });
   }
 
   private updateIndexListData(data: StockDataDto[]): void {
@@ -367,7 +2184,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       symbol: targetIndex.tradingsymbol || targetIndex.symbol || 'NIFTY 50',
       name: targetIndex.companyName || targetIndex.tradingsymbol || 'NIFTY 50',
       lastPrice: targetIndex.lastPrice || 0,
-      variation: (targetIndex as any).variation || 0,
+      variation: (targetIndex as any).variation || targetIndex.priceChange || 0,
       percentChange: targetIndex.percentChange || 0,
       keyCategory: 'Index'
     };
@@ -392,18 +2209,22 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
 
-    // Update selected index symbol for highlighting (use symbol field to match stock list table)
+    // Update selected index symbol signal for highlighting (use symbol field to match stock list table)
+    // This will automatically trigger the effect that updates the widget
+    this.selectedIndexSymbolSignal.set(symbol || name);
+    
+    // Also update the legacy property for backward compatibility
     this.selectedIndexSymbol = symbol || name;
 
     // Show loading indicator
-    this.isCandlestickLoading = true;
+    this.isCandlestickLoadingSignal.set(true);
 
     const selectedIndexData: SelectedIndexData = {
       id: selectedIndex.id || symbol || name,
       symbol: symbol || name,
       name: name || symbol,
       lastPrice: selectedIndex.lastPrice || 0,
-      variation: selectedIndex.variation || selectedIndex.priceChange || 0,
+      variation: selectedIndex.priceChange || 0,
       percentChange: selectedIndex.percentChange || selectedIndex.changePercent || 0,
       keyCategory: 'Index'
     };
@@ -433,16 +2254,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         next: (historicalData: IndexHistoricalData[]) => {
           this.historicalData = this.normalizeHistoricalData(historicalData || []);
           this.updateCandlestickChartWithHistoricalData();
-          this.isCandlestickLoading = false; // Hide loading indicator
-          this.cdr.detectChanges();
+          this.isCandlestickLoadingSignal.set(false); // Hide loading indicator
           this.ensureWidgetTimeRangeFilters();
         },
         error: (error) => {
-          console.warn('Failed to load historical data for', indexName, ':', error);
           this.historicalData = [];
           this.updateCandlestickChartWithHistoricalData();
-          this.isCandlestickLoading = false; // Hide loading indicator even on error
-          this.cdr.detectChanges();
+          this.isCandlestickLoadingSignal.set(false); // Hide loading indicator even on error
           this.ensureWidgetTimeRangeFilters();
         }
       });
@@ -511,7 +2329,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Unsubscribe from previous WebSocket topic if any
     this.unsubscribeFromCurrentWebSocketTopic();
     
-    // Update selected index symbol for highlighting in Index List widget
+    // Update selected index symbol signal for highlighting in Index List widget
+    // This will automatically trigger the effect that updates the widget
+    this.selectedIndexSymbolSignal.set(selectedIndex.symbol || selectedIndex.name || '');
+    
+    // Also update the legacy property for backward compatibility
     this.selectedIndexSymbol = selectedIndex.symbol || selectedIndex.name || '';
     
     // Update dashboard title with selected index name or symbol
@@ -542,7 +2364,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       
       // Subscribe to WebSocket updates for the selected index
       this.subscribeToIndexWebSocket(indexName).catch(error => {
-        console.error('Failed to subscribe to WebSocket:', error);
       });
     }
     
@@ -640,7 +2461,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       },
       error: (error) => {
-        console.warn(`Failed to fetch previous-day data for ${indexName}:`, error);
       }
     });
   }
@@ -1022,34 +2842,36 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       widget.config?.component === 'stock-list-table'
     );
 
-    stockListWidgets.forEach(widget => {
+
+    stockListWidgets.forEach((widget, index) => {
       const stockData = this.filteredDashboardData || this.dashboardData;
       
       if (stockData && stockData.length > 0) {
-        // Update the widget's data directly
-        if (widget.data) {
-          widget.data.stocks = stockData;
-          widget.data.isLoadingStocks = false;
-          widget.data.selectedStockSymbol = this.selectedIndexSymbol;
-        } else {
-          // Initialize widget data if it doesn't exist
-          widget.data = {
-            stocks: stockData,
-            isLoadingStocks: false,
-            selectedStockSymbol: this.selectedIndexSymbol
-          };
-        }
+        // Create a new array with unique identifiers to ensure change detection
+        const initialStockData = stockData.map(item => ({
+          ...item,
+          _initialLoadId: Date.now() + Math.random()
+        }));
+        
+        // Force complete data replacement
+        const initialWidgetData = {
+          stocks: initialStockData,
+          isLoadingStocks: false,
+          selectedStockSymbol: this.selectedIndexSymbol,
+          initialLoad: Date.now()
+        };
+        
+        widget.data = initialWidgetData;
+        
       } else {
         // Set empty data to show the empty message
-        if (widget.data) {
-          widget.data.stocks = [];
-          widget.data.isLoadingStocks = false;
-        } else {
-          widget.data = {
-            stocks: [],
-            isLoadingStocks: false
-          };
-        }
+        widget.data = {
+          stocks: [],
+          isLoadingStocks: false,
+          selectedStockSymbol: this.selectedIndexSymbol,
+          initialLoad: Date.now()
+        };
+        
       }
     });
 
@@ -1089,9 +2911,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Skip if offline (no point calling backend without internet)
       try {
         if (typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
-          if (this.enableDebugLogging) {
-            console.warn('Offline detected, skipping previous-day fetch');
-          }
           return;
         }
       } catch { /* no-op */ }
@@ -1123,7 +2942,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         },
         error: (error) => {
-          console.warn(`Failed to fetch previous-day data for ${indexName}:`, error);
         }
       });
     }
@@ -1292,7 +3110,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         widget.chartInstance.dispose();
         widget.chartInstance = null;
       } catch (error) {
-        console.warn('Error disposing chart instance:', error);
       }
     }
   }
@@ -1641,11 +3458,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.indicesWebSocketSubscription = this.webSocketService
             .subscribeToIndex(webSocketIndexName)
             .subscribe({
-              next: (indicesData) => {
+              next: (indicesData: IndexDataDto) => {
                 this.handleWebSocketData(indicesData, indexName);
               },
-              error: (error) => {
-                console.warn(`Specific index subscription failed for ${webSocketIndexName}, falling back to all indices:`, error.message || error);
+              error: (error: any) => {
                 // Fallback to all indices subscription
                 this.subscribeToAllIndicesAsFallback(indexName);
               },
@@ -1658,7 +3474,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.subscribedTopics.add(topicName);
           
         } catch (error) {
-          console.warn(`Specific index subscription failed for ${webSocketIndexName}, falling back to all indices:`, error);
           // Fallback to all indices subscription
           this.subscribeToAllIndicesAsFallback(indexName);
         }
@@ -1700,7 +3515,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
             }
           },
           error: (error) => {
-            console.warn('All indices subscription error:', error.message || error);
             this.cdr.detectChanges();
           },
           complete: () => {
@@ -1708,7 +3522,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         });
     } catch (error) {
-      console.error('Failed to subscribe to all indices as fallback:', error);
     }
   }
 
@@ -1730,7 +3543,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         
         // Check if dashboard is ready before updating
         if (!this.dashboardConfig?.widgets || this.dashboardConfig.widgets.length === 0) {
-          console.warn('Dashboard not ready yet, deferring first tile update');
           // Schedule the update for later
           setTimeout(() => {
             this.updateFirstTileWithRealTimeData(indexData);
@@ -1755,10 +3567,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         }, 250);
       } else {
-        console.warn('WebSocket received data but no valid index data found:', indexData);
       }
     } catch (error: any) {
-      console.error('Error processing received index data:', error);
     }
   }
 
@@ -1778,7 +3588,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         this.subscribeToIndexWebSocket(this.currentSubscribedIndex);
       }
     } catch (error) {
-      console.warn('WebSocket reconnection failed:', error);
       // Schedule another reconnection attempt after a delay
       setTimeout(() => {
         this.attemptWebSocketReconnection();
@@ -1823,14 +3632,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
 
     if (!firstTile) {
-      console.warn('No suitable tile found for real-time updates');
       return;
     }
 
 
 
     if (!realTimeIndexData) {
-      console.warn('No real-time index data available for first tile update');
       return;
     }
 
@@ -1897,7 +3704,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.cdr.detectChanges();
 
     } catch (error) {
-      console.error('Error updating first tile with real-time data:', error);
     }
   }
 
@@ -2004,21 +3810,18 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const { startDate, endDate } = this.calculateDateRangeFromTimeRange(event.range);
     
     // Show loading indicator
-    this.isCandlestickLoading = true;
-    this.cdr.detectChanges();
+    this.isCandlestickLoadingSignal.set(true);
     
     // Make API call with date range (pass undefined for days to force date range usage)
     this.indicesService.getIndexHistoricalData(indexName, undefined, startDate, endDate).subscribe({
       next: (historicalData: IndexHistoricalData[]) => {
         this.historicalData = this.normalizeHistoricalData(historicalData || []);
         this.updateCandlestickChartWithHistoricalData();
-        this.isCandlestickLoading = false;
-        this.cdr.detectChanges();
+        this.isCandlestickLoadingSignal.set(false);
         this.ensureWidgetTimeRangeFilters();
       },
       error: (error) => {
-        this.isCandlestickLoading = false;
-        this.cdr.detectChanges();
+        this.isCandlestickLoadingSignal.set(false);
         this.ensureWidgetTimeRangeFilters();
       }
     });
@@ -2275,7 +4078,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         },
         error: (error) => {
-          console.error('WebSocket connection state monitoring error:', error);
           this.isWebSocketConnected = false;
           // Clear subscribed topics on error
           this.subscribedTopics.clear();

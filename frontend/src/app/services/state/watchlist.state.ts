@@ -1,10 +1,8 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { ApiService } from '../apis/api.base';
-import { MockApiService } from '../apis/mock-api.service';
 import { WatchlistItem } from '../entities/watchlist-item';
 import { Watchlist } from '../entities/watchlist';
-import { environment } from '../../../environments/environment';
 
 /**
  * Interface for the watchlist state
@@ -44,14 +42,8 @@ export class WatchlistStateService {
   public error = computed(() => this.state().error);
   public lastUpdated = computed(() => this.state().lastUpdated);
   
-  // Choose the appropriate API service based on environment
-  private get apiService(): ApiService | MockApiService {
-    return environment.useMockData ? this.mockApiService : this.realApiService;
-  }
-  
   constructor(
-    private realApiService: ApiService,
-    private mockApiService: MockApiService
+    private apiService: ApiService
   ) {
     // State changes are handled silently
   }

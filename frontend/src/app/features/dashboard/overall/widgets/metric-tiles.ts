@@ -2,7 +2,7 @@ import { TileBuilder, StockTileBuilder } from '@dashboards/public-api';
 import { StockDataDto } from '../../../../services/entities/stock-ticks';
 import { IndexDataDto } from '../../../../services/entities/indices-websocket';
 import { IndicesService } from '../../../../services/apis/indices.api';
-import { WebSocketService } from '../../../../services/websockets/websocket.service';
+import { IWebSocketService } from '../../../../services/websockets/websocket.interface';
 import { WebSocketConnectionState } from '../../../../services/entities/indices-websocket';
 
 /**
@@ -39,7 +39,7 @@ const refreshWidgetReferences = (widget: any) => {
 const getFallbackIndexData = async (
   indexName: string, 
   indicesService?: IndicesService,
-  webSocketService?: WebSocketService
+  webSocketService?: IWebSocketService
 ): Promise<any | null> => {
   if (!indicesService) return null;
   
@@ -84,7 +84,7 @@ function buildIndexStockTile(params: {
   initialHigh?: number;
   initialLow?: number;
   currency?: string;
-  webSocketService?: WebSocketService;
+  webSocketService?: IWebSocketService;
   indicesService?: IndicesService;
   matchToName?: string;
 }) {
@@ -196,7 +196,7 @@ function buildIndexStockTile(params: {
 export function createMetricTiles(
   stockTicksData: StockDataDto[] | null, 
   selectedIndexData?: IndexDataDto | null,
-  webSocketService?: WebSocketService,
+  webSocketService?: IWebSocketService,
   indicesService?: IndicesService
 ) {
   // Handle null or undefined stockTicksData
@@ -355,7 +355,7 @@ export function createMetricTiles(
  */
 function createEmptyMetricTiles(
   selectedIndexData?: IndexDataDto | null,
-  webSocketService?: WebSocketService,
+  webSocketService?: IWebSocketService,
   indicesService?: IndicesService
 ) {
   const tiles = [
