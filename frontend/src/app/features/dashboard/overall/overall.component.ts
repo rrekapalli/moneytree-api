@@ -156,6 +156,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   // Loading state for candlestick chart (converted to signal for reactive UI updates)
   protected isCandlestickLoadingSignal = signal<boolean>(false);
 
+  // Real-time last price signal for the selected index
+  private currentLastPriceSignal = signal<number | null>(null);
+  
+  // Real-time price data array for the line chart (stores timestamp and price pairs)
+  private realTimePriceData: Array<{timestamp: string, price: number}> = [];
+
   // WebSocket connection state tracking
   private isWebSocketConnected: boolean = false;
   private currentSubscribedIndex: string | null = null;
@@ -506,6 +512,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Process each tick and merge with baseline data
     const updatedData = this.mergeTicksWithBaseline(indicesDto.indices);
     
+    // Update real-time price for selected index if present in the data
+    this.updateRealTimePriceForSelectedIndex(indicesDto.indices);
     
     // Update signals with merged data
     this.indicesDataSignal.set(updatedData);
@@ -523,6 +531,49 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
   }
   
+  /**
+   * Update real-time price for the selected index from WebSocket tick data
+   * This method updates the current last price signal and adds data to the real-time price array
+   * for display on the candlestick chart as a dotted line.
+   * 
+   * @param incomingTicks - Real-time tick data from WebSocket
+   */
+  private updateRealTimePriceForSelectedIndex(incomingTicks: IndexDataDto[]): void {
+    const selectedSymbol = this.selectedIndexSymbolSignal();
+    if (!selectedSymbol) {
+      return;
+    }
+    
+    // Find the tick data for the selected index
+    const selectedIndexTick = incomingTicks.find(tick => 
+      tick.indexSymbol === selectedSymbol || 
+      tick.indexName === selectedSymbol ||
+      tick.key === selectedSymbol
+    );
+    
+    if (selectedIndexTick && selectedIndexTick.lastPrice) {
+      const newPrice = selectedIndexTick.lastPrice;
+      const timestamp = selectedIndexTick.tickTimestamp || selectedIndexTick.ingestionTimestamp || new Date().toISOString();
+      
+      // Update the current last price signal
+      this.currentLastPriceSignal.set(newPrice);
+      
+      // Add to real-time price data array (keep last 100 points for performance)
+      this.realTimePriceData.push({
+        timestamp: timestamp,
+        price: newPrice
+      });
+      
+      // Keep only the last 100 data points to prevent memory issues
+      if (this.realTimePriceData.length > 100) {
+        this.realTimePriceData = this.realTimePriceData.slice(-100);
+      }
+      
+      // Update the candlestick chart with the new real-time price line
+      this.updateCandlestickChartWithRealTimePrice();
+    }
+  }
+
   /**
    * Merge incoming tick data with baseline cache for accurate price change calculations
    * This method updates only the lastPrice from ticks while preserving baseline data
@@ -1363,6 +1414,69 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   
   /**
+   * Test real-time price functionality with simulated data
+   * This method can be called from browser console for testing
+   */
+  public testRealTimePriceUpdate(): void {
+    const selectedSymbol = this.selectedIndexSymbolSignal();
+    if (!selectedSymbol) {
+      console.log('No index selected. Please select an index first.');
+      return;
+    }
+    
+    // Simulate real-time price updates
+    const basePrice = 25000;
+    let currentPrice = basePrice;
+    
+    console.log(`Starting real-time price simulation for ${selectedSymbol}`);
+    
+    const interval = setInterval(() => {
+      // Generate random price change (±0.5%)
+      const change = (Math.random() - 0.5) * 0.01 * currentPrice;
+      currentPrice = Math.max(basePrice * 0.95, Math.min(basePrice * 1.05, currentPrice + change));
+      
+      // Update the real-time price signal
+      this.currentLastPriceSignal.set(currentPrice);
+      
+      // Add to real-time price data
+      this.realTimePriceData.push({
+        timestamp: new Date().toISOString(),
+        price: currentPrice
+      });
+      
+      // Keep only last 100 points
+      if (this.realTimePriceData.length > 100) {
+        this.realTimePriceData = this.realTimePriceData.slice(-100);
+      }
+      
+      console.log(`Real-time price updated: ₹${currentPrice.toFixed(2)}`);
+    }, 2000); // Update every 2 seconds
+    
+    // Stop simulation after 30 seconds
+    setTimeout(() => {
+      clearInterval(interval);
+      console.log('Real-time price simulation stopped');
+    }, 30000);
+  }
+  
+  /**
+   * Get current real-time price state for debugging
+   * This method can be called from browser console for inspection
+   */
+  public getRealTimePriceState(): any {
+    return {
+      selectedIndexSymbol: this.selectedIndexSymbolSignal(),
+      currentLastPrice: this.currentLastPriceSignal(),
+      realTimePriceDataLength: this.realTimePriceData.length,
+      realTimePriceDataSample: this.realTimePriceData.slice(-5),
+      hasCandlestickChart: !!this.dashboardConfig?.widgets?.find(w => 
+        w.config?.header?.title === 'Index Historical Price Movement'
+      ),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
    * Test method to verify the fix is working
    * This method can be called from browser console to test the solution
    */
@@ -1619,6 +1733,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       const symbol = this.selectedIndexSymbolSignal();
       // Keep the existing property in sync for backward compatibility
       this.selectedIndexSymbol = symbol;
+    });
+    
+    // Effect: Update candlestick chart when real-time price changes
+    effect(() => {
+      const currentPrice = this.currentLastPriceSignal();
+      if (currentPrice !== null) {
+        // Update the candlestick chart with the new real-time price line
+        this.updateCandlestickChartWithRealTimePrice();
+      }
     });
   }
   
@@ -2012,6 +2135,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.currentSelectedIndexData = null;
     this.historicalData = [];
     
+    // Clear real-time price data
+    this.clearRealTimePriceData();
+    
     // Reset WebSocket state
     this.isWebSocketConnected = false;
     this.currentSubscribedIndex = null;
@@ -2329,6 +2455,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Unsubscribe from previous WebSocket topic if any
     this.unsubscribeFromCurrentWebSocketTopic();
     
+    // Clear real-time price data for the previous index
+    this.clearRealTimePriceData();
+    
     // Update selected index symbol signal for highlighting in Index List widget
     // This will automatically trigger the effect that updates the widget
     this.selectedIndexSymbolSignal.set(selectedIndex.symbol || selectedIndex.name || '');
@@ -2623,8 +2752,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       const options = candlestickChart.config.options as any;
       
       // Remove any volume series that might have been created by the builder
-      if (Array.isArray(options.series)) {
-        options.series = options.series.filter((s: any) => {
+      if (Array.isArray(options['series'])) {
+        options['series'] = options['series'].filter((s: any) => {
           if (s.type === 'line') return false;
           if (s.type === 'bar') {
             if (s.name === 'Volume' || 
@@ -2640,17 +2769,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       
       // Initialize xAxis and yAxis - will be properly configured below
 
-      // Configure grid: single grid for candlestick chart
-      options.grid = [
-        {
-          id: 'main',
-          top: '10%',
-          left: '5%',
-          right: '5%',
-          bottom: '11%',  // Leave minimal space for data zoom
-          containLabel: true
-        }
-      ];
+      // Configure grid: single grid for candlestick chart with space for dual y-axes
+      options.grid = {
+        top: '10%',
+        left: '8%',   // More space for left y-axis (real-time price)
+        right: '8%',  // More space for right y-axis (historical price)
+        bottom: '11%',  // Leave minimal space for data zoom
+        containLabel: true
+      };
 
       // Enhanced tooltip configuration
       options.tooltip = {
@@ -2732,34 +2858,32 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }
       
       // Configure x-axis - single axis for candlestick chart
-      if (!Array.isArray(options.xAxis)) {
-        options.xAxis = options.xAxis ? [options.xAxis] : [];
+      if (!Array.isArray(options['xAxis'])) {
+        options['xAxis'] = options['xAxis'] ? [options['xAxis']] : [];
       }
-      if (options.xAxis.length > 1) {
-        options.xAxis = [options.xAxis[0]];
+      if (options['xAxis'].length > 1) {
+        options['xAxis'] = [options['xAxis'][0]];
       }
-      if (options.xAxis.length === 0) {
-        options.xAxis = [{
+      if (options['xAxis'].length === 0) {
+        options['xAxis'] = [{
           type: 'category',
-          data: [],
-          gridIndex: 0
+          data: []
         }];
       }
       
-      // Configure y-axis - single axis for price
-      if (!Array.isArray(options.yAxis)) {
-        options.yAxis = options.yAxis ? [options.yAxis] : [];
+      // Configure y-axis - dual axes for historical price (right) and real-time price (left)
+      if (!Array.isArray(options['yAxis'])) {
+        options['yAxis'] = options['yAxis'] ? [options['yAxis']] : [];
       }
-      if (options.yAxis.length > 1) {
-        options.yAxis = [options.yAxis[0]];
-      }
-      if (options.yAxis.length === 0) {
-        options.yAxis = [{
+      
+      // Ensure we have at least the primary y-axis for historical data
+      if (options['yAxis'].length === 0) {
+        options['yAxis'].push({
           type: 'value',
           scale: true,
-          gridIndex: 0,
           position: 'right',
           axisLabel: {
+            fontSize: 20,
             formatter: (value: number) => {
               return new Intl.NumberFormat('en-IN', {
                 style: 'currency',
@@ -2769,7 +2893,57 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
               }).format(value);
             }
           }
-        }];
+        });
+      } else {
+        // Update existing primary y-axis
+        options['yAxis'][0] = {
+          ...options['yAxis'][0],
+          type: 'value',
+          scale: true,
+          position: 'right',
+          axisLabel: {
+            ...options['yAxis'][0].axisLabel,
+            fontSize: 20,
+            formatter: (value: number) => {
+              return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+              }).format(value);
+            }
+          }
+        };
+      }
+      
+      // Add secondary y-axis for real-time price (will be populated when real-time data arrives)
+      if (options['yAxis'].length < 2) {
+        options['yAxis'].push({
+          type: 'value',
+          scale: true,
+          position: 'left',
+          show: false, // Initially hidden, will be shown when real-time data arrives
+          axisLabel: {
+            formatter: (value: number) => {
+              return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+              }).format(value);
+            },
+            fontSize: 16,
+            color: '#ff6b35'
+          },
+          axisLine: {
+            lineStyle: {
+              color: '#ff6b35'
+            }
+          },
+          splitLine: {
+            show: false
+          }
+        });
       }
     }
 
@@ -3137,6 +3311,39 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.applyCandlestickData(candlestickWidget, filteredData);
   }
 
+  /**
+   * Update the candlestick chart with real-time price line
+   * This method adds or updates the dotted line showing the current last price
+   */
+  private updateCandlestickChartWithRealTimePrice(): void {
+    if (!this.dashboardConfig?.widgets) return;
+
+    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
+      widget.config?.header?.title === 'Index Historical Price Movement'
+    );
+
+    if (!candlestickWidget || !candlestickWidget.chartInstance) {
+      return;
+    }
+
+    const currentPrice = this.currentLastPriceSignal();
+    if (currentPrice === null) {
+      return;
+    }
+
+    // Get current chart options
+    const currentOptions = candlestickWidget.chartInstance.getOption();
+    if (!currentOptions) {
+      return;
+    }
+
+    // Update the chart options to include the real-time price line
+    const updatedOptions = this.addRealTimePriceLineToChart(currentOptions, currentPrice);
+    
+    // Apply the updated options to the chart
+    candlestickWidget.chartInstance.setOption(updatedOptions, false);
+  }
+
   private clearCandlestickChart(): void {
     if (!this.dashboardConfig?.widgets) return;
     const candlestickWidget = this.dashboardConfig.widgets.find(widget =>
@@ -3177,6 +3384,153 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
 
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Clear real-time price data when switching indices
+   * This method resets the real-time price signal and data array
+   */
+  private clearRealTimePriceData(): void {
+    this.currentLastPriceSignal.set(null);
+    this.realTimePriceData = [];
+    
+    // Remove real-time price line from chart if it exists
+    this.removeRealTimePriceLineFromChart();
+  }
+
+  /**
+   * Remove real-time price line from the candlestick chart
+   */
+  private removeRealTimePriceLineFromChart(): void {
+    if (!this.dashboardConfig?.widgets) return;
+
+    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
+      widget.config?.header?.title === 'Index Historical Price Movement'
+    );
+
+    if (!candlestickWidget || !candlestickWidget.chartInstance) {
+      return;
+    }
+
+    // Get current chart options
+    const currentOptions = candlestickWidget.chartInstance.getOption();
+    if (!currentOptions || !Array.isArray(currentOptions['series'])) {
+      return;
+    }
+
+    // Remove real-time price line series
+    const updatedOptions = JSON.parse(JSON.stringify(currentOptions));
+    updatedOptions['series'] = updatedOptions['series'].filter((s: any) => s.name !== 'Real-time Price');
+    
+    // Hide secondary y-axis
+    if (Array.isArray(updatedOptions['yAxis']) && updatedOptions['yAxis'].length > 1) {
+      updatedOptions['yAxis'][1].show = false;
+    }
+    
+    // Apply the updated options to the chart
+    candlestickWidget.chartInstance.setOption(updatedOptions, false);
+  }
+
+  /**
+   * Add real-time price line to the chart configuration
+   * This method adds a dotted horizontal line showing the current last price on a secondary y-axis
+   * 
+   * @param currentOptions - Current chart options
+   * @param currentPrice - Current last price from WebSocket
+   * @returns Updated chart options with real-time price line
+   */
+  private addRealTimePriceLineToChart(currentOptions: any, currentPrice: number): any {
+    const options = JSON.parse(JSON.stringify(currentOptions)); // Deep clone
+    
+    // Ensure we have series array
+    if (!Array.isArray(options['series'])) {
+      options['series'] = [];
+    }
+    
+    // Ensure we have yAxis array
+    if (!Array.isArray(options['yAxis'])) {
+      options['yAxis'] = options['yAxis'] ? [options['yAxis']] : [];
+    }
+    
+    // Show and configure secondary y-axis for real-time price
+    if (options['yAxis'].length >= 2) {
+      options['yAxis'][1].show = true;
+      options['yAxis'][1].min = currentPrice * 0.999; // Set min slightly below current price
+      options['yAxis'][1].max = currentPrice * 1.001; // Set max slightly above current price
+    } else {
+      // Add secondary y-axis if it doesn't exist
+      options['yAxis'].push({
+        type: 'value',
+        scale: true,
+        position: 'left',
+        show: true,
+        min: currentPrice * 0.999,
+        max: currentPrice * 1.001,
+        axisLabel: {
+          formatter: (value: number) => {
+            return new Intl.NumberFormat('en-IN', {
+              style: 'currency',
+              currency: 'INR',
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2
+            }).format(value);
+          },
+          fontSize: 16,
+          color: '#ff6b35' // Orange color for real-time price axis
+        },
+        axisLine: {
+          lineStyle: {
+            color: '#ff6b35'
+          }
+        },
+        splitLine: {
+          show: false // Hide grid lines for secondary axis
+        }
+      });
+    }
+    
+    // Remove existing real-time price line series if it exists
+    options['series'] = options['series'].filter((s: any) => s.name !== 'Real-time Price');
+    
+    // Add real-time price line series
+    const realTimePriceSeries = {
+      name: 'Real-time Price',
+      type: 'line',
+      yAxisIndex: 1, // Use secondary y-axis
+      data: Array(options['xAxis'][0]?.data?.length || 0).fill(currentPrice),
+      lineStyle: {
+        type: 'dashed',
+        width: 2,
+        color: '#ff6b35' // Orange color for visibility
+      },
+      symbol: 'none', // No symbols on the line
+      animation: false, // Disable animation for real-time updates
+      silent: true, // Don't trigger events
+      emphasis: {
+        disabled: true // Disable hover effects
+      },
+      tooltip: {
+        formatter: () => {
+          return `<div style="padding: 8px;">
+            <div style="font-weight: bold; color: #ff6b35;">Real-time Price</div>
+            <div style="margin: 4px 0;">
+              <span style="color: #666;">Current:</span> 
+              <span style="font-weight: bold;">${new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              }).format(currentPrice)}</span>
+            </div>
+            <div style="font-size: 12px; color: #999;">Live from WebSocket</div>
+          </div>`;
+        }
+      }
+    };
+    
+    options['series'].push(realTimePriceSeries);
+    
+    return options;
   }
 
   private buildUpdatedCandlestickOptions(
@@ -3220,36 +3574,33 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     };
 
     // Update x-axis - single axis for candlestick chart
-    if (Array.isArray(options.xAxis)) {
+    if (Array.isArray(options['xAxis'])) {
       // Keep only the first x-axis
-      options.xAxis = [{
-        ...options.xAxis[0],
+      options['xAxis'] = [{
+        ...options['xAxis'][0],
         data: xAxisData,
-        gridIndex: 0,
         axisLabel: {
-          ...options.xAxis[0]?.axisLabel,
+          ...options['xAxis'][0]?.axisLabel,
           fontSize: 14,
           formatter: xAxisFormatter,
           show: true
         }
       }];
-    } else if (options.xAxis) {
-      options.xAxis = {
-        ...options.xAxis,
+    } else if (options['xAxis']) {
+      options['xAxis'] = {
+        ...options['xAxis'],
         data: xAxisData,
-        gridIndex: 0,
         axisLabel: {
-          ...options.xAxis.axisLabel,
+          ...options['xAxis'].axisLabel,
           fontSize: 14,
           formatter: xAxisFormatter,
           show: true
         }
       };
     } else {
-      options.xAxis = {
+      options['xAxis'] = {
         type: 'category',
         data: xAxisData,
-        gridIndex: 0,
         axisLabel: {
           fontSize: 14,
           formatter: xAxisFormatter,
@@ -3259,32 +3610,32 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
 
     // Update Y-axis font size
-    if (Array.isArray(options.yAxis)) {
-      options.yAxis = options.yAxis.map((axis: any) => ({
+    if (Array.isArray(options['yAxis'])) {
+      options['yAxis'] = options['yAxis'].map((axis: any) => ({
         ...axis,
         axisLabel: {
           ...axis.axisLabel,
           fontSize: 20 // 1.25rem = 20px
         }
       }));
-    } else if (options.yAxis) {
-      options.yAxis = {
-        ...options.yAxis,
+    } else if (options['yAxis']) {
+      options['yAxis'] = {
+        ...options['yAxis'],
         axisLabel: {
-          ...options.yAxis.axisLabel,
+          ...options['yAxis'].axisLabel,
           fontSize: 20 // 1.25rem = 20px
         }
       };
     }
 
     // Update series data - candlestick only
-    if (!Array.isArray(options.series)) {
-      options.series = [];
+    if (!Array.isArray(options['series'])) {
+      options['series'] = [];
     }
     
     // Remove any volume (bar) series or line series
     // Volume series can be identified by: type='bar', name='Volume', gridIndex=1, xAxisIndex=1, or yAxisIndex=1
-    options.series = options.series.filter((s: any) => {
+    options['series'] = options['series'].filter((s: any) => {
       // Remove line series
       if (s.type === 'line') {
         return false;
@@ -3302,7 +3653,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     });
     
     // Find and update candlestick series
-    let candlestickSeries = options.series.find((s: any) => s.type === 'candlestick');
+    let candlestickSeries = options['series'].find((s: any) => s.type === 'candlestick');
     if (!candlestickSeries) {
       candlestickSeries = {
         name: 'Price',
@@ -3318,7 +3669,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           borderColor0: '#ec0000'
         }
       };
-      options.series.push(candlestickSeries);
+      options['series'].push(candlestickSeries);
     } else {
       candlestickSeries.data = candlestickData;
       candlestickSeries.xAxisIndex = 0;
@@ -3540,6 +3891,26 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         
         // Update current selected index data with real-time information
         this.currentSelectedIndexData = indexData;
+        
+        // Update real-time price signal for candlestick chart
+        if (indexData.lastPrice) {
+          const newPrice = indexData.lastPrice;
+          const timestamp = indexData.tickTimestamp || indexData.ingestionTimestamp || new Date().toISOString();
+          
+          // Update the current last price signal
+          this.currentLastPriceSignal.set(newPrice);
+          
+          // Add to real-time price data array (keep last 100 points for performance)
+          this.realTimePriceData.push({
+            timestamp: timestamp,
+            price: newPrice
+          });
+          
+          // Keep only the last 100 data points to prevent memory issues
+          if (this.realTimePriceData.length > 100) {
+            this.realTimePriceData = this.realTimePriceData.slice(-100);
+          }
+        }
         
         // Check if dashboard is ready before updating
         if (!this.dashboardConfig?.widgets || this.dashboardConfig.widgets.length === 0) {
