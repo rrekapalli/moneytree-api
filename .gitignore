@@ -7,4 +7,7 @@ target/
 *.tmp
 .env*
 
-
+# Deployment artifacts (generated build outputs)
+# Ignore all contents but keep the directory structure
+deployment/artifacts/
+!deployment/artifacts/.gitkeep

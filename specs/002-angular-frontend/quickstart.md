@@ -75,7 +75,7 @@ Update `frontend/angular.json` to use proxy configuration:
 ```json
 {
   "projects": {
-    "money-plant-frontend": {
+    "moneytree-app": {
       "architect": {
         "serve": {
           "builder": "@angular/build:dev-server",
