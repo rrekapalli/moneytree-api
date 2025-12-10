@@ -5,10 +5,10 @@ const path = require('path');
 try {
   // Run Angular build with production configuration
   // Angular 20 uses a different build command syntax
-  execSync('npx ng build --configuration=production --project=money-plant-frontend', { stdio: 'inherit' });
+  execSync('npx ng build --configuration=production --project=moneytree-app', { stdio: 'inherit' });
 
   // Get the output directory path (Angular 20 uses a browser subdirectory)
-  const distDir = path.resolve('./dist/money-plant-frontend/browser');
+  const distDir = path.resolve('./dist/moneytree-app/browser');
 
   if (fs.existsSync(distDir)) {
     // List all JS files in the dist directory

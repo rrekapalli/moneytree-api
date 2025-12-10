@@ -7,4 +7,5 @@ target/
 *.tmp
 .env*
 
-
+# Deployment artifacts (generated build outputs)
+deployment/artifacts/

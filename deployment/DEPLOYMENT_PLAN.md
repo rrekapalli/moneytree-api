@@ -4,6 +4,18 @@
 
 This document outlines the deployment plan for the MoneyTree API system, which consists of three independently deployable components:
 
+**Important Security Configuration:**
+- All components are configured with proper CORS settings using Tailscale addresses
+- Backend and SocketEngine default CORS origins: `https://moneytree.tailce422e.ts.net`
+- Frontend uses absolute Tailscale URLs for API endpoints
+- CORS credentials are enabled for secure cross-origin requests
+
+**Configuration Files:**
+- **`deployment/deployment.conf`**: Common deployment settings (server addresses, ports, CORS, etc.)
+- **Root `.env` file**: Sensitive credentials including **SSH_USER and SSH_PASSWORD** for unattended deployment
+- Scripts automatically load both files
+- Use `--accept-defaults` flag for completely unattended deployment (requires all values in config files)
+
 1. **Backend** - Spring Boot REST API (Java 21)
 2. **SocketEngine** - Spring Boot WebSocket service for real-time market data (Java 21)
 3. **Frontend** - Angular 20 web application
@@ -25,10 +37,12 @@ The deployment system consists of:
 - **`deploy-socketengine.sh`** - Interactive script for SocketEngine deployment  
 - **`deploy-frontend.sh`** - Interactive script for frontend deployment
 - **`deploy-all.sh`** - Orchestrator script to deploy all components
+- **`deployment.conf`** - Configuration file with common deployment settings
 
 Each component script:
-- Interactively prompts for SSH credentials (username/password)
-- Collects all required configuration settings
+- Loads configuration from `deployment.conf` (if present) for common settings
+- Interactively prompts only for SSH credentials and sensitive values (passwords, API keys)
+- Uses config file values as defaults for all prompts (can be overridden)
 - Transfers artifacts to the target server via SCP
 - Executes remote deployment script on the server
 - Handles prerequisite installation automatically
@@ -36,11 +50,64 @@ Each component script:
 - Sets up environment variables
 - Configures firewall rules
 
+**Configuration File (`deployment.conf`):**
+- Contains all common/static deployment settings
+- Includes Tailscale addresses, ports, CORS settings, etc.
+- Sensitive values (passwords, API keys) are NOT stored in config file
+- Edit this file once to set your environment defaults
+- Scripts will use these values as defaults, but you can still override them during deployment
+
 The scripts use `sshpass` for automated password-based SSH/SCP operations. If `sshpass` is not available, they provide manual instructions.
 
 ### Quick Start with Interactive Deployment Scripts
 
-1. **Prepare Artifacts**
+1. **Configure Deployment Settings (First Time Setup)**
+
+   **Edit `deployment/deployment.conf`** to set your environment-specific values:
+   ```bash
+   cd deployment
+   nano deployment.conf
+   ```
+   
+   Update Tailscale addresses, ports, and other common settings.
+
+   **Create `.env` file in root directory** with sensitive credentials:
+   ```bash
+   cd ..  # Go to root directory
+   nano .env
+   ```
+   
+   Add the following variables (replace with your actual values):
+   ```bash
+   # SSH Credentials (REQUIRED for unattended deployment)
+   SSH_USER=your-ssh-username
+   SSH_PASSWORD=your-ssh-password
+   
+   # Database Credentials
+   DB_PASSWORD=your-database-password
+   
+   # Kite API Credentials
+   KITE_WEBSOCKET_URL=wss://ws.kite.trade
+   KITE_API_KEY=your-kite-api-key
+   KITE_API_SECRET=your-kite-api-secret
+   KITE_ACCESS_TOKEN=your-kite-access-token
+   
+   # Optional: Redis password (if Redis requires authentication)
+   REDIS_PASSWORD=
+   
+   # Optional: OAuth client IDs (for frontend)
+   GOOGLE_CLIENT_ID=
+   MICROSOFT_CLIENT_ID=
+   ```
+   
+   **Important**: 
+   - `.env` is already in `.gitignore` - never commit this file
+   - SSH_USER and SSH_PASSWORD are required for `--accept-defaults` mode
+   - Scripts automatically load from root `.env` file
+   - If `.env` is missing or values are missing, scripts will prompt for them
+   - For completely unattended deployment, ensure all required variables are set
+
+2. **Prepare Artifacts**
 
    **Option A: Use Helper Script (Recommended)**
    ```bash
@@ -69,7 +136,7 @@ The scripts use `sshpass` for automated password-based SSH/SCP operations. If `s
    cd dist && zip -r ../../artifacts/frontend-dist.zip .
    ```
 
-2. **Install sshpass (Optional but Recommended)**
+3. **Install sshpass (Optional but Recommended)**
    
    For automated password-based SSH/SCP operations:
    ```bash
@@ -82,7 +149,7 @@ The scripts use `sshpass` for automated password-based SSH/SCP operations. If `s
    
    If `sshpass` is not installed, the scripts will provide manual instructions.
 
-3. **Deploy Components**
+4. **Deploy Components**
 
    **Option A: Deploy All Components**
    ```bash
@@ -110,15 +177,31 @@ The scripts use `sshpass` for automated password-based SSH/SCP operations. If `s
    ./deploy-frontend.sh
    ```
 
-4. **Interactive Configuration**
+5. **Interactive Configuration**
 
-   Each script will prompt you for:
-   - **SSH Credentials**: Username and password for server access
-   - **Server Hostname**: Target server address (e.g., `backend.tailce422e.ts.net`)
-   - **Component-Specific Settings**:
-     - Backend: Database credentials, Redis settings, Kite API keys
-     - SocketEngine: Database, Redis, Kite API, WebSocket configuration
-     - Frontend: Backend API URLs, SocketEngine URLs, OAuth client IDs
+   **Normal Mode (with prompts):**
+   ```bash
+   ./deploy-backend.sh
+   ```
+   Each script will:
+   - Load values from `deployment.conf` as defaults
+   - Load credentials from root `.env` file (if present)
+   - Prompt for any missing values or allow overriding defaults
+   - Show defaults from config file for all settings (press Enter to accept)
+   - If credentials are in `.env`, they're used automatically (no prompt)
+
+   **Automatic Mode (no prompts, completely unattended):**
+   ```bash
+   ./deploy-backend.sh --accept-defaults
+   ```
+   - Uses all values from `deployment.conf` and root `.env` file
+   - Skips all prompts - completely unattended
+   - Requires all necessary values to be present in config files:
+     - `deployment/deployment.conf`: Server addresses, ports, CORS settings, etc.
+     - Root `.env`: **SSH_USER, SSH_PASSWORD** (required), DB_PASSWORD, Kite API credentials
+   - Fails immediately if required credentials are missing
+   - Perfect for CI/CD pipelines or automated deployments
+   - **Critical**: SSH_USER and SSH_PASSWORD must be in root `.env` file for unattended deployment
 
    The scripts will:
    - Transfer artifacts to the server
@@ -126,38 +209,125 @@ The scripts use `sshpass` for automated password-based SSH/SCP operations. If `s
    - Configure all services
    - Start and enable systemd services
 
+### Configuration Files
+
+#### `deployment/deployment.conf`
+
+Contains all common/static deployment settings. Scripts load this file automatically and use its values as defaults for prompts.
+
+**What's in the config file:**
+- Tailscale server addresses (BACKEND_HOST, SOCKETENGINE_HOST, FRONTEND_HOST)
+- Application ports (BACKEND_PORT, SOCKETENGINE_PORT, FRONTEND_PORT)
+- Application users (BACKEND_USER, SOCKETENGINE_USER, FRONTEND_USER)
+- Database configuration (DB_HOST, DB_PORT, DB_NAME, DB_USERNAME)
+- Redis configuration (REDIS_HOST, REDIS_PORT)
+- CORS settings (CORS_ALLOWED_ORIGINS, CORS_ALLOWED_METHODS, etc.)
+- WebSocket configuration (WEBSOCKET_ALLOWED_ORIGINS, etc.)
+- Frontend API URLs (BACKEND_API_URL, SOCKETENGINE_API_URL, etc.)
+- Kite API base URLs
+
+#### `.env` (Root Directory)
+
+Contains sensitive credentials. Scripts automatically load from root `.env` file.
+
+**Required variables for `--accept-defaults` mode:**
+- `SSH_USER` - SSH username
+- `SSH_PASSWORD` - SSH password
+- `DB_PASSWORD` - Database password
+- `KITE_API_KEY` - Kite API key
+- `KITE_API_SECRET` - Kite API secret
+- `KITE_ACCESS_TOKEN` - Kite access token
+
+**Optional variables:**
+- `REDIS_PASSWORD` - Redis password (if Redis requires authentication)
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID (for frontend)
+- `MICROSOFT_CLIENT_ID` - Microsoft OAuth client ID (for frontend)
+
+**Example `.env` file (create in root directory):**
+```bash
+# ==============================================================================
+# SSH Credentials (REQUIRED for --accept-defaults mode)
+# ==============================================================================
+SSH_USER=deploy-user
+SSH_PASSWORD=your-secure-password
+
+# ==============================================================================
+# Database Credentials (REQUIRED for --accept-defaults mode)
+# ==============================================================================
+DB_PASSWORD=your-database-password
+
+# ==============================================================================
+# Redis Credentials (optional, if Redis requires authentication)
+# ==============================================================================
+REDIS_PASSWORD=your-redis-password
+
+# ==============================================================================
+# Kite API Credentials (REQUIRED for --accept-defaults mode)
+# ==============================================================================
+KITE_API_KEY=your-kite-api-key
+KITE_API_SECRET=your-kite-api-secret
+KITE_ACCESS_TOKEN=your-kite-access-token
+
+# ==============================================================================
+# OAuth Configuration (optional, for frontend)
+# ==============================================================================
+GOOGLE_CLIENT_ID=your-google-client-id
+MICROSOFT_CLIENT_ID=your-microsoft-client-id
+```
+
+**Important Notes:**
+- SSH_USER and SSH_PASSWORD enable completely unattended deployments
+- All scripts use the same SSH credentials for all servers
+- If you need different SSH credentials per server, you'll need to modify the scripts or use SSH keys instead
+
+**Security Note:**
+- `.env` file is already in `.gitignore` - never commit this file
+- Scripts will prompt for missing values if not using `--accept-defaults`
+
+**Usage:**
+1. Edit `deployment/deployment.conf` to match your environment
+2. Create `.env` file in root directory with credentials
+3. Run deployment scripts:
+   - Normal mode: Scripts use config values as defaults, prompt for missing/override values
+   - `--accept-defaults` mode: Uses all values from config files, skips prompts (requires all values in files)
+
 ### What Each Script Prompts For
 
 **deploy-backend.sh:**
-- SSH username and password
-- Server hostname (default: `backend.tailce422e.ts.net`)
-- PostgreSQL host, port, database name, username, password
-- Redis host and port
-- Kite API key, secret, access token, base URL
-- Application port (default: `8080`)
-- Application user (default: `moneytree-backend`)
+- SSH username and password (loaded from root `.env` if present, otherwise prompted)
+- Server hostname (default from config: `BACKEND_HOST`)
+- PostgreSQL host, port, database name, username, password (host/port/name/username from config)
+- Redis host and port (from config)
+- Kite API key, secret, access token, base URL (base URL from config, credentials from `.env` if present)
+- CORS settings (from config, can override)
+- Application port and user (from config, can override)
+
+**Note**: With `--accept-defaults`, SSH_USER and SSH_PASSWORD must be in root `.env` file for unattended deployment.
 
 **deploy-socketengine.sh:**
-- SSH username and password
-- Server hostname (default: `socketengine.tailce422e.ts.net`)
-- PostgreSQL host, port, database name, username, password
-- Redis host, port, password
-- Kite API key, secret, access token, WebSocket URL
-- WebSocket allowed origins, CORS allowed origins
-- WebSocket max sessions, max message size
-- Persistence batch size, max buffer size, batch interval
-- Application port (default: `8081`)
-- Application user (default: `moneytree-socketengine`)
+- SSH username and password (loaded from root `.env` if present, otherwise prompted)
+- Server hostname (default from config: `SOCKETENGINE_HOST`)
+- PostgreSQL host, port, database name, username, password (host/port/name/username from config)
+- Redis host, port, password (host/port from config)
+- Kite API key, secret, access token, WebSocket URL (WebSocket URL from config, credentials from `.env` if present)
+- WebSocket and CORS settings (from config, can override)
+- Persistence settings (from config, can override)
+- Application port and user (from config, can override)
+
+**Note**: With `--accept-defaults`, SSH_USER and SSH_PASSWORD must be in root `.env` file for unattended deployment.
 
 **deploy-frontend.sh:**
-- SSH username and password
-- Server hostname (default: `moneytree.tailce422e.ts.net`)
-- Backend API URL
-- SocketEngine API URL, WebSocket URL, HTTP URL
-- Google OAuth Client ID
-- Microsoft OAuth Client ID
-- Server name for Nginx configuration
-- Application user (default: `moneytree-frontend`)
+- SSH username and password (loaded from root `.env` if present, otherwise prompted)
+- Server hostname (default from config: `FRONTEND_HOST`)
+- Backend API URL (default from config: `BACKEND_API_URL`)
+- SocketEngine API URL, WebSocket URL, HTTP URL (defaults from config)
+- Google OAuth Client ID (from `.env` if present, otherwise prompted)
+- Microsoft OAuth Client ID (from `.env` if present, otherwise prompted)
+- Server name for Nginx (default from config: `FRONTEND_HOST`)
+- Frontend URL for OAuth redirects (default from config: `FRONTEND_URL`)
+- Application user (default from config: `FRONTEND_USER`)
+
+**Note**: With `--accept-defaults`, SSH_USER and SSH_PASSWORD must be in root `.env` file for unattended deployment.
 
 ### Deployment Script Features
 
@@ -205,13 +375,24 @@ Each component-specific script provides:
 # Navigate to deployment directory
 cd deployment
 
-# Deploy all components interactively
+# Deploy all components interactively (with prompts)
 ./deploy-all.sh
 
-# Deploy individual components
+# Deploy all components automatically (no prompts, uses config files)
+./deploy-all.sh --accept-defaults
+
+# Deploy individual components with prompts
 ./deploy-backend.sh
 ./deploy-socketengine.sh
 ./deploy-frontend.sh
+
+# Deploy individual components automatically
+./deploy-backend.sh --accept-defaults
+./deploy-socketengine.sh --accept-defaults
+./deploy-frontend.sh --accept-defaults
+
+# Show help
+./deploy-backend.sh --help
 ```
 
 ### Updating Deployed Components (Redeployment)
@@ -1080,7 +1261,35 @@ All deployment scripts are located in the `deployment/` directory:
 - `deployment/deploy-frontend.sh` - Interactive frontend deployment script
 - `deployment/deploy-all.sh` - Orchestrator script for deploying all components
 - `deployment/prepare-artifacts.sh` - Artifact preparation script (run locally before deployment)
+- `deployment/deployment.conf` - Configuration file with common deployment settings
 - `deployment/deploy.sh` - Legacy single-script deployment (still available for manual use)
+
+**Configuration Files:**
+
+- **`deployment/deployment.conf`**: Common/static deployment settings
+  - Includes: Tailscale addresses, ports, CORS settings, database/Redis hosts, etc.
+  - Edit once to customize your environment defaults
+  - Scripts use these values as defaults but allow overriding during deployment
+
+- **`.env` (root directory)**: Sensitive credentials
+  - **SSH_USER, SSH_PASSWORD** - Required for unattended deployment
+  - DB_PASSWORD - Database password
+  - **KITE_WEBSOCKET_URL, KITE_API_KEY, KITE_API_SECRET, KITE_ACCESS_TOKEN** - Kite API credentials (all four are loaded and passed to deployment scripts)
+  - Optional: REDIS_PASSWORD, GOOGLE_CLIENT_ID, MICROSOFT_CLIENT_ID
+  - Scripts automatically load from root `.env` file
+  - **Required for `--accept-defaults` mode**: SSH_USER, SSH_PASSWORD, DB_PASSWORD, KITE_API_KEY, KITE_API_SECRET, KITE_ACCESS_TOKEN (KITE_WEBSOCKET_URL defaults to `wss://ws.kite.trade` if not set)
+  - **Never commit this file to version control** (already in .gitignore)
+  
+  **Example `.env` file structure:**
+  ```bash
+  SSH_USER=deploy-user
+  SSH_PASSWORD=your-ssh-password
+  DB_PASSWORD=your-db-password
+  KITE_WEBSOCKET_URL=wss://ws.kite.trade
+  KITE_API_KEY=your-kite-key
+  KITE_API_SECRET=your-kite-secret
+  KITE_ACCESS_TOKEN=your-kite-token
+  ```
 
 **Component Script Features:**
 - Interactive configuration collection

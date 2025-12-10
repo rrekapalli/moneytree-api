@@ -20,8 +20,8 @@ public class OpenApiConfig {
         localServer.setDescription("Local development server");
 
         Server productionServer = new Server();
-        productionServer.setUrl("https://api.moneytree.com");
-        productionServer.setDescription("Production server");
+        productionServer.setUrl("https://backend.tailce422e.ts.net:8080");
+        productionServer.setDescription("Production server (Tailscale)");
 
         Contact contact = new Contact();
         contact.setName("MoneyTree API Support");

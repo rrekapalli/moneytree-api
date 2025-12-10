@@ -12,6 +12,40 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Parse command line arguments
+ACCEPT_DEFAULTS=false
+for arg in "$@"; do
+    case $arg in
+        --accept-defaults|--accept-default)
+            ACCEPT_DEFAULTS=true
+            ;;
+        --help|-h)
+            cat << EOF
+Usage: $0 [OPTIONS]
+
+Deploy MoneyTree application components to Linux VMs.
+
+OPTIONS:
+    --accept-defaults    Use all defaults from config file and .env, skip prompts
+    --help, -h           Show this help message
+
+EXAMPLES:
+    # Interactive deployment (with prompts)
+    $0
+
+    # Automatic deployment (no prompts, uses config files)
+    $0 --accept-defaults
+EOF
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -115,7 +149,11 @@ if [[ "$DEPLOY_BACKEND" == "y" ]]; then
     log_info "Deploying Backend"
     log_info "=========================================="
     if [[ -f "${COMPONENT_SCRIPTS[0]}" ]]; then
-        "${COMPONENT_SCRIPTS[0]}"
+        if [[ "$ACCEPT_DEFAULTS" == true ]]; then
+            "${COMPONENT_SCRIPTS[0]}" --accept-defaults
+        else
+            "${COMPONENT_SCRIPTS[0]}"
+        fi
         if [[ $? -eq 0 ]]; then
             log_success "Backend deployment completed successfully!"
         else
@@ -134,7 +172,11 @@ if [[ "$DEPLOY_SOCKETENGINE" == "y" ]]; then
     log_info "Deploying SocketEngine"
     log_info "=========================================="
     if [[ -f "${COMPONENT_SCRIPTS[1]}" ]]; then
-        "${COMPONENT_SCRIPTS[1]}"
+        if [[ "$ACCEPT_DEFAULTS" == true ]]; then
+            "${COMPONENT_SCRIPTS[1]}" --accept-defaults
+        else
+            "${COMPONENT_SCRIPTS[1]}"
+        fi
         if [[ $? -eq 0 ]]; then
             log_success "SocketEngine deployment completed successfully!"
         else
@@ -153,7 +195,11 @@ if [[ "$DEPLOY_FRONTEND" == "y" ]]; then
     log_info "Deploying Frontend"
     log_info "=========================================="
     if [[ -f "${COMPONENT_SCRIPTS[2]}" ]]; then
-        "${COMPONENT_SCRIPTS[2]}"
+        if [[ "$ACCEPT_DEFAULTS" == true ]]; then
+            "${COMPONENT_SCRIPTS[2]}" --accept-defaults
+        else
+            "${COMPONENT_SCRIPTS[2]}"
+        fi
         if [[ $? -eq 0 ]]; then
             log_success "Frontend deployment completed successfully!"
         else

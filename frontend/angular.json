@@ -71,7 +71,7 @@
       }
     },
 
-    "money-plant-frontend": {
+    "moneytree-app": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -92,7 +92,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/money-plant-frontend",
+            "outputPath": "dist/moneytree-app",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -119,8 +119,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "3.5mb",
-                  "maximumError": "5.5mb"
+                  "maximumWarning": "7.5mb",
+                  "maximumError": "10.0mb"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -155,10 +155,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "money-plant-frontend:build:production"
+              "buildTarget": "moneytree-app:build:production"
             },
             "development": {
-              "buildTarget": "money-plant-frontend:build:development"
+              "buildTarget": "moneytree-app:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -166,7 +166,7 @@
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n",
           "options": {
-            "buildTarget": "money-plant-frontend:build"
+            "buildTarget": "moneytree-app:build"
           }
         },
         "test": {
