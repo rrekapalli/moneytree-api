@@ -54,6 +54,10 @@ socketengine:
     api-secret: ${KITE_API_SECRET:}
     access-token: ${KITE_ACCESS_TOKEN:}
   
+  # Mock data for testing when Kite is not connected
+  mock:
+    enabled: ${SOCKETENGINE_MOCK_ENABLED:true}
+  
   persistence:
     batch-size: ${PERSISTENCE_BATCH_SIZE:1000}
     max-buffer-size: ${PERSISTENCE_MAX_BUFFER_SIZE:100000}

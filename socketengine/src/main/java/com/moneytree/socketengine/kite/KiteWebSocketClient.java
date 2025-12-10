@@ -3,6 +3,7 @@ package com.moneytree.socketengine.kite;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moneytree.socketengine.config.SocketEngineProperties;
 import com.moneytree.socketengine.domain.InstrumentInfo;
+import com.moneytree.socketengine.domain.InstrumentType;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
 import io.micrometer.core.instrument.Counter;
@@ -173,9 +174,7 @@ public class KiteWebSocketClient {
                 }
             };
             
-            // Add authentication headers
-            webSocketClient.addHeader("X-Kite-Version", "3");
-            webSocketClient.addHeader("Authorization", "token " + apiKey + ":" + accessToken);
+            // Authentication is done via query parameters in the URL, not headers
             
             // Connect (non-blocking)
             webSocketClient.connect();
@@ -319,6 +318,25 @@ public class KiteWebSocketClient {
                 return;
             }
             
+            // Log breakdown by type for debugging
+            long indexCount = instrumentsToSubscribe.stream()
+                .filter(i -> i.getType() == InstrumentType.INDEX)
+                .count();
+            long stockCount = instrumentsToSubscribe.stream()
+                .filter(i -> i.getType() == InstrumentType.STOCK)
+                .count();
+            
+            log.info("Subscribing to {} instruments: {} indices, {} stocks", 
+                tokens.size(), indexCount, stockCount);
+            
+            // Log first few index tokens for verification
+            List<Long> indexTokens = instrumentsToSubscribe.stream()
+                .filter(i -> i.getType() == InstrumentType.INDEX)
+                .map(InstrumentInfo::getInstrumentToken)
+                .limit(10)
+                .collect(Collectors.toList());
+            log.info("Sample index tokens being subscribed: {}", indexTokens);
+            
             // Build Kite subscription message
             var subscriptionMessage = new java.util.HashMap<String, Object>();
             subscriptionMessage.put("a", "subscribe");
@@ -329,8 +347,8 @@ public class KiteWebSocketClient {
             // Send subscription message
             webSocketClient.send(messageJson);
             
-            log.info("Subscribed to {} instruments", tokens.size());
-            log.debug("Subscription message: {}", messageJson);
+            log.info("Subscription message sent to Kite WebSocket");
+            log.debug("Full subscription message: {}", messageJson);
             
         } catch (Exception e) {
             log.error("Failed to subscribe to instruments", e);

@@ -1,6 +1,15 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
+# Load environment variables from root .env file
+if [ -f ".env" ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+    echo "Loaded environment variables from root .env file"
+else
+    echo "ERROR: Root .env file not found!"
+    exit 1
+fi
+
 # Function to kill process on a port
 kill_port() {
   local port=$1

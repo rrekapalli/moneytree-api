@@ -232,6 +232,11 @@ public class KiteTickParser {
         if (instrumentInfo != null) {
             symbol = instrumentInfo.getTradingSymbol();
             type = instrumentInfo.getType();
+            
+            // Log index ticks for debugging
+            if (type == InstrumentType.INDEX) {
+                log.info("INDEX TICK RECEIVED: {} (token: {}) = ₹{}", symbol, instrumentToken, lastPrice);
+            }
         } else {
             // Fallback if instrument not found
             symbol = String.valueOf(instrumentToken);
