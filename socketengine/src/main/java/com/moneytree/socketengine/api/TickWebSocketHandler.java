@@ -238,17 +238,21 @@ public class TickWebSocketHandler extends TextWebSocketHandler {
     private String extractEndpoint(WebSocketSession session) {
         String uri = session.getUri() != null ? session.getUri().getPath() : "";
         
+        // Debug logging to see actual URI
+        log.info("DEBUG: Extracting endpoint from URI: '{}' for session: {}", uri, session.getId());
+        
         // Remove any trailing slashes and query parameters
         uri = uri.replaceAll("/+$", "");
         
-        // Match against known endpoints
-        if (uri.endsWith("/ws/indices/all")) {
+        // Match against known endpoints - handle SockJS URLs
+        if (uri.contains("/ws/indices/all")) {
+            log.info("DEBUG: Matched /ws/indices/all endpoint for session: {}", session.getId());
             return "/ws/indices/all";
-        } else if (uri.endsWith("/ws/stocks/nse/all")) {
+        } else if (uri.contains("/ws/stocks/nse/all")) {
             return "/ws/stocks/nse/all";
-        } else if (uri.endsWith("/ws/indices")) {
+        } else if (uri.contains("/ws/indices")) {
             return "/ws/indices";
-        } else if (uri.endsWith("/ws/stocks")) {
+        } else if (uri.contains("/ws/stocks")) {
             return "/ws/stocks";
         }
         

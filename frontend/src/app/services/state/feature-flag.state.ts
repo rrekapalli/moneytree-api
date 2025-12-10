@@ -1,10 +1,8 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import { Observable, of, tap } from 'rxjs';
 import { ApiService } from '../apis/api.base';
-import { MockApiService } from '../apis/mock-api.service';
 import { FeatureFlag } from '../entities/feature-flag';
 import { enabledFeatures } from '../../../environments/enabled-features';
-import { environment } from '../../../environments/environment';
 
 /**
  * Interface for the feature flag state
@@ -44,14 +42,8 @@ export class FeatureFlagStateService {
   public error = computed(() => this.state().error);
   public lastUpdated = computed(() => this.state().lastUpdated);
 
-  // Choose the appropriate API service based on environment
-  private get apiService(): ApiService | MockApiService {
-    return environment.useMockData ? this.mockApiService : this.realApiService;
-  }
-
   constructor(
-    private realApiService: ApiService,
-    private mockApiService: MockApiService
+    private apiService: ApiService
   ) {
     // State changes are handled silently
   }

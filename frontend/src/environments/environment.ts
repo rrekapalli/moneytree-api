@@ -4,7 +4,7 @@ export const environment = {
   enginesApiUrl: 'http://localhost:8081/engines',
   enginesWebSocketUrl: 'ws://localhost:8081/engines',
   enginesHttpUrl: 'http://localhost:8081/engines', // HTTP URL for SockJS connections
-  useMockData: true,
+
   
   // OAuth Configuration
   oauth: {

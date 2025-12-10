@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.base';
 import { Holding } from '../entities/holding';
 import { HoldingGroup } from '../entities/holding-group';
-import { MockApiService } from './mock-api.service';
+
 
 @Injectable({
   providedIn: 'root'
@@ -12,7 +12,7 @@ export class HoldingsService {
   private readonly endpoint = '/holdings';
   private readonly groupsEndpoint = '/holding-groups';
 
-  constructor(private apiService: MockApiService) {}
+  constructor(private apiService: ApiService) {}
 
   /**
    * Get all holdings

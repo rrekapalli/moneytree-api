@@ -75,13 +75,24 @@ public class TickBroadcaster {
                 sessionManager.getSessionsSubscribedTo(tick.getSymbol()));
             
             // 2. /ws/indices/all sessions (if this is an index tick)
-            if (instrumentLoader.isIndexToken(tick.getInstrumentToken())) {
-                targetSessions.addAll(sessionManager.getIndicesAllSessions());
+            boolean isIndex = instrumentLoader.isIndexToken(tick.getInstrumentToken());
+            if (isIndex) {
+                Set<String> indicesAllSessions = sessionManager.getIndicesAllSessions();
+                targetSessions.addAll(indicesAllSessions);
+                log.debug("INDEX TICK BROADCAST: {} (token: {}) to {} sessions", 
+                    tick.getSymbol(), tick.getInstrumentToken(), indicesAllSessions.size());
             }
             
             // 3. /ws/stocks/nse/all sessions (if this is a stock tick)
-            if (instrumentLoader.isStockToken(tick.getInstrumentToken())) {
+            boolean isStock = instrumentLoader.isStockToken(tick.getInstrumentToken());
+            if (isStock) {
                 targetSessions.addAll(sessionManager.getStocksAllSessions());
+            }
+            
+            // Debug logging for troubleshooting
+            if (isIndex && targetSessions.isEmpty()) {
+                log.warn("INDEX TICK {} has no target sessions! indicesAllSessions: {}", 
+                    tick.getSymbol(), sessionManager.getIndicesAllSessions().size());
             }
             
             // Broadcast to all target sessions (non-blocking)

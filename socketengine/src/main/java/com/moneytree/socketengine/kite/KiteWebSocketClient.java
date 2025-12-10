@@ -55,6 +55,7 @@ public class KiteWebSocketClient {
     private volatile boolean connected = false;
     private volatile boolean shouldReconnect = true;
     private List<InstrumentInfo> instruments;
+    private int debugMessageCount = 0;
     
     public KiteWebSocketClient(
             SocketEngineProperties properties,
@@ -95,34 +96,56 @@ public class KiteWebSocketClient {
     
     /**
      * Cleanup on application shutdown.
-     * Closes WebSocket connection gracefully and waits for completion.
+     * Unsubscribes from all instruments and closes WebSocket connection gracefully.
      */
     @PreDestroy
     public void shutdown() {
-        log.info("Shutting down Kite WebSocket client");
+        log.warn("🛑 SHUTDOWN INITIATED - Kite WebSocket client shutdown starting");
         shouldReconnect = false;
         
         if (webSocketClient != null) {
             try {
                 if (webSocketClient.isOpen()) {
-                    log.info("Closing Kite WebSocket connection...");
-                    // Close with normal closure code (1000)
+                    log.warn("🔌 WebSocket is OPEN - proceeding with unsubscribe and close");
+                    
+                    // First, unsubscribe from all instruments to stop tick data flow
+                    log.warn("📤 SENDING UNSUBSCRIBE MESSAGE to Kite API");
+                    unsubscribeFromAllInstruments();
+                    
+                    // Give Kite more time to process the unsubscribe message
+                    log.warn("⏳ Waiting 3 seconds for Kite to process unsubscribe...");
+                    Thread.sleep(3000);
+                    
+                    log.warn("🔒 CLOSING WebSocket connection...");
+                    // Close with normal closure code (1000) and wait for completion
                     webSocketClient.closeBlocking();
-                    log.info("Kite WebSocket connection closed successfully");
+                    log.warn("✅ Kite WebSocket connection CLOSED successfully");
+                    
                 } else {
-                    log.info("Kite WebSocket connection already closed");
+                    log.warn("🔌 WebSocket is already CLOSED or not connected");
                 }
+                
             } catch (InterruptedException e) {
-                log.warn("Interrupted while closing Kite WebSocket connection", e);
+                log.error("❌ INTERRUPTED while closing Kite WebSocket connection", e);
                 Thread.currentThread().interrupt();
                 // Force close if blocking close was interrupted
                 webSocketClient.close();
+                log.warn("🔨 FORCE CLOSED WebSocket due to interruption");
             } catch (Exception e) {
-                log.error("Error closing Kite WebSocket connection", e);
-                // Force close on error
+                log.error("❌ ERROR during graceful shutdown, forcing close", e);
+                // Force close on any error
                 webSocketClient.close();
+                log.warn("🔨 FORCE CLOSED WebSocket due to error");
             }
+        } else {
+            log.warn("🔌 WebSocket client is NULL - no cleanup needed");
         }
+        
+        // Final cleanup
+        webSocketClient = null;
+        connected = false;
+        
+        log.warn("🏁 Kite WebSocket client shutdown COMPLETED");
     }
     
     /**
@@ -207,7 +230,33 @@ public class KiteWebSocketClient {
             byte[] data = new byte[bytes.remaining()];
             bytes.get(data);
             
+            // DEBUG: Analyze first few binary messages to detect parsing issues
+            // This will help identify the root cause of corrupted price data
+            if (debugMessageCount < 3) {
+                debugMessageCount++;
+                log.warn("🔍 DEBUG MESSAGE #{}: Analyzing binary data for parsing issues", debugMessageCount);
+                tickParser.debugBinaryData(data);
+            }
+            
             List<Tick> ticks = tickParser.parse(data);
+            
+            // DEBUG: Log parsed ticks to verify data quality
+            if (debugMessageCount <= 3) {
+                ticks.forEach(tick -> {
+                    if (tick.getType() == com.moneytree.socketengine.domain.InstrumentType.INDEX) {
+                        log.warn("🔍 PARSED INDEX TICK: {} = ₹{} (OHLC: O={}, H={}, L={}, C={})", 
+                            tick.getSymbol(), tick.getLastTradedPrice(),
+                            tick.getOhlc().getOpen(), tick.getOhlc().getHigh(), 
+                            tick.getOhlc().getLow(), tick.getOhlc().getClose());
+                        
+                        // Check for obviously corrupted data
+                        if (tick.getLastTradedPrice() < 0 || tick.getLastTradedPrice() > 1000000) {
+                            log.error("❌ CORRUPTED PRICE DETECTED: {} has price ₹{}", 
+                                tick.getSymbol(), tick.getLastTradedPrice());
+                        }
+                    }
+                });
+            }
             
             // Publish event for each tick
             ticks.forEach(tick -> {
@@ -356,6 +405,70 @@ public class KiteWebSocketClient {
     }
     
     /**
+     * Unsubscribes from all instruments by sending unsubscribe message to Kite.
+     * This is called during shutdown to stop tick data flow before closing the connection.
+     * 
+     * <p>Kite unsubscribe message format:
+     * <pre>
+     * {
+     *   "a": "unsubscribe",
+     *   "v": [token1, token2, ...]
+     * }
+     * </pre>
+     */
+    private void unsubscribeFromAllInstruments() {
+        if (instruments == null || instruments.isEmpty()) {
+            log.warn("⚠️ NO INSTRUMENTS to unsubscribe from - instruments list is empty");
+            return;
+        }
+        
+        try {
+            // Extract instrument tokens
+            List<Long> tokens = instruments.stream()
+                .map(InstrumentInfo::getInstrumentToken)
+                .collect(Collectors.toList());
+            
+            log.warn("📤 UNSUBSCRIBING from {} instruments", tokens.size());
+            
+            // Log first few tokens for verification
+            List<Long> sampleTokens = tokens.stream().limit(5).collect(Collectors.toList());
+            log.warn("📋 Sample tokens being unsubscribed: {}", sampleTokens);
+            
+            // Build Kite unsubscribe message
+            var unsubscribeMessage = new java.util.HashMap<String, Object>();
+            unsubscribeMessage.put("a", "unsubscribe");
+            unsubscribeMessage.put("v", tokens);
+            
+            String messageJson = objectMapper.writeValueAsString(unsubscribeMessage);
+            
+            // Send unsubscribe message
+            if (webSocketClient != null && webSocketClient.isOpen()) {
+                log.warn("📡 SENDING unsubscribe message to Kite WebSocket...");
+                webSocketClient.send(messageJson);
+                log.warn("✅ UNSUBSCRIBE MESSAGE SENT successfully");
+                log.warn("📄 Full unsubscribe message: {}", messageJson);
+                
+                // Verify the message was sent by checking connection state
+                if (webSocketClient.isOpen()) {
+                    log.warn("🔗 WebSocket connection is still OPEN after sending unsubscribe");
+                } else {
+                    log.warn("🔌 WebSocket connection CLOSED immediately after unsubscribe");
+                }
+                
+            } else {
+                log.error("❌ CANNOT send unsubscribe message - WebSocket is NOT OPEN");
+                log.error("🔍 WebSocket state: client={}, isOpen={}", 
+                    webSocketClient != null ? "exists" : "null",
+                    webSocketClient != null ? webSocketClient.isOpen() : "N/A");
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ FAILED to unsubscribe from instruments", e);
+            log.error("🔍 Error details: {}", e.getMessage());
+        }
+    }
+    
+    /**
      * Checks if the WebSocket connection is currently active.
      * 
      * @return true if connected, false otherwise
@@ -372,5 +485,38 @@ public class KiteWebSocketClient {
      */
     public int getReconnectionAttempts() {
         return reconnectionStrategy.getAttemptCount();
+    }
+    
+    /**
+     * Manual shutdown method for testing purposes.
+     * This can be called via REST endpoint or management interface to test shutdown behavior.
+     */
+    public void manualShutdown() {
+        log.warn("🧪 MANUAL SHUTDOWN TRIGGERED for testing");
+        shutdown();
+    }
+    
+    /**
+     * Get current subscription status for monitoring.
+     * 
+     * @return Map containing subscription details
+     */
+    public java.util.Map<String, Object> getSubscriptionStatus() {
+        var status = new java.util.HashMap<String, Object>();
+        status.put("connected", isConnected());
+        status.put("shouldReconnect", shouldReconnect);
+        status.put("instrumentCount", instruments != null ? instruments.size() : 0);
+        status.put("reconnectionAttempts", getReconnectionAttempts());
+        
+        if (instruments != null && !instruments.isEmpty()) {
+            // Sample of subscribed instruments
+            List<String> sampleInstruments = instruments.stream()
+                .limit(5)
+                .map(i -> i.getTradingSymbol() + ":" + i.getInstrumentToken())
+                .collect(Collectors.toList());
+            status.put("sampleInstruments", sampleInstruments);
+        }
+        
+        return status;
     }
 }

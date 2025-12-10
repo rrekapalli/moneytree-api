@@ -3,7 +3,7 @@ import { Observable, of } from 'rxjs';
 import { ApiService } from './api.base';
 import { FeatureFlag } from '../entities/feature-flag';
 import { enabledFeatures } from '../../../environments/enabled-features';
-import { MockApiService } from './mock-api.service';
+
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +11,7 @@ import { MockApiService } from './mock-api.service';
 export class FeatureFlagService {
   private readonly endpoint = '/feature-flags';
 
-  constructor(private apiService: MockApiService) {}
+  constructor(private apiService: ApiService) {}
 
   /**
    * Get all feature flags

@@ -54,6 +54,7 @@ import java.util.List;
 public class KiteTickParser {
     
     private final InstrumentLoader instrumentLoader;
+    private int debugMessageCount = 0;
     
     // Packet size constants for different modes
     private static final int MODE_LTP = 1;
@@ -77,14 +78,54 @@ public class KiteTickParser {
         }
         
         try {
+            // CRITICAL FIX: Try both byte orders to determine correct parsing
             ByteBuffer buffer = ByteBuffer.wrap(binaryData);
-            buffer.order(ByteOrder.BIG_ENDIAN);  // Kite uses big-endian (network byte order)
             
-            // First 2 bytes: number of packets
-            int packetCount = buffer.getShort() & 0xFFFF;
+            // First try BIG_ENDIAN (as per Kite documentation)
+            buffer.order(ByteOrder.BIG_ENDIAN);
+            int packetCountBE = buffer.getShort() & 0xFFFF;
+            
+            // Then try LITTLE_ENDIAN
+            buffer.rewind();
+            buffer.order(ByteOrder.LITTLE_ENDIAN);
+            int packetCountLE = buffer.getShort() & 0xFFFF;
+            
+            // Determine which byte order produces reasonable packet count
+            int packetCount;
+            ByteOrder correctOrder;
+            
+            if (packetCountBE > 0 && packetCountBE <= 100) {
+                packetCount = packetCountBE;
+                correctOrder = ByteOrder.BIG_ENDIAN;
+                buffer.rewind();
+                buffer.order(ByteOrder.BIG_ENDIAN);
+                buffer.getShort(); // Skip packet count
+            } else if (packetCountLE > 0 && packetCountLE <= 100) {
+                packetCount = packetCountLE;
+                correctOrder = ByteOrder.LITTLE_ENDIAN;
+                // buffer is already positioned correctly and in LITTLE_ENDIAN
+                buffer.getShort(); // Skip packet count
+                log.warn("🔧 BINARY PARSING FIX: Using LITTLE_ENDIAN byte order (packet count: {})", packetCountLE);
+            } else {
+                // Neither byte order produces reasonable packet count, use original logic
+                packetCount = packetCountBE;
+                correctOrder = ByteOrder.BIG_ENDIAN;
+                buffer.rewind();
+                buffer.order(ByteOrder.BIG_ENDIAN);
+                buffer.getShort(); // Skip packet count
+                log.warn("⚠️ BINARY PARSING: Neither byte order produces reasonable packet count (BE: {}, LE: {})", 
+                    packetCountBE, packetCountLE);
+            }
             
             if (packetCount <= 0) {
                 throw new TickParseException("Invalid packet count: " + packetCount);
+            }
+            
+            // Debug: Log parsing details for first few messages
+            if (debugMessageCount < 3) {
+                debugMessageCount++;
+                log.info("🔍 PARSING DEBUG #{}: Using {} byte order, packet count: {}, data length: {}", 
+                    debugMessageCount, correctOrder, packetCount, binaryData.length);
             }
             
             List<Tick> ticks = new ArrayList<>(packetCount);
@@ -129,10 +170,25 @@ public class KiteTickParser {
         // Read mode (1 byte)
         int mode = buffer.get() & 0xFF;
         
+        // Debug: Log first few tick modes to verify parsing
+        if (debugMessageCount <= 3) {
+            log.info("🔍 TICK DEBUG: instrument={}, mode={}, valid={}, bufferRemaining={}", 
+                instrumentToken, mode, (mode >= MODE_LTP && mode <= MODE_FULL), buffer.remaining());
+        }
+        
         // Validate mode
         if (mode < MODE_LTP || mode > MODE_FULL) {
-            log.warn("Unknown tick mode {} for instrument {}, skipping", mode, instrumentToken);
-            skipRemainingPacketData(buffer, mode);
+            if (debugMessageCount <= 3) {
+                log.warn("❌ Invalid tick mode {} for instrument {} (expected 1-3), attempting recovery", 
+                    mode, instrumentToken);
+            }
+            
+            // CRITICAL FIX: For invalid modes, we can't trust the packet structure
+            // Skip a minimal amount and let the next packet parsing attempt to recover
+            // This is better than trying to guess the packet size
+            if (buffer.remaining() >= 4) {
+                buffer.getInt(); // Skip 4 bytes and try to recover
+            }
             return null;
         }
         
@@ -161,6 +217,11 @@ public class KiteTickParser {
         
         double lastPrice = buffer.getInt() / 100.0;
         
+        // Debug: Log LTP parsing for first few messages
+        if (debugMessageCount <= 3) {
+            log.info("🔍 LTP MODE: instrument={}, lastPrice={}", instrumentToken, lastPrice);
+        }
+        
         return buildTick(instrumentToken, lastPrice, 0, 0, 0, 0, 0, Instant.now(), originalData);
     }
     
@@ -179,6 +240,12 @@ public class KiteTickParser {
         long volume = buffer.getInt() & 0xFFFFFFFFL;
         long buyQuantity = buffer.getInt() & 0xFFFFFFFFL;
         long sellQuantity = buffer.getInt() & 0xFFFFFFFFL;
+        
+        // Debug: Log Quote parsing for first few messages
+        if (debugMessageCount <= 3) {
+            log.info("🔍 QUOTE MODE: instrument={}, lastPrice={}, volume={}", 
+                instrumentToken, lastPrice, volume);
+        }
         
         return buildTick(instrumentToken, lastPrice, volume, 0, 0, 0, 0, Instant.now(), originalData);
     }
@@ -212,6 +279,12 @@ public class KiteTickParser {
         
         // Convert Unix timestamp to Instant
         Instant tickTimestamp = Instant.ofEpochSecond(timestamp);
+        
+        // Debug: Log Full parsing for first few messages
+        if (debugMessageCount <= 3) {
+            log.info("🔍 FULL MODE: instrument={}, lastPrice={}, volume={}, OHLC=[{},{},{},{}]", 
+                instrumentToken, lastPrice, volume, open, high, low, close);
+        }
         
         return buildTick(instrumentToken, lastPrice, volume, open, high, low, close, tickTimestamp, originalData);
     }
@@ -274,6 +347,107 @@ public class KiteTickParser {
         
         if (buffer.remaining() >= bytesToSkip) {
             buffer.position(buffer.position() + bytesToSkip);
+        }
+    }
+    
+    /**
+     * Debug method to analyze raw binary data and detect parsing issues.
+     * This method logs detailed information about the binary structure to help
+     * identify issues with corrupted price data.
+     * 
+     * @param binaryData Raw binary data from Kite WebSocket
+     */
+    public void debugBinaryData(byte[] binaryData) {
+        if (binaryData == null || binaryData.length < 2) {
+            log.warn("🔍 DEBUG: Binary data is null or too short");
+            return;
+        }
+        
+        try {
+            log.info("🔍 BINARY DEBUG: Analyzing {} bytes of data", binaryData.length);
+            
+            // Log first 32 bytes as hex for inspection
+            StringBuilder hexDump = new StringBuilder();
+            for (int i = 0; i < Math.min(32, binaryData.length); i++) {
+                hexDump.append(String.format("%02X ", binaryData[i] & 0xFF));
+                if ((i + 1) % 8 == 0) hexDump.append(" ");
+            }
+            log.info("🔍 HEX DUMP (first 32 bytes): {}", hexDump.toString());
+            
+            ByteBuffer buffer = ByteBuffer.wrap(binaryData);
+            buffer.order(ByteOrder.BIG_ENDIAN);
+            
+            // Read packet count
+            int packetCount = buffer.getShort() & 0xFFFF;
+            log.info("🔍 PACKET COUNT: {}", packetCount);
+            
+            if (packetCount <= 0 || packetCount > 100) {
+                log.warn("🔍 SUSPICIOUS PACKET COUNT: {} (expected 1-100)", packetCount);
+                
+                // Try little-endian
+                buffer.rewind();
+                buffer.order(ByteOrder.LITTLE_ENDIAN);
+                int packetCountLE = buffer.getShort() & 0xFFFF;
+                log.info("🔍 PACKET COUNT (little-endian): {}", packetCountLE);
+                
+                if (packetCountLE > 0 && packetCountLE <= 100) {
+                    log.warn("🔍 DATA APPEARS TO BE LITTLE-ENDIAN, NOT BIG-ENDIAN!");
+                }
+                return;
+            }
+            
+            // Analyze first packet
+            if (buffer.remaining() >= 6) {
+                long instrumentToken = buffer.getInt() & 0xFFFFFFFFL;
+                byte tradable = buffer.get();
+                int mode = buffer.get() & 0xFF;
+                
+                log.info("🔍 FIRST PACKET: token={}, tradable={}, mode={}", 
+                    instrumentToken, tradable, mode);
+                
+                if (mode >= MODE_LTP && mode <= MODE_FULL && buffer.remaining() >= 4) {
+                    // Read price with different interpretations
+                    int rawPriceInt = buffer.getInt();
+                    double priceBigEndian = rawPriceInt / 100.0;
+                    
+                    // Try little-endian interpretation
+                    ByteBuffer tempBuffer = ByteBuffer.allocate(4);
+                    tempBuffer.order(ByteOrder.LITTLE_ENDIAN);
+                    tempBuffer.putInt(rawPriceInt);
+                    tempBuffer.flip();
+                    tempBuffer.order(ByteOrder.BIG_ENDIAN);
+                    int swappedInt = tempBuffer.getInt();
+                    double priceLittleEndian = swappedInt / 100.0;
+                    
+                    // Try without division
+                    double priceNoDivision = rawPriceInt;
+                    
+                    // Try as unsigned
+                    long unsignedPrice = rawPriceInt & 0xFFFFFFFFL;
+                    double priceUnsigned = unsignedPrice / 100.0;
+                    
+                    log.info("🔍 PRICE INTERPRETATIONS:");
+                    log.info("  Raw int: {} (0x{:08X})", rawPriceInt, rawPriceInt);
+                    log.info("  Big-endian /100: {}", priceBigEndian);
+                    log.info("  Little-endian /100: {}", priceLittleEndian);
+                    log.info("  No division: {}", priceNoDivision);
+                    log.info("  Unsigned /100: {}", priceUnsigned);
+                    
+                    // Check which interpretation makes sense (typical stock prices are 1-50000)
+                    if (priceBigEndian > 0 && priceBigEndian < 100000) {
+                        log.info("✅ Big-endian /100 looks reasonable: {}", priceBigEndian);
+                    } else if (priceLittleEndian > 0 && priceLittleEndian < 100000) {
+                        log.warn("⚠️ Little-endian /100 looks more reasonable: {}", priceLittleEndian);
+                    } else if (priceUnsigned > 0 && priceUnsigned < 10000000) {
+                        log.warn("⚠️ Unsigned /100 looks reasonable: {}", priceUnsigned);
+                    } else {
+                        log.error("❌ None of the interpretations look reasonable!");
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            log.error("🔍 DEBUG: Error analyzing binary data", e);
         }
     }
 }

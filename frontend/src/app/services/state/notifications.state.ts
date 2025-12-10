@@ -1,10 +1,8 @@
 import { Injectable, OnDestroy, computed, effect, signal } from '@angular/core';
 import { Observable, tap, interval, Subscription } from 'rxjs';
 import { ApiService } from '../apis/api.base';
-import { MockApiService } from '../apis/mock-api.service';
 import { Notification } from '../entities/notification';
 import { SettingsStateService } from './settings.state';
-import { environment } from '../../../environments/environment';
 
 /**
  * Interface for the notifications state
@@ -49,14 +47,8 @@ export class NotificationsStateService implements OnDestroy {
   // Cleanup interval subscription
   private cleanupSubscription: Subscription | null = null;
 
-  // Choose the appropriate API service based on environment
-  private get apiService(): ApiService | MockApiService {
-    return environment.useMockData ? this.mockApiService : this.realApiService;
-  }
-
   constructor(
-    private realApiService: ApiService,
-    private mockApiService: MockApiService,
+    private apiService: ApiService,
     private settingsState: SettingsStateService
   ) {
     // State changes are handled silently

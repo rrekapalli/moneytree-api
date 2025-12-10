@@ -5,6 +5,10 @@ spring:
   application:
     name: socketengine
   
+  # Graceful shutdown configuration
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  
   # Database configuration (TimescaleDB/PostgreSQL)
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://postgres.tailce422e.ts.net:5432/MoneyTree}
@@ -54,9 +58,7 @@ socketengine:
     api-secret: ${KITE_API_SECRET:}
     access-token: ${KITE_ACCESS_TOKEN:}
   
-  # Mock data for testing when Kite is not connected
-  mock:
-    enabled: ${SOCKETENGINE_MOCK_ENABLED:true}
+
   
   persistence:
     batch-size: ${PERSISTENCE_BATCH_SIZE:1000}

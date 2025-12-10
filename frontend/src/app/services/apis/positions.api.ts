@@ -4,7 +4,7 @@ import { HttpParams } from '@angular/common/http';
 import { ApiService } from './api.base';
 import { Position } from '../entities/position';
 import { PositionsSummary } from '../entities/positions-summary';
-import { MockApiService } from './mock-api.service';
+
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +13,7 @@ export class PositionsService {
   private readonly endpoint = '/positions';
   private readonly summaryEndpoint = '/positions/summary';
 
-  constructor(private apiService: MockApiService) {}
+  constructor(private apiService: ApiService) {}
 
   /**
    * Get all positions

@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { HttpParams } from '@angular/common/http';
 import { ApiService } from './api.base';
 import { Notification } from '../entities/notification';
-import { MockApiService } from './mock-api.service';
+
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +11,7 @@ import { MockApiService } from './mock-api.service';
 export class NotificationsService {
   private readonly endpoint = '/notifications';
 
-  constructor(private apiService: MockApiService) {}
+  constructor(private apiService: ApiService) {}
 
   /**
    * Get all notifications

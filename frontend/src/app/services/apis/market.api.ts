@@ -4,7 +4,7 @@ import { HttpParams } from '@angular/common/http';
 import { ApiService } from './api.base';
 import { MarketData } from '../entities/market-data';
 import { MarketSummary } from '../entities/market-summary';
-import { MockApiService } from './mock-api.service';
+
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +17,7 @@ export class MarketService {
   private readonly mostActiveEndpoint = '/market/most-active';
   private readonly searchEndpoint = '/market/search';
 
-  constructor(private apiService: MockApiService) {}
+  constructor(private apiService: ApiService) {}
 
   /**
    * Get market summary data

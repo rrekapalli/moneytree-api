@@ -3,15 +3,13 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.base';
 import { Watchlist } from '../entities/watchlist';
 import { WatchlistItem } from '../entities/watchlist-item';
-import { MockApiService } from './mock-api.service';
-
 @Injectable({
   providedIn: 'root'
 })
 export class WatchlistService {
   private readonly endpoint = '/watchlists';
 
-  constructor(private apiService: MockApiService) {}
+  constructor(private apiService: ApiService) {}
 
   /**
    * Get all watchlists
