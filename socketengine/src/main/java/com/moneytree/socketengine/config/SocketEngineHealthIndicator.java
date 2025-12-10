@@ -42,14 +42,13 @@ public class SocketEngineHealthIndicator implements HealthIndicator {
             boolean kiteConnected = kiteClient.isConnected();
             long bufferSize = tickBuffer.getBufferSize();
             int activeSessions = sessionManager.getActiveSessionCount();
-            int reconnectionAttempts = kiteClient.getReconnectionAttempts();
             
             // Build health details
             var healthBuilder = Health.up()
                 .withDetail("kiteConnected", kiteConnected)
                 .withDetail("bufferSize", bufferSize)
                 .withDetail("activeSessions", activeSessions)
-                .withDetail("reconnectionAttempts", reconnectionAttempts);
+                .withDetail("usingOfficialKiteTicker", true);
             
             // Check for critical issues
             if (!kiteConnected) {

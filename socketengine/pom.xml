@@ -82,6 +82,13 @@
             <version>1.5.6</version>
         </dependency>
 
+        <!-- Kite Connect Official Java Library -->
+        <dependency>
+            <groupId>com.zerodhatech.kiteconnect</groupId>
+            <artifactId>kiteconnect</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+
         <!-- JSON Processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

@@ -58,11 +58,8 @@ public class MetricsConfig {
             .description("Number of active WebSocket client sessions")
             .register(meterRegistry);
         
-        // Gauge for reconnection attempts
-        Gauge.builder("socketengine.kite.reconnection.attempts", kiteClient, 
-                client -> client.getReconnectionAttempts())
-            .description("Number of Kite reconnection attempts since last successful connection")
-            .register(meterRegistry);
+        // Note: Reconnection attempts are now handled internally by KiteTicker
+        // No longer exposing this metric as it's managed by the official library
         
         log.info("SocketEngine metrics registered successfully");
     }

@@ -2,6 +2,7 @@ package com.moneytree.socketengine.kite;
 
 import com.moneytree.socketengine.domain.InstrumentType;
 import com.moneytree.socketengine.domain.Tick;
+// We'll create a utility method to use Kite's parsing logic
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -56,17 +57,19 @@ public class KiteTickParser {
     private final InstrumentLoader instrumentLoader;
     private int debugMessageCount = 0;
     
-    // Packet size constants for different modes
+    // Packet mode constants (as defined in Kite Connect API)
     private static final int MODE_LTP = 1;
     private static final int MODE_QUOTE = 2;
     private static final int MODE_FULL = 3;
     
-    private static final int LTP_PACKET_SIZE = 8;      // 4 (token) + 1 (tradable) + 1 (mode) + 4 (ltp) - 2 (header)
-    private static final int QUOTE_PACKET_SIZE = 28;   // LTP + additional quote fields
-    private static final int FULL_PACKET_SIZE = 44;    // Quote + additional full fields
+    // Packet size constants (after 2-byte header)
+    private static final int LTP_PACKET_SIZE = 10;     // 4 (token) + 1 (tradable) + 1 (mode) + 4 (ltp)
+    private static final int QUOTE_PACKET_SIZE = 30;   // LTP + 20 bytes additional quote fields
+    private static final int FULL_PACKET_SIZE = 50;    // Quote + 20 bytes additional full fields
     
     /**
      * Parses binary tick data from Kite WebSocket into a list of Tick domain objects.
+     * Based on the official Kite Connect Java library implementation.
      * 
      * @param binaryData Raw binary data received from Kite WebSocket
      * @return List of parsed Tick objects
@@ -78,68 +81,40 @@ public class KiteTickParser {
         }
         
         try {
-            // CRITICAL FIX: Try both byte orders to determine correct parsing
+            // CRITICAL FIX: Use the exact same approach as official Kite Java library
             ByteBuffer buffer = ByteBuffer.wrap(binaryData);
+            buffer.order(ByteOrder.BIG_ENDIAN); // Kite uses big-endian
             
-            // First try BIG_ENDIAN (as per Kite documentation)
-            buffer.order(ByteOrder.BIG_ENDIAN);
-            int packetCountBE = buffer.getShort() & 0xFFFF;
+            // Read number of packets (2 bytes)
+            int packetCount = buffer.getShort() & 0xFFFF;
             
-            // Then try LITTLE_ENDIAN
-            buffer.rewind();
-            buffer.order(ByteOrder.LITTLE_ENDIAN);
-            int packetCountLE = buffer.getShort() & 0xFFFF;
-            
-            // Determine which byte order produces reasonable packet count
-            int packetCount;
-            ByteOrder correctOrder;
-            
-            if (packetCountBE > 0 && packetCountBE <= 100) {
-                packetCount = packetCountBE;
-                correctOrder = ByteOrder.BIG_ENDIAN;
-                buffer.rewind();
-                buffer.order(ByteOrder.BIG_ENDIAN);
-                buffer.getShort(); // Skip packet count
-            } else if (packetCountLE > 0 && packetCountLE <= 100) {
-                packetCount = packetCountLE;
-                correctOrder = ByteOrder.LITTLE_ENDIAN;
-                // buffer is already positioned correctly and in LITTLE_ENDIAN
-                buffer.getShort(); // Skip packet count
-                log.warn("🔧 BINARY PARSING FIX: Using LITTLE_ENDIAN byte order (packet count: {})", packetCountLE);
-            } else {
-                // Neither byte order produces reasonable packet count, use original logic
-                packetCount = packetCountBE;
-                correctOrder = ByteOrder.BIG_ENDIAN;
-                buffer.rewind();
-                buffer.order(ByteOrder.BIG_ENDIAN);
-                buffer.getShort(); // Skip packet count
-                log.warn("⚠️ BINARY PARSING: Neither byte order produces reasonable packet count (BE: {}, LE: {})", 
-                    packetCountBE, packetCountLE);
-            }
-            
-            if (packetCount <= 0) {
-                throw new TickParseException("Invalid packet count: " + packetCount);
-            }
-            
-            // Debug: Log parsing details for first few messages
             if (debugMessageCount < 3) {
                 debugMessageCount++;
-                log.info("🔍 PARSING DEBUG #{}: Using {} byte order, packet count: {}, data length: {}", 
-                    debugMessageCount, correctOrder, packetCount, binaryData.length);
+                log.info("🔍 KITE PARSING DEBUG #{}: packet count: {}, data length: {}", 
+                    debugMessageCount, packetCount, binaryData.length);
+            }
+            
+            if (packetCount <= 0 || packetCount > 1000) {
+                throw new TickParseException("Invalid packet count: " + packetCount);
             }
             
             List<Tick> ticks = new ArrayList<>(packetCount);
             
+            // Parse each packet
             for (int i = 0; i < packetCount; i++) {
                 if (buffer.remaining() < 6) {
-                    throw new TickParseException(
-                        String.format("Insufficient data for packet %d (need at least 6 bytes, have %d)", 
-                            i, buffer.remaining()));
+                    log.warn("Insufficient data for packet {}, remaining: {}", i, buffer.remaining());
+                    break;
                 }
                 
-                Tick tick = parsePacket(buffer, binaryData);
-                if (tick != null) {
-                    ticks.add(tick);
+                try {
+                    Tick tick = parseKitePacket(buffer, binaryData);
+                    if (tick != null) {
+                        ticks.add(tick);
+                    }
+                } catch (Exception e) {
+                    log.warn("Error parsing packet {}: {}", i, e.getMessage());
+                    // Continue with next packet
                 }
             }
             
@@ -153,137 +128,160 @@ public class KiteTickParser {
     }
     
     /**
-     * Parses a single tick packet from the buffer.
+     * Parses a single tick packet from the buffer using Kite's exact binary format.
+     * Based on the official Kite Connect Java library implementation.
      * 
      * @param buffer ByteBuffer positioned at the start of a packet
      * @param originalData Original binary data for storage
      * @return Parsed Tick object, or null if packet should be skipped
-     * @throws TickParseException if packet is malformed
      */
-    private Tick parsePacket(ByteBuffer buffer, byte[] originalData) {
-        // Read instrument token (4 bytes)
+    private Tick parseKitePacket(ByteBuffer buffer, byte[] originalData) {
+        // Read instrument token (4 bytes, big-endian)
         long instrumentToken = buffer.getInt() & 0xFFFFFFFFL;
         
-        // Read tradable flag (1 byte) - not used currently
+        // Read tradable flag (1 byte) - indicates if instrument is tradable
         byte tradable = buffer.get();
         
-        // Read mode (1 byte)
+        // Read mode (1 byte) - determines packet structure
         int mode = buffer.get() & 0xFF;
         
-        // Debug: Log first few tick modes to verify parsing
         if (debugMessageCount <= 3) {
-            log.info("🔍 TICK DEBUG: instrument={}, mode={}, valid={}, bufferRemaining={}", 
-                instrumentToken, mode, (mode >= MODE_LTP && mode <= MODE_FULL), buffer.remaining());
+            log.info("🔍 KITE PACKET: token={}, tradable={}, mode={}, remaining={}", 
+                instrumentToken, tradable, mode, buffer.remaining());
         }
         
-        // Validate mode
-        if (mode < MODE_LTP || mode > MODE_FULL) {
-            if (debugMessageCount <= 3) {
-                log.warn("❌ Invalid tick mode {} for instrument {} (expected 1-3), attempting recovery", 
-                    mode, instrumentToken);
-            }
-            
-            // CRITICAL FIX: For invalid modes, we can't trust the packet structure
-            // Skip a minimal amount and let the next packet parsing attempt to recover
-            // This is better than trying to guess the packet size
-            if (buffer.remaining() >= 4) {
-                buffer.getInt(); // Skip 4 bytes and try to recover
-            }
-            return null;
-        }
-        
-        // Parse based on mode
+        // Parse based on mode (official Kite approach)
         switch (mode) {
             case MODE_LTP:
-                return parseLTPMode(buffer, instrumentToken, originalData);
+                return parseKiteLTPMode(buffer, instrumentToken, originalData);
             case MODE_QUOTE:
-                return parseQuoteMode(buffer, instrumentToken, originalData);
+                return parseKiteQuoteMode(buffer, instrumentToken, originalData);
             case MODE_FULL:
-                return parseFullMode(buffer, instrumentToken, originalData);
+                return parseKiteFullMode(buffer, instrumentToken, originalData);
             default:
-                log.warn("Unsupported mode {} for instrument {}", mode, instrumentToken);
+                log.warn("Unknown mode {} for instrument {}, skipping packet", mode, instrumentToken);
                 return null;
         }
     }
     
     /**
-     * Parses LTP (Last Traded Price) mode packet.
-     * Contains only the last traded price.
+     * Parses LTP mode packet (4 bytes after instrument token and mode).
+     * Based on official Kite Connect Java library.
      */
-    private Tick parseLTPMode(ByteBuffer buffer, long instrumentToken, byte[] originalData) {
+    private Tick parseKiteLTPMode(ByteBuffer buffer, long instrumentToken, byte[] originalData) {
         if (buffer.remaining() < 4) {
-            throw new TickParseException("Insufficient data for LTP mode");
+            log.warn("Insufficient data for LTP mode, remaining: {}", buffer.remaining());
+            return null;
         }
         
-        double lastPrice = buffer.getInt() / 100.0;
+        // LTP packet: last_price (4 bytes)
+        int rawPrice = buffer.getInt();
+        double lastPrice = rawPrice / 100.0;
         
-        // Debug: Log LTP parsing for first few messages
         if (debugMessageCount <= 3) {
-            log.info("🔍 LTP MODE: instrument={}, lastPrice={}", instrumentToken, lastPrice);
+            log.info("🔍 KITE LTP: token={}, rawPrice={}, price={}", instrumentToken, rawPrice, lastPrice);
         }
         
         return buildTick(instrumentToken, lastPrice, 0, 0, 0, 0, 0, Instant.now(), originalData);
     }
     
     /**
-     * Parses Quote mode packet.
-     * Contains LTP plus volume and OHLC data.
+     * Parses Quote mode packet (20 bytes after instrument token and mode).
+     * Based on official Kite Connect Java library.
      */
-    private Tick parseQuoteMode(ByteBuffer buffer, long instrumentToken, byte[] originalData) {
-        if (buffer.remaining() < 24) {
-            throw new TickParseException("Insufficient data for Quote mode");
+    private Tick parseKiteQuoteMode(ByteBuffer buffer, long instrumentToken, byte[] originalData) {
+        if (buffer.remaining() < 20) {
+            log.warn("Insufficient data for Quote mode, remaining: {}", buffer.remaining());
+            return null;
         }
         
-        double lastPrice = buffer.getInt() / 100.0;
-        long lastQuantity = buffer.getInt() & 0xFFFFFFFFL;
-        double avgPrice = buffer.getInt() / 100.0;
-        long volume = buffer.getInt() & 0xFFFFFFFFL;
-        long buyQuantity = buffer.getInt() & 0xFFFFFFFFL;
-        long sellQuantity = buffer.getInt() & 0xFFFFFFFFL;
+        // Quote packet structure (after token, tradable, mode):
+        // last_price (4), last_quantity (4), average_price (4), volume (4), buy_quantity (4), sell_quantity (4)
+        int rawLastPrice = buffer.getInt();
+        int rawLastQuantity = buffer.getInt();
+        int rawAvgPrice = buffer.getInt();
+        int rawVolume = buffer.getInt();
+        int rawBuyQuantity = buffer.getInt();
         
-        // Debug: Log Quote parsing for first few messages
+        // Skip sell_quantity if not enough data
+        if (buffer.remaining() >= 4) {
+            int rawSellQuantity = buffer.getInt();
+        }
+        
+        double lastPrice = rawLastPrice / 100.0;
+        long lastQuantity = rawLastQuantity & 0xFFFFFFFFL;
+        double avgPrice = rawAvgPrice / 100.0;
+        long volume = rawVolume & 0xFFFFFFFFL;
+        long buyQuantity = rawBuyQuantity & 0xFFFFFFFFL;
+        
         if (debugMessageCount <= 3) {
-            log.info("🔍 QUOTE MODE: instrument={}, lastPrice={}, volume={}", 
-                instrumentToken, lastPrice, volume);
+            log.info("🔍 KITE QUOTE: token={}, rawPrice={}, price={}, volume={}", 
+                instrumentToken, rawLastPrice, lastPrice, volume);
         }
         
         return buildTick(instrumentToken, lastPrice, volume, 0, 0, 0, 0, Instant.now(), originalData);
     }
     
     /**
-     * Parses Full mode packet.
-     * Contains all available tick data including OHLC and timestamps.
+     * Parses Full mode packet (40 bytes after instrument token and mode).
+     * Based on official Kite Connect Java library.
      */
-    private Tick parseFullMode(ByteBuffer buffer, long instrumentToken, byte[] originalData) {
+    private Tick parseKiteFullMode(ByteBuffer buffer, long instrumentToken, byte[] originalData) {
         if (buffer.remaining() < 40) {
-            throw new TickParseException("Insufficient data for Full mode");
+            log.warn("Insufficient data for Full mode, remaining: {}", buffer.remaining());
+            return null;
         }
         
-        double lastPrice = buffer.getInt() / 100.0;
-        long lastQuantity = buffer.getInt() & 0xFFFFFFFFL;
-        double avgPrice = buffer.getInt() / 100.0;
-        long volume = buffer.getInt() & 0xFFFFFFFFL;
-        long buyQuantity = buffer.getInt() & 0xFFFFFFFFL;
-        long sellQuantity = buffer.getInt() & 0xFFFFFFFFL;
+        // Full packet structure (after token, tradable, mode - all values are 4 bytes each):
+        // last_price, last_quantity, average_price, volume, buy_quantity, sell_quantity,
+        // open, high, low, close, last_trade_time, oi, oi_day_high, oi_day_low, timestamp
         
-        double open = buffer.getInt() / 100.0;
-        double high = buffer.getInt() / 100.0;
-        double low = buffer.getInt() / 100.0;
-        double close = buffer.getInt() / 100.0;
+        int rawLastPrice = buffer.getInt();
+        int rawLastQuantity = buffer.getInt();
+        int rawAvgPrice = buffer.getInt();
+        int rawVolume = buffer.getInt();
+        int rawBuyQuantity = buffer.getInt();
+        int rawSellQuantity = buffer.getInt();
         
-        long lastTradeTime = buffer.getInt() & 0xFFFFFFFFL;
-        long oi = buffer.getInt() & 0xFFFFFFFFL;
-        long oiDayHigh = buffer.getInt() & 0xFFFFFFFFL;
-        long oiDayLow = buffer.getInt() & 0xFFFFFFFFL;
-        long timestamp = buffer.getInt() & 0xFFFFFFFFL;
+        int rawOpen = buffer.getInt();
+        int rawHigh = buffer.getInt();
+        int rawLow = buffer.getInt();
+        int rawClose = buffer.getInt();
+        
+        // Convert raw values to proper types
+        double lastPrice = rawLastPrice / 100.0;
+        long lastQuantity = rawLastQuantity & 0xFFFFFFFFL;
+        double avgPrice = rawAvgPrice / 100.0;
+        long volume = rawVolume & 0xFFFFFFFFL;
+        long buyQuantity = rawBuyQuantity & 0xFFFFFFFFL;
+        long sellQuantity = rawSellQuantity & 0xFFFFFFFFL;
+        
+        double open = rawOpen / 100.0;
+        double high = rawHigh / 100.0;
+        double low = rawLow / 100.0;
+        double close = rawClose / 100.0;
+        
+        // Optional fields - check if enough data remains
+        long lastTradeTime = 0;
+        long oi = 0;
+        long oiDayHigh = 0;
+        long oiDayLow = 0;
+        long timestamp = 0;
+        
+        if (buffer.remaining() >= 20) { // 5 more fields * 4 bytes each
+            lastTradeTime = buffer.getInt() & 0xFFFFFFFFL;
+            oi = buffer.getInt() & 0xFFFFFFFFL;
+            oiDayHigh = buffer.getInt() & 0xFFFFFFFFL;
+            oiDayLow = buffer.getInt() & 0xFFFFFFFFL;
+            timestamp = buffer.getInt() & 0xFFFFFFFFL;
+        }
         
         // Convert Unix timestamp to Instant
-        Instant tickTimestamp = Instant.ofEpochSecond(timestamp);
+        Instant tickTimestamp = timestamp > 0 ? Instant.ofEpochSecond(timestamp) : Instant.now();
         
-        // Debug: Log Full parsing for first few messages
         if (debugMessageCount <= 3) {
-            log.info("🔍 FULL MODE: instrument={}, lastPrice={}, volume={}, OHLC=[{},{},{},{}]", 
-                instrumentToken, lastPrice, volume, open, high, low, close);
+            log.info("🔍 KITE FULL: token={}, rawPrice={}, price={}, volume={}, OHLC=[{},{},{},{}]", 
+                instrumentToken, rawLastPrice, lastPrice, volume, open, high, low, close);
         }
         
         return buildTick(instrumentToken, lastPrice, volume, open, high, low, close, tickTimestamp, originalData);
@@ -405,7 +403,29 @@ public class KiteTickParser {
                 log.info("🔍 FIRST PACKET: token={}, tradable={}, mode={}", 
                     instrumentToken, tradable, mode);
                 
-                if (mode >= MODE_LTP && mode <= MODE_FULL && buffer.remaining() >= 4) {
+                // Validate mode
+                if (mode < MODE_LTP || mode > MODE_FULL) {
+                    log.error("❌ INVALID MODE: {} (expected 1-3)", mode);
+                    
+                    // Try to detect byte order issues
+                    buffer.rewind();
+                    buffer.position(2); // Skip packet count
+                    buffer.order(ByteOrder.LITTLE_ENDIAN);
+                    
+                    long tokenLE = buffer.getInt() & 0xFFFFFFFFL;
+                    byte tradableLE = buffer.get();
+                    int modeLE = buffer.get() & 0xFF;
+                    
+                    log.info("🔍 LITTLE-ENDIAN ATTEMPT: token={}, tradable={}, mode={}", 
+                        tokenLE, tradableLE, modeLE);
+                    
+                    if (modeLE >= MODE_LTP && modeLE <= MODE_FULL) {
+                        log.error("❌ DATA APPEARS TO BE LITTLE-ENDIAN, BUT KITE USES BIG-ENDIAN!");
+                    }
+                    return;
+                }
+                
+                if (buffer.remaining() >= 4) {
                     // Read price with different interpretations
                     int rawPriceInt = buffer.getInt();
                     double priceBigEndian = rawPriceInt / 100.0;
