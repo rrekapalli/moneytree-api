@@ -44,14 +44,12 @@ export class NativeWebSocketService implements IWebSocketService {
 
   async connect(): Promise<void> {
     if (this.isConnected) {
-      console.log('[NativeWebSocket] Already connected, skipping connection attempt');
       return;
     }
 
     try {
       // Connect to socketengine WebSocket endpoint for all indices using SockJS
       const sockJsUrl = 'http://localhost:8081/ws/indices/all';
-      console.log('[NativeWebSocket] Creating SockJS connection to:', sockJsUrl);
       const sockjs = new SockJS(sockJsUrl);
       this.ws = sockjs as any;
 
@@ -61,8 +59,6 @@ export class NativeWebSocketService implements IWebSocketService {
 
       // Set up event handlers
       this.ws.onopen = () => {
-        console.log('[NativeWebSocket] Connected to socketengine via SockJS');
-        console.log('[NativeWebSocket] Connection readyState:', this.ws?.readyState);
         this.connectionState$.next(WebSocketConnectionState.CONNECTED);
         this.isConnected = true;
         this.retryCount = 0;
@@ -71,23 +67,19 @@ export class NativeWebSocketService implements IWebSocketService {
 
       this.ws.onmessage = (event: any) => {
         try {
-          console.log('[NativeWebSocket] Raw message received:', event.data);
           const tick = JSON.parse(event.data);
-          console.log('[NativeWebSocket] Parsed tick data:', tick);
           this.handleTickData(tick);
         } catch (error) {
-          console.error('[NativeWebSocket] Failed to parse message:', error, 'Raw data:', event.data);
+          // Silent error handling - message parsing failed
         }
       };
 
       this.ws.onerror = (error: any) => {
-        console.error('[NativeWebSocket] WebSocket error:', error);
         this.errors$.next('WebSocket connection error');
         this.connectionState$.next(WebSocketConnectionState.ERROR);
       };
 
       this.ws.onclose = (event: any) => {
-        console.log('[NativeWebSocket] Connection closed:', event.code, event.reason);
         this.connectionState$.next(WebSocketConnectionState.DISCONNECTED);
         this.isConnected = false;
         
@@ -97,10 +89,7 @@ export class NativeWebSocketService implements IWebSocketService {
         }
       };
 
-      console.log('[NativeWebSocket] SockJS connection setup complete, waiting for onopen event');
-
     } catch (error) {
-      console.error('[NativeWebSocket] Connection failed:', error);
       this.connectionState$.next(WebSocketConnectionState.ERROR);
       throw error;
     }
@@ -199,17 +188,12 @@ export class NativeWebSocketService implements IWebSocketService {
    * This method can be called from browser console to check data quality
    */
   public analyzeDataQuality(): void {
-    console.log('🔍 ANALYZING DATA QUALITY');
-    console.log('='.repeat(40));
-    console.log('This will analyze the next few messages for data quality issues...');
-    
     let messageCount = 0;
     const originalOnMessage = this.ws?.onmessage || null;
     
     if (this.ws) {
       this.ws.onmessage = (event: any) => {
         messageCount++;
-        console.log(`\n📨 Message ${messageCount}:`, event.data);
         
         try {
           const parsed = JSON.parse(event.data);
@@ -229,21 +213,12 @@ export class NativeWebSocketService implements IWebSocketService {
             dataQuality: this.assessDataQuality(parsed)
           };
           
-          console.log(`🔍 Analysis ${messageCount}:`, analysis);
-          
-          if (analysis.hasBinaryIssues) {
-            console.log('⚠️ BINARY PARSING ISSUES DETECTED - Kite WebSocket data is corrupted');
-          } else {
-            console.log('✅ DATA QUALITY GOOD - Kite WebSocket data appears correct');
-          }
-          
         } catch (error) {
-          console.error(`❌ Failed to parse message ${messageCount}:`, error);
+          // Silent error handling
         }
         
         // Restore original handler after 3 messages
         if (messageCount >= 3) {
-          console.log('\n✅ Data quality analysis complete.');
           if (this.ws && originalOnMessage) {
             this.ws.onmessage = originalOnMessage;
           }
@@ -254,8 +229,6 @@ export class NativeWebSocketService implements IWebSocketService {
           }
         }
       };
-    } else {
-      console.log('❌ WebSocket not connected. Connect first.');
     }
   }
   
@@ -288,21 +261,15 @@ export class NativeWebSocketService implements IWebSocketService {
    * This method can be called from browser console to help debug data corruption
    */
   public debugRawMessages(): void {
-    console.log('🔍 DEBUGGING RAW WEBSOCKET MESSAGES');
-    console.log('='.repeat(50));
-    console.log('This will log the next 5 raw messages for analysis...');
-    
     let messageCount = 0;
     const originalOnMessage = this.ws?.onmessage || null;
     
     if (this.ws) {
       this.ws.onmessage = (event: any) => {
         messageCount++;
-        console.log(`\n📨 Raw Message ${messageCount}:`, event.data);
         
         try {
           const parsed = JSON.parse(event.data);
-          console.log(`📊 Parsed Message ${messageCount}:`, parsed);
           
           // Analyze for corruption
           const lastPrice = parsed.lastTradedPrice || 0;
@@ -310,23 +277,12 @@ export class NativeWebSocketService implements IWebSocketService {
           const isCorrupted = lastPrice <= 0 || 
             (ohlcClose > 0 && Math.abs(lastPrice - ohlcClose) > ohlcClose * 2);
           
-          console.log(`🔍 Analysis ${messageCount}:`, {
-            symbol: parsed.symbol,
-            lastTradedPrice: lastPrice,
-            ohlcClose: ohlcClose,
-            difference: Math.abs(lastPrice - ohlcClose),
-            percentDifference: ohlcClose > 0 ? ((Math.abs(lastPrice - ohlcClose) / ohlcClose) * 100).toFixed(2) + '%' : 'N/A',
-            isCorrupted: isCorrupted ? '❌ CORRUPTED' : '✅ OK',
-            recommendation: isCorrupted ? `Use OHLC close (${ohlcClose})` : `Use lastTradedPrice (${lastPrice})`
-          });
-          
         } catch (error) {
-          console.error(`❌ Failed to parse message ${messageCount}:`, error);
+          // Silent error handling
         }
         
         // Restore original handler after 5 messages
         if (messageCount >= 5) {
-          console.log('\n✅ Debug analysis complete. Restoring normal message handling.');
           if (this.ws && originalOnMessage) {
             this.ws.onmessage = originalOnMessage;
           }
@@ -337,14 +293,10 @@ export class NativeWebSocketService implements IWebSocketService {
           }
         }
       };
-    } else {
-      console.log('❌ WebSocket not connected. Connect first.');
     }
   }
 
   private handleTickData(tick: any): void {
-    console.log('[NativeWebSocket] handleTickData called with:', tick);
-    
     // Extract tick data - handle corrupted lastTradedPrice from binary parsing issues
     let lastPrice = tick.lastTradedPrice || 0;
     
@@ -359,24 +311,8 @@ export class NativeWebSocketService implements IWebSocketService {
         (ohlcHigh > 0 && lastPrice > ohlcHigh * 1.5) || // Way above high
         (ohlcLow > 0 && lastPrice < ohlcLow * 0.5)) { // Way below low
       
-      console.warn('[NativeWebSocket] Corrupted lastTradedPrice detected:', {
-        symbol: tick.symbol,
-        corruptedPrice: lastPrice,
-        ohlc: tick.ohlc,
-        usingFallback: ohlcClose
-      });
-      
       lastPrice = ohlcClose; // Use OHLC close as the most reliable price
     }
-    
-    console.log('[NativeWebSocket] Processing tick data (after corruption fix):', {
-      symbol: tick.symbol,
-      originalLastTradedPrice: tick.lastTradedPrice,
-      correctedLastPrice: lastPrice,
-      ohlc: tick.ohlc,
-      timestamp: tick.timestamp,
-      wasCorrected: tick.lastTradedPrice !== lastPrice
-    });
     
     // Convert single tick to IndexDataDto format (minimal processing)
     // The component will handle price change calculations using baseline cache
@@ -412,31 +348,15 @@ export class NativeWebSocketService implements IWebSocketService {
       tickTimestamp: tick.timestamp || ''
     };
 
-    console.log('[NativeWebSocket] Converted to IndexDataDto (price changes will be calculated by component):', {
-      symbol: indexData.indexSymbol,
-      lastPrice: indexData.lastPrice,
-      ohlc: {
-        open: indexData.openPrice,
-        high: indexData.dayHigh,
-        low: indexData.dayLow,
-        close: indexData.previousClose
-      },
-      note: 'Component will calculate variation and percentChange using baseline cache'
-    });
-
     // Update the all indices data
     const currentData = this.allIndicesData$.value;
     const indices = currentData?.indices || [];
     
-    console.log('[NativeWebSocket] Current indices count:', indices.length);
-    
     // Find and update existing index or add new one
     const existingIndex = indices.findIndex(i => i.indexSymbol === tick.symbol);
     if (existingIndex >= 0) {
-      console.log('[NativeWebSocket] Updating existing index at position:', existingIndex, 'with price:', indexData.lastPrice);
       indices[existingIndex] = indexData;
     } else {
-      console.log('[NativeWebSocket] Adding new index:', tick.symbol, 'with price:', indexData.lastPrice);
       indices.push(indexData);
     }
 
@@ -447,13 +367,6 @@ export class NativeWebSocketService implements IWebSocketService {
       marketStatus: { status: 'ACTIVE' }
     };
 
-    console.log('[NativeWebSocket] Emitting IndicesDto with', indices.length, 'indices, sample data:', {
-      firstIndex: indices[0] ? {
-        symbol: indices[0].indexSymbol,
-        lastPrice: indices[0].lastPrice,
-        note: 'Price changes calculated by component using baseline'
-      } : null
-    });
     this.allIndicesData$.next(indicesDto);
   }
 
@@ -464,11 +377,10 @@ export class NativeWebSocketService implements IWebSocketService {
     );
     
     this.retryCount++;
-    console.log(`[NativeWebSocket] Scheduling retry ${this.retryCount}/${this.maxRetries} in ${delay}ms`);
     
     this.retryTimeout = setTimeout(() => {
       this.connect().catch(error => {
-        console.error('[NativeWebSocket] Retry failed:', error);
+        // Silent error handling
       });
     }, delay);
   }

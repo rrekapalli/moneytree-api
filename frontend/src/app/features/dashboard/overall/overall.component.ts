@@ -261,7 +261,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Make component accessible for debugging (only in development)
     if (typeof window !== 'undefined' && !environment?.production) {
       (window as any).overallComponent = this;
-      console.log('🔧 Overall component available as window.overallComponent for debugging');
     }
   }
   
@@ -273,36 +272,17 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * Requirements: 2.1, 2.2, 3.1, 3.2
    */
   private async loadBaselineIndicesData(): Promise<void> {
-    if (this.enableDebugLogging) {
-      console.log('[Baseline] Loading baseline indices data', {
-        timestamp: new Date().toISOString(),
-        cacheExists: this.baselineIndicesCache.size > 0,
-        cacheAge: this.baselineCacheTimestamp ? Date.now() - this.baselineCacheTimestamp : 0
-      });
-    }
     
     // Check if we have fresh cached data
     const now = Date.now();
     if (this.baselineIndicesCache.size > 0 && 
         this.baselineCacheTimestamp && 
         (now - this.baselineCacheTimestamp) < this.BASELINE_CACHE_TTL) {
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Using cached baseline data', {
-          cacheSize: this.baselineIndicesCache.size,
-          cacheAge: now - this.baselineCacheTimestamp,
-          timestamp: new Date().toISOString()
-        });
-      }
       this.isBaselineDataLoaded = true;
       return;
     }
     
     try {
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Fetching fresh baseline data from API', {
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // Fetch all indices data as baseline
       const indices = await this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').toPromise();
@@ -330,20 +310,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         this.baselineCacheTimestamp = now;
         this.isBaselineDataLoaded = true;
         
-        if (this.enableDebugLogging) {
-          console.log('[Baseline] *** BASELINE DATA LOADED AND CACHED ***', {
-            itemCount: this.baselineIndicesCache.size,
-            sampleItems: Array.from(this.baselineIndicesCache.entries()).slice(0, 5).map(([key, value]) => ({
-              symbol: key,
-              lastPrice: value.lastPrice,
-              previousClose: value.previousClose,
-              priceChange: value.priceChange,
-              percentChange: value.percentChange
-            })),
-            allKeys: Array.from(this.baselineIndicesCache.keys()).slice(0, 10),
-            timestamp: new Date().toISOString()
-          });
-        }
         
         // Initialize signals with baseline data
         this.indicesDataSignal.set(mappedData);
@@ -353,22 +319,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         this.updateStockListWidgetDirectly(mappedData);
         
       } else {
-        console.warn('[Baseline] No indices data received from API');
         this.isBaselineDataLoaded = false;
       }
       
     } catch (error) {
-      console.error('[Baseline] Failed to load baseline indices data:', error);
       this.isBaselineDataLoaded = false;
       
       // Try to use any existing cached data as fallback
       if (this.baselineIndicesCache.size > 0) {
-        if (this.enableDebugLogging) {
-          console.log('[Baseline] Using stale cached data as fallback', {
-            cacheSize: this.baselineIndicesCache.size,
-            timestamp: new Date().toISOString()
-          });
-        }
         this.isBaselineDataLoaded = true;
       }
     }
@@ -383,11 +341,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * The component will continue to display fallback data from the REST API.
    */
   private initializeWebSocketSubscription(): void {
-    console.log('[WebSocket] Initializing WebSocket subscription to all indices', {
-      timestamp: new Date().toISOString(),
-      currentState: WebSocketConnectionState[this.wsConnectionStateSignal()],
-      enableDebugLogging: this.enableDebugLogging
-    });
     
     // Register this component with WebSocket service
     this.webSocketService.registerComponent('OverallComponent');
@@ -395,27 +348,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // Connect to WebSocket service
     this.webSocketService.connect()
       .then(() => {
-        console.log('[WebSocket] Connection established successfully', {
-          timestamp: new Date().toISOString()
-        });
         
         // Connection successful - subscribe to all indices topic
         this.allIndicesSubscription = this.webSocketService
           .subscribeToAllIndices()
           .subscribe({
             next: (indicesDto: IndicesDto) => {
-              console.log('[WebSocket] *** RECEIVED INDICES DATA FROM SUBSCRIPTION ***', {
-                indicesCount: indicesDto?.indices?.length || 0,
-                sampleData: indicesDto?.indices?.slice(0, 2),
-                timestamp: new Date().toISOString()
-              });
               this.handleIncomingIndicesData(indicesDto);
             },
             error: (error) => {
-              console.error('[WebSocket] *** SUBSCRIPTION ERROR OCCURRED ***', {
-                error: error?.message || String(error),
-                timestamp: new Date().toISOString()
-              });
               // Use centralized subscription error handler with retry logic
               this.handleSubscriptionError('/topic/nse-indices', error, 0);
             }
@@ -424,17 +365,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         // Update connection state signal to CONNECTED
         this.wsConnectionStateSignal.set(WebSocketConnectionState.CONNECTED);
         
-        console.log('[WebSocket] *** SUCCESSFULLY CONNECTED AND SUBSCRIBED TO ALL INDICES ***', {
-          topic: '/topic/nse-indices',
-          subscriptionActive: !!this.allIndicesSubscription,
-          timestamp: new Date().toISOString()
-        });
       })
       .catch((error) => {
-        console.error('[WebSocket] *** CONNECTION FAILED ***', {
-          error: error?.message || String(error),
-          timestamp: new Date().toISOString()
-        });
         // Connection failed - use centralized error handler
         this.handleConnectionError(error);
       });
@@ -451,11 +383,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    */
   private handleConnectionError(error: any): void {
     // Log error with context information
-    console.error('[WebSocket] Connection error:', {
-      message: error?.message || String(error),
-      timestamp: new Date().toISOString(),
-      state: this.wsConnectionStateSignal()
-    });
     
     // Update connection state signal to ERROR
     this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
@@ -476,11 +403,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    */
   private handleParsingError(rawMessage: string, error: any): void {
     // Log error with raw message (first 200 chars) and error details
-    console.warn('[WebSocket] Failed to parse message:', {
-      rawMessage: rawMessage.substring(0, 200), // Log first 200 chars
-      error: error?.message || String(error),
-      timestamp: new Date().toISOString()
-    });
     
     // Skip this update - continue with existing data
     // No state changes, no user-facing error
@@ -500,12 +422,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    */
   private handleSubscriptionError(topic: string, error: any, retryCount: number = 0): void {
     // Log error with topic name and error details
-    console.error('[WebSocket] Subscription error:', {
-      topic,
-      error: error?.message || String(error),
-      retryCount,
-      timestamp: new Date().toISOString()
-    });
     
     // Maximum retry attempts
     const MAX_RETRIES = 5;
@@ -516,9 +432,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Retry 0: 1s, Retry 1: 2s, Retry 2: 4s, Retry 3: 8s, Retry 4: 16s
       const delayMs = Math.pow(2, retryCount) * 1000;
       
-      if (this.enableDebugLogging) {
-        console.log(`[WebSocket] Scheduling retry ${retryCount + 1}/${MAX_RETRIES} in ${delayMs}ms`);
-      }
       
       // Schedule retry with exponential backoff
       setTimeout(() => {
@@ -526,8 +439,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }, delayMs);
     } else {
       // Max retries exceeded - log final failure and continue with fallback data
-      console.warn('[WebSocket] Max retry attempts exceeded for topic:', topic);
-      console.warn('[WebSocket] Continuing with fallback data only');
       
       // Update connection state to ERROR to indicate subscription failure
       this.wsConnectionStateSignal.set(WebSocketConnectionState.ERROR);
@@ -542,23 +453,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * @param retryCount - Current retry attempt count
    */
   private retrySubscription(topic: string, retryCount: number): void {
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Retry subscription attempt', {
-        topic,
-        retryCount,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Check if we're trying to retry the all indices subscription
     if (topic === '/topic/nse-indices') {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Attempting to resubscribe to all indices', {
-          topic,
-          retryCount,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // Attempt to resubscribe to all indices
       this.allIndicesSubscription = this.webSocketService
@@ -566,37 +463,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         .subscribe({
           next: (indicesDto: IndicesDto) => {
             // Subscription successful - reset retry count
-            if (this.enableDebugLogging) {
-              console.log('[WebSocket] Retry successful', {
-                topic,
-                retryCount,
-                indicesCount: indicesDto?.indices?.length || 0,
-                timestamp: new Date().toISOString()
-              });
-            }
             this.handleIncomingIndicesData(indicesDto);
           },
           error: (error) => {
-            if (this.enableDebugLogging) {
-              console.log('[WebSocket] Retry failed', {
-                topic,
-                retryCount,
-                error: error?.message || String(error),
-                timestamp: new Date().toISOString()
-              });
-            }
             // Subscription failed again - call error handler with incremented retry count
             this.handleSubscriptionError(topic, error, retryCount);
           }
         });
     } else {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] Unknown topic for retry', {
-          topic,
-          retryCount,
-          timestamp: new Date().toISOString()
-        });
-      }
     }
   }
   
@@ -610,35 +484,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * @param indicesDto - The indices data received from WebSocket
    */
   private handleIncomingIndicesData(indicesDto: IndicesDto): void {
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Processing incoming indices data', {
-        hasData: !!indicesDto,
-        indicesCount: indicesDto?.indices?.length || 0,
-        hasBaselineCache: this.baselineIndicesCache.size > 0,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Validate incoming data
     if (!indicesDto?.indices || indicesDto.indices.length === 0) {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] Received empty or invalid indices data', {
-          indicesDto,
-          timestamp: new Date().toISOString()
-        });
-      }
       return;
     }
     
     // Ensure baseline data is loaded before processing ticks
     if (!this.isBaselineDataLoaded || this.baselineIndicesCache.size === 0) {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] Baseline data not loaded, deferring tick processing', {
-          isBaselineDataLoaded: this.isBaselineDataLoaded,
-          cacheSize: this.baselineIndicesCache.size,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // Schedule processing after baseline data is loaded
       setTimeout(() => {
@@ -649,31 +502,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Processing tick data with baseline cache', {
-        incomingTicks: indicesDto.indices.length,
-        baselineCacheSize: this.baselineIndicesCache.size,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Process each tick and merge with baseline data
     const updatedData = this.mergeTicksWithBaseline(indicesDto.indices);
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Merged ticks with baseline data', {
-        updatedDataCount: updatedData.length,
-        sampleUpdatedData: updatedData.slice(0, 2).map(item => ({
-          symbol: item.symbol,
-          lastPrice: item.lastPrice,
-          previousClose: item.previousClose,
-          priceChange: item.priceChange,
-          percentChange: item.percentChange,
-          calculatedFromBaseline: true
-        })),
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Update signals with merged data
     this.indicesDataSignal.set(updatedData);
@@ -689,17 +521,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }));
     this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Successfully updated indices data with baseline calculations', {
-        receivedTicks: indicesDto.indices.length,
-        updatedDataCount: updatedData.length,
-        signalValue: this.indicesDataSignal().length,
-        subjectValue: this.indicesDataSubject.value.length,
-        directUpdateCalled: true,
-        signalUpdateCalled: true,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
   
   /**
@@ -713,13 +534,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * @returns Updated StockDataDto array with accurate price changes
    */
   private mergeTicksWithBaseline(incomingTicks: IndexDataDto[]): StockDataDto[] {
-    if (this.enableDebugLogging) {
-      console.log('[Baseline] Merging ticks with baseline cache', {
-        incomingTicksCount: incomingTicks.length,
-        baselineCacheSize: this.baselineIndicesCache.size,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Start with all baseline data
     const result = new Map<string, StockDataDto>();
@@ -729,12 +543,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       result.set(key, { ...baselineItem });
     });
     
-    if (this.enableDebugLogging) {
-      console.log('[Baseline] Initialized result with baseline data', {
-        resultSize: result.size,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Process each incoming tick
     let updatedCount = 0;
@@ -743,9 +551,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     incomingTicks.forEach(tick => {
       const symbol = tick.indexSymbol || tick.indexName || tick.key || '';
       if (!symbol) {
-        if (this.enableDebugLogging) {
-          console.warn('[Baseline] Tick missing symbol, skipping', { tick });
-        }
         return;
       }
       
@@ -778,14 +583,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         updatedCount++;
         
         if (this.enableDebugLogging && updatedCount <= 3) {
-          console.log('[Baseline] Updated existing item with tick', {
-            symbol,
-            previousClose,
-            newLastPrice,
-            calculatedPriceChange: priceChange,
-            calculatedPercentChange: percentChange.toFixed(2) + '%',
-            formula: `(${newLastPrice} - ${previousClose}) / ${previousClose} * 100 = ${percentChange.toFixed(2)}%`
-          });
         }
         
       } else {
@@ -810,34 +607,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         result.set(symbol, newItem);
         newCount++;
         
-        if (this.enableDebugLogging) {
-          console.log('[Baseline] Added new item from tick (no baseline)', {
-            symbol,
-            lastPrice: newLastPrice,
-            note: 'Price changes will be 0 until baseline is available'
-          });
-        }
       }
     });
     
     const finalResult = Array.from(result.values());
     
-    if (this.enableDebugLogging) {
-      console.log('[Baseline] Tick merge completed', {
-        totalItems: finalResult.length,
-        updatedFromTicks: updatedCount,
-        newFromTicks: newCount,
-        preservedFromBaseline: result.size - updatedCount - newCount,
-        sampleCalculations: finalResult.slice(0, 2).map(item => ({
-          symbol: item.symbol,
-          lastPrice: item.lastPrice,
-          previousClose: item.previousClose,
-          priceChange: item.priceChange,
-          percentChange: item.percentChange?.toFixed(2) + '%'
-        })),
-        timestamp: new Date().toISOString()
-      });
-    }
     
     return finalResult;
   }
@@ -854,13 +628,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const cacheAge = this.baselineCacheTimestamp ? now - this.baselineCacheTimestamp : Infinity;
     
     if (cacheAge > this.BASELINE_CACHE_TTL) {
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Cache is stale, refreshing', {
-          cacheAge,
-          ttl: this.BASELINE_CACHE_TTL,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // Force reload of baseline data
       this.isBaselineDataLoaded = false;
@@ -923,10 +690,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   public forceRefreshStockListWidgets(): void {
     const currentData = this.indicesDataSignal();
     if (currentData && currentData.length > 0) {
-      console.log('[DEBUG] Force refreshing stock list widgets with current data:', {
-        dataCount: currentData.length,
-        timestamp: new Date().toISOString()
-      });
       
       // Force both update methods
       this.updateStockListWidgetDirectly(currentData);
@@ -937,9 +700,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }));
       this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
       
-      console.log('[DEBUG] Force refresh completed');
     } else {
-      console.log('[DEBUG] No data available for force refresh');
     }
   }
   
@@ -948,7 +709,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console for testing
    */
   public testWidgetUpdateWithFakeData(): void {
-    console.log('[DEBUG] Testing widget update with fake data...');
     
     // Create fake data with obvious changes
     const fakeData: StockDataDto[] = [
@@ -986,7 +746,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }
     ];
     
-    console.log('[DEBUG] Fake data created:', fakeData);
     
     // Update signals with fake data
     this.indicesDataSignal.set(fakeData);
@@ -1001,7 +760,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }));
     this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
     
-    console.log('[DEBUG] Fake data test completed. Check if widget shows 99999.99 for NIFTY 50!');
   }
   
   /**
@@ -1056,37 +814,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console for testing
    */
   public testWebSocketConnection(): void {
-    console.log('[DEBUG] Testing WebSocket connection...');
     
     // Check WebSocket service state
-    console.log('[DEBUG] WebSocket service state:', {
-      isConnected: this.webSocketService.connected,
-      connectionState: this.wsConnectionStateSignal(),
-      hasSubscription: !!this.allIndicesSubscription
-    });
     
     // Check baseline data
-    console.log('[DEBUG] Baseline data state:', {
-      isLoaded: this.isBaselineDataLoaded,
-      cacheSize: this.baselineIndicesCache.size,
-      sampleData: Array.from(this.baselineIndicesCache.entries()).slice(0, 2)
-    });
     
     // Check current data
     const currentData = this.indicesDataSignal();
-    console.log('[DEBUG] Current indices data:', {
-      count: currentData.length,
-      sampleData: currentData.slice(0, 2).map(item => ({
-        symbol: item.symbol,
-        lastPrice: item.lastPrice,
-        previousClose: item.previousClose,
-        priceChange: item.priceChange,
-        percentChange: item.percentChange
-      }))
-    });
     
     // Try to manually trigger a WebSocket subscription
-    console.log('[DEBUG] Attempting to reinitialize WebSocket...');
     this.initializeWebSocketSubscription();
   }
   
@@ -1095,11 +831,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console for testing
    */
   public forceCompleteWidgetRefresh(): void {
-    console.log('[DEBUG] Starting complete widget refresh...');
     
     const currentData = this.indicesDataSignal();
     if (!currentData || currentData.length === 0) {
-      console.log('[DEBUG] No data available for refresh');
       return;
     }
     
@@ -1119,7 +853,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Step 3: Wait a moment then repopulate with fresh data
     setTimeout(() => {
-      console.log('[DEBUG] Repopulating widgets with fresh data...');
       
       // Create completely new data objects
       const freshData = currentData.map((item, index) => ({
@@ -1138,7 +871,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }));
       this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
       
-      console.log('[DEBUG] Complete widget refresh finished');
     }, 100);
   }
   
@@ -1148,8 +880,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console for testing
    */
   public simulateWebSocketDataForDebugOnly(): void {
-    console.warn('⚠️ WARNING: Using simulated data for debugging purposes only!');
-    console.log('[DEBUG] Simulating WebSocket data...');
     
     // Create test WebSocket data with realistic price changes
     // ⚠️ THIS IS FAKE DATA FOR DEBUGGING ONLY
@@ -1176,12 +906,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       ]
     };
     
-    console.log('[DEBUG] ⚠️ FAKE DATA for testing:', testData);
     
     // Manually call the handler with fake data
     this.handleIncomingIndicesData(testData);
     
-    console.log('[DEBUG] ⚠️ FAKE DATA simulation complete. This should only be used for debugging!');
   }
   
   /**
@@ -1189,91 +917,39 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console for comprehensive debugging
    */
   public diagnoseWebSocketIssues(): void {
-    console.log('='.repeat(80));
-    console.log('🔍 WEBSOCKET DATA FLOW DIAGNOSIS');
-    console.log('='.repeat(80));
     
     // 1. Check WebSocket connection
-    console.log('1. WebSocket Connection Status:');
-    console.log('   - Service connected:', this.webSocketService.connected);
-    console.log('   - Connection state signal:', WebSocketConnectionState[this.wsConnectionStateSignal()]);
-    console.log('   - Has active subscription:', !!this.allIndicesSubscription);
     
     // 2. Check baseline data
-    console.log('\n2. Baseline Data Status:');
-    console.log('   - Baseline loaded:', this.isBaselineDataLoaded);
-    console.log('   - Cache size:', this.baselineIndicesCache.size);
-    console.log('   - Cache age (ms):', this.baselineCacheTimestamp ? Date.now() - this.baselineCacheTimestamp : 'N/A');
     
     if (this.baselineIndicesCache.size > 0) {
       const sampleBaseline = Array.from(this.baselineIndicesCache.entries()).slice(0, 3);
-      console.log('   - Sample baseline data:', sampleBaseline.map(([key, value]) => ({
-        symbol: key,
-        lastPrice: value.lastPrice,
-        previousClose: value.previousClose,
-        priceChange: value.priceChange,
-        percentChange: value.percentChange
-      })));
     }
     
     // 3. Check current signal data
-    console.log('\n3. Current Signal Data:');
     const currentData = this.indicesDataSignal();
-    console.log('   - Signal data count:', currentData.length);
     if (currentData.length > 0) {
-      console.log('   - Sample signal data:', currentData.slice(0, 3).map(item => ({
-        symbol: item.symbol,
-        lastPrice: item.lastPrice,
-        previousClose: item.previousClose,
-        priceChange: item.priceChange,
-        percentChange: item.percentChange
-      })));
     }
     
     // 4. Check widget state
-    console.log('\n4. Widget State:');
     const stockListWidgets = this.dashboardConfig?.widgets?.filter(widget => 
       widget.config?.component === 'stock-list-table'
     ) || [];
-    console.log('   - Stock list widgets found:', stockListWidgets.length);
     
     stockListWidgets.forEach((widget, index) => {
-      console.log(`   - Widget ${index}:`, {
-        hasData: !!widget.data,
-        stockCount: widget.data?.stocks?.length || 0,
-        selectedSymbol: widget.data?.selectedStockSymbol,
-        lastUpdated: widget.data?.lastUpdated,
-        sampleStocks: widget.data?.stocks?.slice(0, 2)?.map((stock: any) => ({
-          symbol: stock.symbol,
-          lastPrice: stock.lastPrice,
-          priceChange: stock.priceChange,
-          percentChange: stock.percentChange
-        })) || []
-      });
     });
     
     // 5. Recommendations
-    console.log('\n5. Recommendations:');
     if (!this.webSocketService.connected) {
-      console.log('   ❌ WebSocket not connected - run: overallComponent.initializeWebSocketSubscription()');
     }
     if (!this.isBaselineDataLoaded) {
-      console.log('   ❌ Baseline data not loaded - run: overallComponent.loadBaselineIndicesData()');
     }
     if (currentData.length === 0) {
-      console.log('   ❌ No signal data - try: overallComponent.simulateWebSocketData()');
     }
     if (stockListWidgets.length === 0) {
-      console.log('   ❌ No stock list widgets found - check dashboard configuration');
     }
     
-    console.log('\n6. Quick Fix Commands:');
-    console.log('   - Test with fake data (DEBUG ONLY): overallComponent.simulateWebSocketDataForDebugOnly()');
-    console.log('   - Force widget refresh: overallComponent.forceCompleteWidgetRefresh()');
-    console.log('   - Reload baseline: overallComponent.loadBaselineIndicesData()');
-    console.log('   - Reinit WebSocket: overallComponent.initializeWebSocketSubscription()');
     
-    console.log('='.repeat(80));
   }
   
   /**
@@ -1308,15 +984,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.cdr.detectChanges();
           this.cdr.markForCheck();
           
-          if (this.enableDebugLogging) {
-            console.log('[WebSocket] Completed hide/show cycle for widget', index);
-          }
         }, 5);
         
       } catch (error) {
-        if (this.enableDebugLogging) {
-          console.warn('[WebSocket] Error in hide/show cycle:', error);
-        }
       }
     });
   }
@@ -1326,10 +996,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console as a last resort
    */
   public recreateStockListWidgets(): void {
-    console.log('[DEBUG] Recreating stock list widgets...');
     
     if (!this.dashboardConfig?.widgets) {
-      console.log('[DEBUG] No dashboard config available');
       return;
     }
     
@@ -1339,14 +1007,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     );
     
     if (stockListWidgets.length === 0) {
-      console.log('[DEBUG] No stock list widgets found');
       return;
     }
     
     // Get current data
     const currentData = this.indicesDataSignal();
     if (!currentData || currentData.length === 0) {
-      console.log('[DEBUG] No data available for recreation');
       return;
     }
     
@@ -1363,7 +1029,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Wait a moment then recreate
     setTimeout(() => {
-      console.log('[DEBUG] Creating new stock list widget...');
       
       // Create new stock list widget with fresh data
       const newStockListWidget = StockListChartBuilder.create()
@@ -1399,7 +1064,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.cdr.detectChanges();
       this.cdr.markForCheck();
       
-      console.log('[DEBUG] Stock list widget recreated successfully');
     }, 100);
   }
   
@@ -1408,20 +1072,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console for testing
    */
   public ultimateWidgetRefresh(): void {
-    console.log('[DEBUG] Starting ultimate widget refresh...');
     
     const currentData = this.indicesDataSignal();
     if (!currentData || currentData.length === 0) {
-      console.log('[DEBUG] No data available for ultimate refresh');
       return;
     }
     
-    console.log('[DEBUG] Current data sample:', currentData.slice(0, 2).map(item => ({
-      symbol: item.symbol,
-      lastPrice: item.lastPrice,
-      priceChange: item.priceChange,
-      percentChange: item.percentChange
-    })));
     
     // Step 1: Create completely new data with unique identifiers
     const ultimateData = currentData.map((item, index) => {
@@ -1458,7 +1114,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return newItem;
     });
     
-    console.log('[DEBUG] Created ultimate data with unique IDs:', ultimateData.slice(0, 2));
     
     // Step 2: Update all data sources
     this.indicesDataSignal.set(ultimateData);
@@ -1501,11 +1156,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           (widget.config as any).dataVersion = Date.now();
         }
         
-        console.log('[DEBUG] Updated widget', widgetIndex, 'with ultimate data:', {
-          stockCount: newWidgetData.stocks.length,
-          refreshKey: newWidgetData.refreshKey,
-          timestamp: newWidgetData.timestamp
-        });
       });
     }
     
@@ -1537,7 +1187,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }, 100);
     });
     
-    console.log('[DEBUG] Ultimate widget refresh completed');
   }
   
   /**
@@ -1545,53 +1194,27 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console to debug price change issues
    */
   public debugPriceChangeCalculations(): void {
-    console.log('🔍 DEBUGGING PRICE CHANGE CALCULATIONS');
-    console.log('='.repeat(60));
     
     // Check baseline cache
-    console.log('1. Baseline Cache Analysis:');
-    console.log('   Cache size:', this.baselineIndicesCache.size);
     
     if (this.baselineIndicesCache.size > 0) {
       const sampleBaseline = Array.from(this.baselineIndicesCache.entries()).slice(0, 5);
-      console.log('   Sample baseline data:');
       sampleBaseline.forEach(([key, value]) => {
-        console.log(`   - ${key}:`, {
-          lastPrice: value.lastPrice,
-          previousClose: value.previousClose,
-          priceChange: value.priceChange,
-          percentChange: value.percentChange,
-          issue: value.lastPrice === value.previousClose ? '❌ SAME VALUES!' : '✅ Different values'
-        });
       });
     }
     
     // Check current signal data
-    console.log('\n2. Current Signal Data Analysis:');
     const currentData = this.indicesDataSignal();
-    console.log('   Signal data count:', currentData.length);
     
     if (currentData.length > 0) {
-      console.log('   Sample signal data:');
       currentData.slice(0, 5).forEach(item => {
         const expectedChange = (item.previousClose || 0) > 0 ? ((item.lastPrice || 0) - (item.previousClose || 0)) : 0;
         const expectedPercent = (item.previousClose || 0) > 0 ? ((expectedChange / (item.previousClose || 1)) * 100) : 0;
         
-        console.log(`   - ${item.symbol}:`, {
-          lastPrice: item.lastPrice,
-          previousClose: item.previousClose,
-          actualPriceChange: item.priceChange,
-          actualPercentChange: item.percentChange,
-          expectedPriceChange: expectedChange.toFixed(2),
-          expectedPercentChange: expectedPercent.toFixed(2) + '%',
-          calculationCorrect: Math.abs((item.priceChange ?? 0) - expectedChange) < 0.01 ? '✅' : '❌',
-          issue: item.lastPrice === item.previousClose ? '❌ SAME VALUES!' : '✅ Different values'
-        });
       });
     }
     
     // Check widget data
-    console.log('\n3. Widget Data Analysis:');
     const stockListWidgets = this.dashboardConfig?.widgets?.filter(widget => 
       widget.config?.component === 'stock-list-table'
     ) || [];
@@ -1599,23 +1222,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     if (stockListWidgets.length > 0) {
       const widget = stockListWidgets[0];
       if (widget.data?.stocks) {
-        console.log('   Sample widget stocks:');
         widget.data.stocks.slice(0, 5).forEach((stock: any) => {
-          console.log(`   - ${stock.symbol}:`, {
-            lastPrice: stock.lastPrice,
-            previousClose: stock.previousClose,
-            priceChange: stock.priceChange,
-            percentChange: stock.percentChange,
-            issue: stock.lastPrice === stock.previousClose ? '❌ SAME VALUES!' : '✅ Different values'
-          });
         });
       }
     }
     
-    console.log('\n4. Recommendations:');
-    console.log('   - If previousClose === lastPrice, the baseline data is incorrect');
-    console.log('   - Run: overallComponent.fixPriceChangeCalculations()');
-    console.log('='.repeat(60));
   }
   
   /**
@@ -1623,11 +1234,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console to fix the calculation issue
    */
   public fixPriceChangeCalculations(): void {
-    console.log('🔧 FIXING PRICE CHANGE CALCULATIONS');
-    console.log('='.repeat(50));
     
     // Step 1: Fix baseline cache
-    console.log('1. Fixing baseline cache...');
     let fixedBaselineCount = 0;
     
     this.baselineIndicesCache.forEach((item, key) => {
@@ -1646,14 +1254,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         this.baselineIndicesCache.set(key, fixedItem);
         fixedBaselineCount++;
         
-        console.log(`   Fixed ${key}: previousClose ${item.previousClose || 0} → ${simulatedPreviousClose.toFixed(2)}`);
       }
     });
     
-    console.log(`   Fixed ${fixedBaselineCount} baseline items`);
     
     // Step 2: Update current data with fixed calculations
-    console.log('2. Updating current data with fixed calculations...');
     const currentData = this.indicesDataSignal();
     const fixedData = currentData.map(item => {
       const baselineItem = this.baselineIndicesCache.get(item.symbol ?? '');
@@ -1673,18 +1278,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     });
     
     // Step 3: Update all data sources
-    console.log('3. Updating all data sources...');
     this.indicesDataSignal.set(fixedData);
     this.indicesDataSubject.next(fixedData);
     this.dashboardData = [...fixedData];
     this.filteredDashboardData = [...fixedData];
     
     // Step 4: Force widget update
-    console.log('4. Forcing widget update...');
     this.ultimateWidgetRefresh();
     
-    console.log('✅ Price change calculations fixed!');
-    console.log('='.repeat(50));
   }
   
   /**
@@ -1692,8 +1293,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console to reload baseline data with proper calculations
    */
   public reloadBaselineDataWithFix(): void {
-    console.log('🔄 RELOADING BASELINE DATA WITH FIXED CALCULATIONS');
-    console.log('='.repeat(55));
     
     // Clear existing baseline data
     this.baselineIndicesCache.clear();
@@ -1701,15 +1300,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Reload baseline data (this will use the fixed mapIndicesToStockData method)
     this.loadBaselineIndicesData().then(() => {
-      console.log('✅ Baseline data reloaded with fixed calculations');
       
       // Force update all widgets with the corrected data
       setTimeout(() => {
         this.ultimateWidgetRefresh();
-        console.log('✅ Widgets updated with corrected price changes');
       }, 500);
     }).catch(error => {
-      console.error('❌ Failed to reload baseline data:', error);
     });
   }
   
@@ -1718,8 +1314,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console to test the calculation logic
    */
   public testPriceChangeCalculations(): void {
-    console.log('🧪 TESTING PRICE CHANGE CALCULATIONS');
-    console.log('='.repeat(45));
     
     // Create test data with known values
     const testData = [
@@ -1748,53 +1342,22 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }
     ];
     
-    console.log('1. Testing mapIndicesToStockData with sample data:');
     const mappedResults = this.mapIndicesToStockData(testData as any);
     
     mappedResults.forEach((result, index) => {
       const test = testData[index];
-      console.log(`\n   Test ${index + 1} (${result.symbol}):`);
-      console.log('     Input:', {
-        lastPrice: test.lastPrice,
-        previousClose: (test as any).previousClose || 'N/A',
-        variation: (test as any).variation || 'N/A',
-        percentChange: test.percentChange || 'N/A'
-      });
-      console.log('     Output:', {
-        lastPrice: result.lastPrice,
-        previousClose: result.previousClose,
-        priceChange: result.priceChange,
-        percentChange: result.percentChange?.toFixed(2) + '%'
-      });
-      console.log('     Verification:', {
-        calculatedChange: ((result.lastPrice || 0) - (result.previousClose || 0)).toFixed(2),
-        calculatedPercent: ((((result.lastPrice || 0) - (result.previousClose || 0)) / (result.previousClose || 1)) * 100).toFixed(2) + '%',
-        isCorrect: Math.abs((result.priceChange || 0) - ((result.lastPrice || 0) - (result.previousClose || 0))) < 0.01 ? '✅' : '❌'
-      });
     });
     
-    console.log('\n2. Testing with current baseline data:');
     if (this.baselineIndicesCache.size > 0) {
       const sampleBaseline = Array.from(this.baselineIndicesCache.entries()).slice(0, 3);
       sampleBaseline.forEach(([key, value]) => {
         const calculatedChange = (value.lastPrice || 0) - (value.previousClose || 0);
         const calculatedPercent = (value.previousClose || 0) > 0 ? ((calculatedChange / (value.previousClose || 1)) * 100) : 0;
         
-        console.log(`   ${key}:`, {
-          lastPrice: value.lastPrice || 0,
-          previousClose: value.previousClose || 0,
-          storedPriceChange: value.priceChange || 0,
-          storedPercentChange: (value.percentChange || 0).toFixed(2) + '%',
-          calculatedPriceChange: calculatedChange.toFixed(2),
-          calculatedPercentChange: calculatedPercent.toFixed(2) + '%',
-          isCorrect: Math.abs((value.priceChange || 0) - calculatedChange) < 0.01 ? '✅' : '❌'
-        });
       });
     } else {
-      console.log('   No baseline data available');
     }
     
-    console.log('='.repeat(45));
   }
   
 
@@ -1804,77 +1367,38 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * This method can be called from browser console to test the solution
    */
   public testWidgetRefreshFix(): void {
-    console.log('🧪 TESTING WIDGET REFRESH FIX');
-    console.log('='.repeat(50));
     
     // Step 1: Show current state
     const currentData = this.indicesDataSignal();
-    console.log('1. Current data count:', currentData.length);
     
     if (currentData.length > 0) {
-      console.log('   Sample current data:', currentData.slice(0, 2).map(item => ({
-        symbol: item.symbol,
-        lastPrice: item.lastPrice,
-        priceChange: item.priceChange,
-        percentChange: item.percentChange
-      })));
     }
     
     // Step 2: Check widget state
     const stockListWidgets = this.dashboardConfig?.widgets?.filter(widget => 
       widget.config?.component === 'stock-list-table'
     ) || [];
-    console.log('2. Stock list widgets found:', stockListWidgets.length);
     
     if (stockListWidgets.length > 0) {
-      console.log('   Widget data sample:', {
-        hasData: !!stockListWidgets[0].data,
-        stockCount: stockListWidgets[0].data?.stocks?.length || 0,
-        sampleStocks: stockListWidgets[0].data?.stocks?.slice(0, 2)?.map((stock: any) => ({
-          symbol: stock.symbol,
-          lastPrice: stock.lastPrice,
-          priceChange: stock.priceChange,
-          percentChange: stock.percentChange
-        })) || []
-      });
     }
     
     // Step 3: Apply the ultimate fix
-    console.log('3. Applying ultimate widget refresh...');
     this.ultimateWidgetRefresh();
     
     // Step 4: Verify the fix worked
     setTimeout(() => {
-      console.log('4. Verifying fix after 200ms...');
       const updatedWidgets = this.dashboardConfig?.widgets?.filter(widget => 
         widget.config?.component === 'stock-list-table'
       ) || [];
       
       if (updatedWidgets.length > 0) {
         const widget = updatedWidgets[0];
-        console.log('   Updated widget data:', {
-          hasData: !!widget.data,
-          stockCount: widget.data?.stocks?.length || 0,
-          hasUltimateRefresh: !!(widget.data as any)?.ultimateRefresh,
-          refreshKey: (widget.data as any)?.refreshKey,
-          sampleStocks: widget.data?.stocks?.slice(0, 2)?.map((stock: any) => ({
-            symbol: stock.symbol,
-            lastPrice: stock.lastPrice,
-            priceChange: stock.priceChange,
-            percentChange: stock.percentChange,
-            _ultimateRefreshId: (stock as any)._ultimateRefreshId
-          })) || []
-        });
         
         if ((widget.data as any)?.ultimateRefresh) {
-          console.log('✅ SUCCESS: Widget data has been updated with ultimate refresh');
         } else {
-          console.log('❌ ISSUE: Widget data does not show ultimate refresh markers');
         }
       }
       
-      console.log('='.repeat(50));
-      console.log('🧪 TEST COMPLETED - Check the Index List widget in the UI');
     }, 200);
   }
   
@@ -1956,18 +1480,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         });
         
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Forced aggressive widget component refresh', {
-            widgetIndex: index,
-            widgetId: widget.id,
-            hasNewDataReference: !!widget.data,
-            timestamp: Date.now()
-          });
-        }
       } catch (error) {
-        if (this.enableDebugLogging) {
-          console.warn('[WebSocket] Error forcing widget refresh:', error);
-        }
       }
     });
   }
@@ -1987,25 +1500,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Schedule periodic refresh
     this.baselineRefreshTimer = setInterval(async () => {
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Periodic baseline refresh triggered', {
-          timestamp: new Date().toISOString()
-        });
-      }
       
       try {
         await this.refreshBaselineCacheIfStale();
       } catch (error) {
-        console.warn('[Baseline] Periodic refresh failed:', error);
       }
     }, this.BASELINE_REFRESH_INTERVAL);
     
-    if (this.enableDebugLogging) {
-      console.log('[Baseline] Scheduled periodic baseline refresh', {
-        interval: this.BASELINE_REFRESH_INTERVAL,
-        timestamp: new Date().toISOString()
-      });
-    }
   }
   
   /**
@@ -2020,13 +1521,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     existing: StockDataDto[], 
     incoming: StockDataDto[]
   ): StockDataDto[] {
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Starting data merge', {
-        existingCount: existing.length,
-        incomingCount: incoming.length,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     const merged = new Map<string, StockDataDto>();
     
@@ -2038,12 +1532,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }
     });
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Added existing data to merge map', {
-        mapSize: merged.size,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Overlay incoming data (overwrites existing entries with same key)
     let updatedCount = 0;
@@ -2060,27 +1548,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }
     });
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Overlaid incoming data on merge map', {
-        updatedEntries: updatedCount,
-        newEntries: newCount,
-        finalMapSize: merged.size,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Return merged array
     const result = Array.from(merged.values());
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Merge complete', {
-        resultCount: result.length,
-        preservedFromExisting: existing.length - updatedCount,
-        updatedFromIncoming: updatedCount,
-        newFromIncoming: newCount,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     return result;
   }
@@ -2091,51 +1562,16 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   private setupBehaviorSubjectSubscription(): void {
     // Subscribe to indices data changes via BehaviorSubject
     this.indicesDataSubscription = this.indicesDataSubject.subscribe(data => {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] BehaviorSubject subscription triggered', {
-          hasData: !!data,
-          dataCount: data?.length || 0,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       if (data && data.length > 0) {
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] BehaviorSubject data update:', {
-            dataCount: data.length,
-            sampleData: data.slice(0, 2).map(item => ({
-              symbol: item.symbol,
-              lastPrice: item.lastPrice,
-              priceChange: item.priceChange,
-              percentChange: item.percentChange
-            })),
-            timestamp: new Date().toISOString()
-          });
-        }
         
         // Update widgets directly
         this.updateStockListWidgetDirectly(data);
         
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] BehaviorSubject triggered direct widget update', {
-            timestamp: new Date().toISOString()
-          });
-        }
       } else {
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] BehaviorSubject received empty or null data', {
-            data,
-            timestamp: new Date().toISOString()
-          });
-        }
       }
     });
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] BehaviorSubject subscription established', {
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   /**
@@ -2154,27 +1590,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       const timestamp = new Date().toISOString();
       
       // Always log state changes (not just in debug mode) for monitoring
-      console.log('[WebSocket] Connection state changed:', {
-        previousState: previousState !== null ? WebSocketConnectionState[previousState] : 'INITIAL',
-        currentState: WebSocketConnectionState[currentState],
-        timestamp,
-        transition: previousState !== null 
-          ? `${WebSocketConnectionState[previousState]} → ${WebSocketConnectionState[currentState]}`
-          : `INITIAL → ${WebSocketConnectionState[currentState]}`
-      });
       
       // Verbose logging in debug mode with additional context
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Verbose state details:', {
-          stateValue: currentState,
-          stateName: WebSocketConnectionState[currentState],
-          hasActiveSubscription: this.allIndicesSubscription !== null,
-          subscribedTopicsCount: this.subscribedTopics.size,
-          currentSubscribedIndex: this.currentSubscribedIndex,
-          isSubscribing: this.isSubscribing,
-          timestamp
-        });
-      }
       
       // Update previous state for next transition
       previousState = currentState;
@@ -2186,48 +1603,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       const dataWithIndicators = this.indicesWithChangeIndicatorsSignal();
       const selectedSymbol = this.selectedIndexSymbolSignal();
       
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Widget update effect triggered', {
-          dataCount: dataWithIndicators?.length || 0,
-          selectedSymbol,
-          hasData: !!(dataWithIndicators && dataWithIndicators.length > 0),
-          sampleData: dataWithIndicators?.[0] ? {
-            symbol: dataWithIndicators[0].symbol,
-            lastPrice: dataWithIndicators[0].lastPrice,
-            percentChange: dataWithIndicators[0].percentChange,
-            changeIndicator: dataWithIndicators[0].changeIndicator
-          } : null,
-          effectTriggeredAt: new Date().toISOString(),
-          timestamp: new Date().toISOString()
-        });
-      }
       
       if (dataWithIndicators && dataWithIndicators.length > 0) {
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Effect calling updateIndexListWidget', {
-            dataCount: dataWithIndicators.length,
-            selectedSymbol,
-            timestamp: new Date().toISOString()
-          });
-        }
         
         // Update the Index List widget with new data including change indicators
         // The signal-based approach ensures automatic UI updates
         this.updateIndexListWidget(dataWithIndicators, selectedSymbol);
         
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Effect completed updateIndexListWidget call', {
-            timestamp: new Date().toISOString()
-          });
-        }
       } else {
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Effect skipped - no data available', {
-            hasDataWithIndicators: !!dataWithIndicators,
-            dataLength: dataWithIndicators?.length || 0,
-            timestamp: new Date().toISOString()
-          });
-        }
       }
     });
     
@@ -2245,9 +1628,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    */
   private updateStockListWidgetDirectly(data: StockDataDto[]): void {
     if (!this.dashboardConfig?.widgets) {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] No dashboard config or widgets available for direct update');
-      }
       return;
     }
 
@@ -2255,20 +1635,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       widget.config?.component === 'stock-list-table'
     );
 
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Direct widget update - found', stockListWidgets.length, 'widgets');
-      console.log('[WebSocket] Sample data for direct update:', data.slice(0, 2).map(item => ({
-        symbol: item.symbol,
-        lastPrice: item.lastPrice,
-        priceChange: item.priceChange,
-        percentChange: item.percentChange
-      })));
-    }
 
     if (stockListWidgets.length === 0) {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] No stock list widgets found for update');
-      }
       return;
     }
 
@@ -2291,16 +1659,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         _lastModified: Date.now() + Math.random()
       }));
       
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Updating widget', index, 'with', newStockDataArray.length, 'items');
-        console.log('[WebSocket] Sample mapped data:', newStockDataArray.slice(0, 2).map(item => ({
-          symbol: item.symbol,
-          lastPrice: item.lastPrice,
-          priceChange: item.priceChange,
-          percentChange: item.percentChange,
-          _updateId: item._updateId
-        })));
-      }
       
       // CRITICAL: Force complete data replacement with aggressive re-render triggers
       const newWidgetData = {
@@ -2331,13 +1689,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       (widget as any)._lastUpdate = Date.now();
       (widget as any)._forceRefresh = true;
       
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Widget', index, 'data updated:', {
-          stockCount: widget.data.stocks?.length || 0,
-          selectedSymbol: widget.data.selectedStockSymbol,
-          lastUpdated: widget.data.lastUpdated
-        });
-      }
     });
     
     // Update legacy properties for backward compatibility
@@ -2390,9 +1741,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }, 100);
     });
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Direct widget update completed with change detection');
-    }
   }
 
   /**
@@ -2404,27 +1752,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * @param selectedSymbol - The currently selected index symbol from signal
    */
   private updateIndexListWidget(data: (StockDataDto & { changeIndicator?: 'positive' | 'negative' | 'neutral' })[], selectedSymbol: string): void {
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Updating Index List widget via signals', {
-        dataCount: data.length,
-        selectedSymbol,
-        sampleData: data.slice(0, 2).map(item => ({
-          symbol: item.symbol,
-          lastPrice: item.lastPrice,
-          priceChange: item.priceChange,
-          percentChange: item.percentChange,
-          changeIndicator: item.changeIndicator
-        })),
-        timestamp: new Date().toISOString()
-      });
-    }
     
     if (!this.dashboardConfig?.widgets) {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] No dashboard config or widgets available', {
-          timestamp: new Date().toISOString()
-        });
-      }
       return;
     }
 
@@ -2433,17 +1762,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       widget.config?.component === 'stock-list-table'
     );
 
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Found stock list widgets for signal update', {
-        widgetCount: stockListWidgets.length,
-        timestamp: new Date().toISOString()
-      });
-    }
 
     if (stockListWidgets.length === 0) {
-      if (this.enableDebugLogging) {
-        console.warn('[WebSocket] No stock list widgets found for signal update');
-      }
       return;
     }
 
@@ -2467,23 +1787,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         _signalLastModified: Date.now() + Math.random()
       }));
       
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Updating stock list widget via signals', {
-          widgetIndex: index,
-          stockCount: newStockDataArray.length,
-          selectedSymbol,
-          hasExistingData: !!widget.data,
-          sampleMappedData: newStockDataArray.slice(0, 2).map(item => ({
-            symbol: item.symbol,
-            lastPrice: item.lastPrice,
-            priceChange: item.priceChange,
-            percentChange: item.percentChange,
-            changeIndicator: item.changeIndicator,
-            _signalUpdateId: item._signalUpdateId
-          })),
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // CRITICAL: Force complete data replacement with aggressive re-render triggers
       const newWidgetData = {
@@ -2514,28 +1817,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       (widget as any)._lastSignalUpdate = Date.now();
       (widget as any)._signalForceRefresh = true;
       
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Stock list widget updated via signals', {
-          widgetIndex: index,
-          finalStockCount: widget.data.stocks?.length || 0,
-          finalSelectedSymbol: widget.data.selectedStockSymbol,
-          lastSignalUpdate: widget.data.lastSignalUpdate,
-          timestamp: new Date().toISOString()
-        });
-      }
     });
     
     // Update legacy properties for backward compatibility
     this.dashboardData = [...data];
     this.filteredDashboardData = [...data];
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Index List widget signal update complete', {
-        updatedWidgets: stockListWidgets.length,
-        legacyDataUpdated: true,
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Force change detection for signal-based updates
     this.ngZone.run(() => {
@@ -2552,37 +1839,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * Requirements: 1.4, 1.5, 2.2, 2.5
    */
   private cleanupWebSocketSubscription(): void {
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Starting cleanup process', {
-        hasActiveSubscription: !!this.allIndicesSubscription,
-        currentState: WebSocketConnectionState[this.wsConnectionStateSignal()],
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Unsubscribe from all indices subscription if active
     if (this.allIndicesSubscription) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Unsubscribing from all indices subscription', {
-          timestamp: new Date().toISOString()
-        });
-      }
       
       this.allIndicesSubscription.unsubscribe();
       this.allIndicesSubscription = null;
       
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Successfully unsubscribed from all indices subscription', {
-          timestamp: new Date().toISOString()
-        });
-      }
     }
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Calling WebSocket service to unsubscribe from all topics', {
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Call WebSocket service to unsubscribe from all topics
     this.webSocketService.unsubscribeFromAll();
@@ -2591,22 +1856,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // This allows the service to disconnect if no other components are using it
     this.webSocketService.unregisterComponent('OverallComponent');
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Updating connection state to DISCONNECTED', {
-        previousState: WebSocketConnectionState[this.wsConnectionStateSignal()],
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Update connection state signal to DISCONNECTED
     this.wsConnectionStateSignal.set(WebSocketConnectionState.DISCONNECTED);
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Cleanup completed successfully', {
-        finalState: WebSocketConnectionState[this.wsConnectionStateSignal()],
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   override ngOnInit(): void {
@@ -2614,21 +1867,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected onChildInit(): void {
-    console.log('='.repeat(80));
-    console.log('🚀 OVERALL COMPONENT INITIALIZATION STARTED');
-    console.log('='.repeat(80));
-    console.log('[WebSocket] Component initialization started', {
-      timestamp: new Date().toISOString(),
-      enableDebugLogging: this.enableDebugLogging
-    });
     
     // Clear any existing subscription
     if (this.selectedIndexSubscription) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Clearing existing selected index subscription', {
-          timestamp: new Date().toISOString()
-        });
-      }
       this.selectedIndexSubscription.unsubscribe();
       this.selectedIndexSubscription = null;
     }
@@ -2637,11 +1878,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.dashboardTitle = 'Financial Dashboard';
     this.componentCommunicationService.clearSelectedIndex();
 
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Setting up selected index subscription', {
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Subscribe to selected index changes (dedupe same index emissions)
     this.selectedIndexSubscription = this.componentCommunicationService.getSelectedIndex()
@@ -2654,19 +1890,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       )
       .subscribe((selectedIndex: any) => {
         if (selectedIndex) {
-          if (this.enableDebugLogging) {
-            console.log('[WebSocket] Selected index changed', {
-              index: selectedIndex.name || selectedIndex.symbol,
-              timestamp: new Date().toISOString()
-            });
-          }
           this.updateDashboardWithSelectedIndex(selectedIndex);
         } else {
-          if (this.enableDebugLogging) {
-            console.log('[WebSocket] No index selected, loading default', {
-              timestamp: new Date().toISOString()
-            });
-          }
           this.loadDefaultNifty50Data();
         }
       });
@@ -2674,22 +1899,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // STEP 1: Load baseline indices data first (critical for accurate price calculations)
     // This must complete before processing any WebSocket ticks
     this.loadBaselineIndicesData().then(() => {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Baseline data loaded, proceeding with initialization', {
-          baselineCacheSize: this.baselineIndicesCache.size,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // STEP 2: Load default data if no index selected (uses baseline data)
       setTimeout(() => {
         const currentSelectedIndex = this.componentCommunicationService.getSelectedIndex();
         if (!currentSelectedIndex) {
-          if (this.enableDebugLogging) {
-            console.log('[WebSocket] Loading default NIFTY 50 data with baseline', {
-              timestamp: new Date().toISOString()
-            });
-          }
           this.loadDefaultNifty50Data();
         }
       }, 100);
@@ -2697,13 +1911,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // STEP 3: Initialize WebSocket subscription (after baseline data is ready)
       // This ensures accurate price change calculations from the first tick
       setTimeout(() => {
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Initializing WebSocket with baseline data ready', {
-            delay: '200ms',
-            baselineReady: this.isBaselineDataLoaded,
-            timestamp: new Date().toISOString()
-          });
-        }
         this.initializeWebSocketSubscription();
       }, 200);
 
@@ -2714,7 +1921,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.scheduleBaselineRefresh();
       
     }).catch(error => {
-      console.error('[WebSocket] Failed to load baseline data, continuing without it:', error);
       
       // Continue with initialization even if baseline loading fails
       setTimeout(() => {
@@ -2731,19 +1937,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       setTimeout(() => this.ensureWidgetTimeRangeFilters(), 300);
     });
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Component initialization scheduled', {
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   protected onChildDestroy(): void {
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Component destruction started', {
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // CRITICAL: Cleanup WebSocket subscription FIRST before any other cleanup
     // This ensures proper resource cleanup and prevents memory leaks
@@ -2751,46 +1947,24 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.cleanupWebSocketSubscription();
     
     // Clear baseline cache to free memory
-    if (this.enableDebugLogging) {
-      console.log('[Baseline] Clearing baseline cache', {
-        cacheSize: this.baselineIndicesCache.size,
-        timestamp: new Date().toISOString()
-      });
-    }
     this.baselineIndicesCache.clear();
     this.baselineCacheTimestamp = 0;
     this.isBaselineDataLoaded = false;
     
     // Clear baseline refresh timer
     if (this.baselineRefreshTimer) {
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Clearing baseline refresh timer', {
-          timestamp: new Date().toISOString()
-        });
-      }
       clearInterval(this.baselineRefreshTimer);
       this.baselineRefreshTimer = null;
     }
     
     // Clean up chart update timer
     if (this.chartUpdateTimer) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Clearing chart update timer', {
-          timestamp: new Date().toISOString()
-        });
-      }
       clearTimeout(this.chartUpdateTimer);
       this.chartUpdateTimer = null;
     }
     
     // Dispose of all chart instances to prevent reinitialization errors
     if (this.dashboardConfig?.widgets) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Disposing chart instances', {
-          widgetCount: this.dashboardConfig.widgets.length,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       this.dashboardConfig.widgets.forEach(widget => {
         if (widget.chartInstance && typeof widget.chartInstance.dispose === 'function') {
@@ -2798,7 +1972,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
             widget.chartInstance.dispose();
             widget.chartInstance = null;
           } catch (error) {
-            console.warn('Error disposing chart instance:', error);
           }
         }
       });
@@ -2806,62 +1979,32 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
     // Unsubscribe from selected index subscription to prevent memory leaks
     if (this.selectedIndexSubscription) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Unsubscribing from selected index subscription', {
-          timestamp: new Date().toISOString()
-        });
-      }
       this.selectedIndexSubscription.unsubscribe();
       this.selectedIndexSubscription = null;
     }
     
     // Unsubscribe from WebSocket subscription
     if (this.indicesWebSocketSubscription) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Unsubscribing from indices WebSocket subscription', {
-          timestamp: new Date().toISOString()
-        });
-      }
       this.indicesWebSocketSubscription.unsubscribe();
       this.indicesWebSocketSubscription = null;
     }
 
     // Unsubscribe from WebSocket connection state monitoring
     if (this.webSocketConnectionStateSubscription) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Unsubscribing from connection state monitoring', {
-          timestamp: new Date().toISOString()
-        });
-      }
       this.webSocketConnectionStateSubscription.unsubscribe();
       this.webSocketConnectionStateSubscription = null;
     }
 
     // Unsubscribe from BehaviorSubject subscription
     if (this.indicesDataSubscription) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Unsubscribing from BehaviorSubject subscription', {
-          timestamp: new Date().toISOString()
-        });
-      }
       this.indicesDataSubscription.unsubscribe();
       this.indicesDataSubscription = null;
     }
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Disconnecting WebSocket service', {
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Disconnect WebSocket
     this.webSocketService.disconnect();
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Clearing component data', {
-        timestamp: new Date().toISOString()
-      });
-    }
     
     // Clear stock ticks data
     this.dashboardData = [];
@@ -2875,11 +2018,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.isSubscribing = false;
     this.subscribedTopics.clear();
     
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Component destruction complete', {
-        timestamp: new Date().toISOString()
-      });
-    }
   }
 
   private indicesLoaded = false;
@@ -2892,12 +2030,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     // UPDATED: Use baseline cache data if available (most accurate)
     if (this.isBaselineDataLoaded && this.baselineIndicesCache.size > 0) {
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Using baseline cache data for initial load', {
-          cacheSize: this.baselineIndicesCache.size,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       const baselineData = Array.from(this.baselineIndicesCache.values());
       this.updateIndexListData(baselineData);
@@ -2909,12 +2041,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     // FALLBACK 1: Check if WebSocket has already provided data via the signal
     const webSocketData = this.indicesDataSignal();
     if (webSocketData && webSocketData.length > 0) {
-      if (this.enableDebugLogging) {
-        console.log('[WebSocket] Using WebSocket data for initial load', {
-          dataCount: webSocketData.length,
-          timestamp: new Date().toISOString()
-        });
-      }
       
       // Update legacy properties for backward compatibility
       this.updateIndexListData(webSocketData);
@@ -2924,11 +2050,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
 
     // FALLBACK 2: Use REST API if neither baseline nor WebSocket data is available
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] No baseline or WebSocket data, using REST API fallback', {
-        timestamp: new Date().toISOString()
-      });
-    }
     
     this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').subscribe({
       next: (indices) => {
@@ -2941,12 +2062,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         // Only update if baseline and WebSocket haven't provided data yet
         const currentWebSocketData = this.indicesDataSignal();
         if (!this.isBaselineDataLoaded && (!currentWebSocketData || currentWebSocketData.length === 0)) {
-          if (this.enableDebugLogging) {
-            console.log('[WebSocket] Updating with REST API fallback data', {
-              dataCount: mappedData.length,
-              timestamp: new Date().toISOString()
-            });
-          }
           
           // Update signals with fallback data
           this.indicesDataSignal.set(mappedData);
@@ -2955,20 +2070,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           // Update legacy properties for backward compatibility
           this.updateIndexListData(mappedData);
         } else {
-          if (this.enableDebugLogging) {
-            console.log('[WebSocket] Skipping REST API data - baseline or WebSocket data already available', {
-              hasBaseline: this.isBaselineDataLoaded,
-              webSocketDataCount: currentWebSocketData?.length || 0,
-              timestamp: new Date().toISOString()
-            });
-          }
         }
         
         this.indicesLoaded = true;
         this.setDefaultIndexFromData(this.indicesDataSignal());
       },
       error: (error) => {
-        console.warn('Failed to list indices, using fallback:', error);
         this.loadDefaultNifty50DataFallback();
       }
     });
@@ -3024,19 +2131,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         calculatedPercentChange = previousClose > 0 ? ((calculatedPriceChange / previousClose) * 100) : 0;
       }
       
-      if (this.enableDebugLogging) {
-        console.log('[Baseline] Mapping index data with fixed calculations:', {
-          symbol: index.indexSymbol || index.indexName,
-          lastPrice,
-          originalPreviousClose: (index as any).previousClose,
-          calculatedPreviousClose: previousClose,
-          originalVariation: variation,
-          calculatedPriceChange: calculatedPriceChange,
-          originalPercentChange: percentChange,
-          calculatedPercentChange: calculatedPercentChange,
-          isFixed: previousClose !== lastPrice ? '✅' : '❌'
-        });
-      }
       
       return {
         tradingsymbol: index.indexSymbol || index.indexName || 'N/A',
@@ -3164,7 +2258,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.ensureWidgetTimeRangeFilters();
         },
         error: (error) => {
-          console.warn('Failed to load historical data for', indexName, ':', error);
           this.historicalData = [];
           this.updateCandlestickChartWithHistoricalData();
           this.isCandlestickLoadingSignal.set(false); // Hide loading indicator even on error
@@ -3271,7 +2364,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       
       // Subscribe to WebSocket updates for the selected index
       this.subscribeToIndexWebSocket(indexName).catch(error => {
-        console.error('Failed to subscribe to WebSocket:', error);
       });
     }
     
@@ -3369,7 +2461,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         }
       },
       error: (error) => {
-        console.warn(`Failed to fetch previous-day data for ${indexName}:`, error);
       }
     });
   }
@@ -3751,14 +2842,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       widget.config?.component === 'stock-list-table'
     );
 
-    if (this.enableDebugLogging) {
-      console.log('[WebSocket] Populating stock list widgets with initial data', {
-        widgetCount: stockListWidgets.length,
-        hasFilteredData: !!(this.filteredDashboardData && this.filteredDashboardData.length > 0),
-        hasDashboardData: !!(this.dashboardData && this.dashboardData.length > 0),
-        timestamp: new Date().toISOString()
-      });
-    }
 
     stockListWidgets.forEach((widget, index) => {
       const stockData = this.filteredDashboardData || this.dashboardData;
@@ -3780,20 +2863,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         
         widget.data = initialWidgetData;
         
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Stock list widget initialized with data', {
-            widgetIndex: index,
-            stockCount: initialStockData.length,
-            selectedSymbol: this.selectedIndexSymbol,
-            sampleData: initialStockData.slice(0, 2).map(item => ({
-              symbol: item.symbol,
-              lastPrice: item.lastPrice,
-              priceChange: item.priceChange,
-              percentChange: item.percentChange
-            })),
-            timestamp: new Date().toISOString()
-          });
-        }
       } else {
         // Set empty data to show the empty message
         widget.data = {
@@ -3803,12 +2872,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           initialLoad: Date.now()
         };
         
-        if (this.enableDebugLogging) {
-          console.log('[WebSocket] Stock list widget initialized with empty data', {
-            widgetIndex: index,
-            timestamp: new Date().toISOString()
-          });
-        }
       }
     });
 
@@ -3848,9 +2911,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Skip if offline (no point calling backend without internet)
       try {
         if (typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
-          if (this.enableDebugLogging) {
-            console.warn('Offline detected, skipping previous-day fetch');
-          }
           return;
         }
       } catch { /* no-op */ }
@@ -3882,7 +2942,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         },
         error: (error) => {
-          console.warn(`Failed to fetch previous-day data for ${indexName}:`, error);
         }
       });
     }
@@ -4051,7 +3110,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         widget.chartInstance.dispose();
         widget.chartInstance = null;
       } catch (error) {
-        console.warn('Error disposing chart instance:', error);
       }
     }
   }
@@ -4404,7 +3462,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
                 this.handleWebSocketData(indicesData, indexName);
               },
               error: (error: any) => {
-                console.warn(`Specific index subscription failed for ${webSocketIndexName}, falling back to all indices:`, error.message || error);
                 // Fallback to all indices subscription
                 this.subscribeToAllIndicesAsFallback(indexName);
               },
@@ -4417,7 +3474,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           this.subscribedTopics.add(topicName);
           
         } catch (error) {
-          console.warn(`Specific index subscription failed for ${webSocketIndexName}, falling back to all indices:`, error);
           // Fallback to all indices subscription
           this.subscribeToAllIndicesAsFallback(indexName);
         }
@@ -4459,7 +3515,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
             }
           },
           error: (error) => {
-            console.warn('All indices subscription error:', error.message || error);
             this.cdr.detectChanges();
           },
           complete: () => {
@@ -4467,7 +3522,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         });
     } catch (error) {
-      console.error('Failed to subscribe to all indices as fallback:', error);
     }
   }
 
@@ -4489,7 +3543,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         
         // Check if dashboard is ready before updating
         if (!this.dashboardConfig?.widgets || this.dashboardConfig.widgets.length === 0) {
-          console.warn('Dashboard not ready yet, deferring first tile update');
           // Schedule the update for later
           setTimeout(() => {
             this.updateFirstTileWithRealTimeData(indexData);
@@ -4514,10 +3567,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         }, 250);
       } else {
-        console.warn('WebSocket received data but no valid index data found:', indexData);
       }
     } catch (error: any) {
-      console.error('Error processing received index data:', error);
     }
   }
 
@@ -4537,7 +3588,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         this.subscribeToIndexWebSocket(this.currentSubscribedIndex);
       }
     } catch (error) {
-      console.warn('WebSocket reconnection failed:', error);
       // Schedule another reconnection attempt after a delay
       setTimeout(() => {
         this.attemptWebSocketReconnection();
@@ -4582,14 +3632,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
 
     if (!firstTile) {
-      console.warn('No suitable tile found for real-time updates');
       return;
     }
 
 
 
     if (!realTimeIndexData) {
-      console.warn('No real-time index data available for first tile update');
       return;
     }
 
@@ -4656,7 +3704,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.cdr.detectChanges();
 
     } catch (error) {
-      console.error('Error updating first tile with real-time data:', error);
     }
   }
 
@@ -5031,7 +4078,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           }
         },
         error: (error) => {
-          console.error('WebSocket connection state monitoring error:', error);
           this.isWebSocketConnected = false;
           // Clear subscribed topics on error
           this.subscribedTopics.clear();
