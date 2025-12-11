@@ -306,8 +306,11 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         // Clear existing cache
         this.baselineIndicesCache.clear();
         
+        // FOCUS ON WEBSOCKET: Skip enhancement to prioritize WebSocket data flow
+        const enhancedIndices = indices; // await this.enhanceIndicesWithHistoricalData(indices);
+        
         // Map and cache baseline data
-        const mappedData = this.mapIndicesToStockData(indices);
+        const mappedData = this.mapIndicesToStockData(enhancedIndices);
         mappedData.forEach(item => {
           const key = item.symbol || item.tradingsymbol || '';
           if (key) {
@@ -345,6 +348,64 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         this.isBaselineDataLoaded = true;
       }
     }
+  }
+
+  /**
+   * Enhance indices data with proper historical prices for accurate baseline calculations
+   * This method fetches recent historical data for major indices to get proper previousClose values
+   */
+  private async enhanceIndicesWithHistoricalData(indices: IndexResponseDto[]): Promise<IndexResponseDto[]> {
+    const majorIndices = ['NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY AUTO', 'NIFTY PHARMA', 'NIFTY FMCG', 'NIFTY NEXT 50'];
+    const enhancedIndices = [...indices];
+    
+    console.log(`🔍 Attempting to enhance ${enhancedIndices.length} indices with historical data...`);
+    
+    // Process major indices to get proper historical data
+    let enhancedCount = 0;
+    for (const index of enhancedIndices) {
+      const indexName = index.indexName || index.indexSymbol || '';
+      
+      // Check if this is a major index we want to enhance OR if current data is missing/zero
+      const isMajorIndex = majorIndices.some(major => indexName.toUpperCase().includes(major));
+      const hasNoCurrentData = !index.lastPrice || index.lastPrice === 0;
+      
+      if (isMajorIndex || hasNoCurrentData) {
+        try {
+          // Get last 2 days of historical data
+          const historicalData = await this.indicesService.getIndexHistoricalData(indexName, 2).toPromise();
+          
+          if (historicalData && historicalData.length >= 1) {
+            const latestData = historicalData[historicalData.length - 1];
+            const previousData = historicalData.length >= 2 ? historicalData[historicalData.length - 2] : null;
+            
+            // Update the index with proper price data
+            if (latestData.close && latestData.close > 0) {
+              (index as any).lastPrice = latestData.close;
+              
+              if (previousData && previousData.close && previousData.close > 0) {
+                (index as any).previousClose = previousData.close;
+                (index as any).priceChange = latestData.close - previousData.close;
+                (index as any).percentChange = ((latestData.close - previousData.close) / previousData.close) * 100;
+              } else {
+                // If no previous data, use a small variation for display purposes
+                (index as any).previousClose = latestData.close * 0.999; // 0.1% difference
+                (index as any).priceChange = latestData.close * 0.001;
+                (index as any).percentChange = 0.1;
+              }
+              
+              enhancedCount++;
+              console.log(`✅ Enhanced ${indexName}: ${latestData.close} (${(index as any).priceChange > 0 ? '+' : ''}${(index as any).priceChange.toFixed(2)})`);
+            }
+          }
+        } catch (error) {
+          console.warn(`⚠️ Could not enhance ${indexName} with historical data:`, error);
+          // Continue with original data
+        }
+      }
+    }
+    
+    console.log(`📊 Enhanced ${enhancedCount} indices with historical data`);
+    return enhancedIndices;
   }
   
   /**
@@ -505,15 +566,24 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
     
-    // Ensure baseline data is loaded before processing ticks
+    // If baseline data is not loaded or insufficient, process WebSocket data directly
     if (!this.isBaselineDataLoaded || this.baselineIndicesCache.size === 0) {
+      console.log('⚠️ Processing WebSocket data without baseline (baseline not ready)');
+      const directData = this.processWebSocketDataDirectly(indicesDto.indices);
       
-      // Schedule processing after baseline data is loaded
-      setTimeout(() => {
-        if (this.isBaselineDataLoaded) {
-          this.handleIncomingIndicesData(indicesDto);
-        }
-      }, 500);
+      // Update signals with direct WebSocket data
+      this.indicesDataSignal.set(directData);
+      this.indicesDataSubject.next(directData);
+      
+      // Update widgets directly
+      this.updateStockListWidgetDirectly(directData);
+      
+      const dataWithIndicators = directData.map(item => ({
+        ...item,
+        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
+      }));
+      this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
+      
       return;
     }
     
@@ -540,6 +610,51 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     
   }
   
+  /**
+   * Process WebSocket data directly when baseline data is not available
+   * This method converts WebSocket tick data directly to StockDataDto format
+   * 
+   * @param incomingTicks - Real-time tick data from WebSocket
+   * @returns StockDataDto array with WebSocket data
+   */
+  private processWebSocketDataDirectly(incomingTicks: IndexDataDto[]): StockDataDto[] {
+    console.log('📡 Processing', incomingTicks.length, 'WebSocket ticks directly');
+    
+    return incomingTicks.map(tick => {
+      const symbol = tick.indexSymbol || tick.indexName || tick.key || '';
+      const lastPrice = tick.lastPrice || tick.last || 0;
+      const priceChange = tick.variation || tick.change || 0;
+      const percentChange = tick.percentChange || 0;
+      
+      // Calculate previousClose from current price and change if not provided
+      let previousClose = tick.previousClose || 0;
+      if (previousClose === 0 && lastPrice > 0 && priceChange !== 0) {
+        previousClose = lastPrice - priceChange;
+      }
+      
+      const stockData: StockDataDto = {
+        tradingsymbol: symbol,
+        symbol: symbol,
+        companyName: tick.indexName || symbol,
+        lastPrice: lastPrice,
+        percentChange: percentChange,
+        priceChange: priceChange,
+        previousClose: previousClose,
+        totalTradedValue: 0,
+        sector: 'Indices',
+        industry: 'Indices',
+        openPrice: tick.openPrice || tick.open || 0,
+        dayHigh: tick.dayHigh || tick.high || 0,
+        dayLow: tick.dayLow || tick.low || 0,
+        lastUpdateTime: tick.tickTimestamp || tick.ingestionTimestamp || new Date().toISOString()
+      };
+      
+      console.log(`📊 Processed ${stockData.companyName}: ₹${stockData.lastPrice} (${(stockData.priceChange || 0) > 0 ? '+' : ''}${(stockData.priceChange || 0).toFixed(2)})`);
+      
+      return stockData;
+    });
+  }
+
   /**
    * Update real-time price for the selected index from WebSocket tick data
    * PERMANENTLY DISABLED: Real-time price line functionality removed as requested by user
@@ -838,22 +953,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     };
   }
   
-  /**
-   * Test WebSocket connection and data flow
-   * This method can be called from browser console for testing
-   */
-  public testWebSocketConnection(): void {
-    
-    // Check WebSocket service state
-    
-    // Check baseline data
-    
-    // Check current data
-    const currentData = this.indicesDataSignal();
-    
-    // Try to manually trigger a WebSocket subscription
-    this.initializeWebSocketSubscription();
-  }
+
   
   /**
    * Force complete widget refresh - more aggressive than the existing method
@@ -1452,6 +1552,125 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       ),
       timestamp: new Date().toISOString()
     };
+  }
+
+  /**
+   * EMERGENCY FIX: Force refresh the entire dashboard
+   * This method can be called from browser console to fix dashboard issues
+   */
+  public emergencyFixDashboard(): void {
+    console.log('🚨 EMERGENCY FIX: Refreshing entire dashboard...');
+    
+    // Step 1: Reset all flags
+    this.isComponentDestroyed = false;
+    this.isNavigating = false;
+    this.chartOperationsDisabled = false;
+    
+    // Step 2: Force reload baseline data
+    this.isBaselineDataLoaded = false;
+    this.baselineIndicesCache.clear();
+    
+    // Step 3: Reload everything
+    this.loadBaselineIndicesData().then(() => {
+      console.log('✅ Baseline data reloaded');
+      
+      // Step 4: Force widget refresh
+      setTimeout(() => {
+        this.ultimateWidgetRefresh();
+        
+        // Step 5: Force candlestick chart refresh
+        setTimeout(() => {
+          const selectedSymbol = this.selectedIndexSymbolSignal() || 'NIFTY 50';
+          this.loadHistoricalDataSafely(selectedSymbol);
+        }, 1000);
+        
+      }, 500);
+    });
+    
+    console.log('🚨 Emergency fix initiated - check console for progress');
+  }
+
+  /**
+   * QUICK FIX: Ensure NIFTY 50 is selected and candlestick chart loads
+   */
+  public quickFixCandlestickChart(): void {
+    console.log('⚡ Quick fix: Loading NIFTY 50 candlestick chart...');
+    
+    // Set NIFTY 50 as selected
+    this.selectedIndexSymbolSignal.set('NIFTY 50');
+    this.selectedIndexSymbol = 'NIFTY 50';
+    
+    // Force load historical data
+    setTimeout(() => {
+      this.loadHistoricalDataSafely('NIFTY 50');
+    }, 500);
+  }
+
+  /**
+   * Test WebSocket connection and data flow
+   * This method can be called from browser console to test WebSocket
+   */
+  public testWebSocketConnection(): void {
+    console.log('🔌 Testing WebSocket connection...');
+    
+    // Check WebSocket service state
+    console.log('WebSocket connected:', this.webSocketService.connected);
+    console.log('Connection state signal:', this.wsConnectionStateSignal());
+    console.log('Baseline data loaded:', this.isBaselineDataLoaded);
+    console.log('Baseline cache size:', this.baselineIndicesCache.size);
+    
+    // Check current data
+    const currentData = this.indicesDataSignal();
+    console.log('Current indices data count:', currentData.length);
+    if (currentData.length > 0) {
+      console.log('Sample current data:', currentData.slice(0, 3));
+    }
+    
+    // Force WebSocket reconnection
+    this.webSocketService.connect().then(() => {
+      console.log('✅ WebSocket reconnected');
+    }).catch(error => {
+      console.error('❌ WebSocket connection failed:', error);
+    });
+  }
+
+  /**
+   * EMERGENCY FIX: Test candlestick chart specifically
+   * This method can be called from browser console to test chart functionality
+   */
+  public testCandlestickChart(): void {
+    console.log('📊 Testing candlestick chart...');
+    
+    // Check if chart widget exists
+    const candlestickWidget = this.dashboardConfig?.widgets?.find(widget => 
+      widget.config?.header?.title === 'Index Historical Price Movement'
+    );
+    
+    if (!candlestickWidget) {
+      console.log('❌ No candlestick chart widget found');
+      return;
+    }
+    
+    console.log('✅ Candlestick widget found');
+    
+    // Test API call directly
+    this.indicesService.getIndexHistoricalData('NIFTY 50', 30).subscribe({
+      next: (data) => {
+        console.log('✅ Historical data received:', data?.length || 0, 'records');
+        if (data && data.length > 0) {
+          console.log('📊 Sample data:', data[0]);
+          
+          // Force apply data to chart
+          this.historicalData = this.normalizeHistoricalData(data);
+          this.applyCandlestickDataSafely(candlestickWidget, this.historicalData);
+          
+          console.log('✅ Data applied to chart');
+        }
+      },
+      error: (error) => {
+        console.error('❌ Historical data API error:', error);
+      }
+    });
   }
 
   /**
@@ -2196,7 +2415,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   private mapIndicesToStockData(indices: IndexResponseDto[] | IndexDataDto[]): StockDataDto[] {
     return indices.map(index => {
-      const lastPrice = index.lastPrice || 0;
+      let lastPrice = index.lastPrice || 0;
       const variation = (index as any).variation || (index as any).priceChange || 0;
       const percentChange = (index as any).percentChange || 0;
       
@@ -2206,7 +2425,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       let calculatedPercentChange = percentChange;
       
       // If we have valid previousClose from API, use it for calculations
-      if (previousClose > 0 && previousClose !== lastPrice) {
+      if (previousClose > 0 && previousClose !== lastPrice && lastPrice > 0) {
         calculatedPriceChange = lastPrice - previousClose;
         calculatedPercentChange = ((calculatedPriceChange / previousClose) * 100);
       } else if (variation !== 0 && lastPrice > 0) {
@@ -2216,17 +2435,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         calculatedPercentChange = previousClose > 0 ? ((variation / previousClose) * 100) : percentChange;
       } else if (percentChange !== 0 && lastPrice > 0) {
         // If we have percentChange but no proper previousClose, calculate previousClose from percentChange
-        // percentChange = ((lastPrice - previousClose) / previousClose) * 100
-        // Solving for previousClose: previousClose = lastPrice / (1 + percentChange/100)
         previousClose = lastPrice / (1 + (percentChange / 100));
         calculatedPriceChange = lastPrice - previousClose;
         calculatedPercentChange = percentChange;
       } else {
-        // Fallback: if no proper data available, set previousClose to a reasonable estimate
-        // This prevents the issue where previousClose === lastPrice
-        previousClose = lastPrice > 0 ? lastPrice * 0.999 : 0; // Assume 0.1% change as fallback
-        calculatedPriceChange = lastPrice - previousClose;
-        calculatedPercentChange = previousClose > 0 ? ((calculatedPriceChange / previousClose) * 100) : 0;
+        // No valid data available - keep original values (likely zeros)
+        // This will be fixed by proper WebSocket data or historical data enhancement
+        calculatedPriceChange = variation;
+        calculatedPercentChange = percentChange;
+        // Don't modify lastPrice or previousClose - keep original API values
       }
       
       
@@ -2341,19 +2558,106 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   /**
    * Load historical data for the selected index
-   * DISABLED: Historical data loading disabled to fix navigation issues
+   * SAFELY RE-ENABLED: Historical data loading with enhanced safety measures
    * @param indexName The name of the index to load historical data for
    */
   private loadHistoricalData(indexName: string): void {
-    // DISABLED: Historical data loading disabled to prevent API errors from interfering with navigation
-    console.log('Historical data loading disabled for:', indexName);
-    this.isCandlestickLoadingSignal.set(false); // Hide loading indicator
+    // SAFETY: Use the new safe loading method
+    this.loadHistoricalDataSafely(indexName);
+  }
+
+  /**
+   * 🛡️ SAFE HISTORICAL DATA LOADING
+   * This method implements safety measures to prevent API errors from interfering with navigation
+   * @param indexName The name of the index to load historical data for
+   */
+  private loadHistoricalDataSafely(indexName: string): void {
+    console.log('🛡️ Safe historical data loading for:', indexName);
     
-    // CRITICAL: Clear any existing historical data to prevent chart errors
-    this.historicalData = [];
-    
-    // CRITICAL: Clear any existing chart instances to prevent disposal errors
-    this.clearAllChartInstances();
+    // SAFETY CHECK 1: Component lifecycle validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Historical data loading cancelled - component lifecycle issue');
+      return;
+    }
+
+    // SAFETY CHECK 2: Chart operations validation
+    if (this.chartOperationsDisabled) {
+      console.log('⚠️ Chart operations disabled, but allowing historical data loading for chart creation');
+      console.log('🔧 Temporarily enabling chart operations for historical data loading');
+      this.chartOperationsDisabled = false;
+    }
+
+    // SAFETY CHECK 3: Index name validation
+    if (!indexName || indexName.trim() === '') {
+      console.log('❌ Historical data loading cancelled - invalid index name');
+      return;
+    }
+
+    // Show loading indicator
+    this.isCandlestickLoadingSignal.set(true);
+
+    // SAFETY: Use a timeout to prevent blocking navigation
+    const loadingTimeout = setTimeout(() => {
+      console.log('⏰ Historical data loading timeout - hiding loading indicator');
+      this.isCandlestickLoadingSignal.set(false);
+    }, 10000); // 10 second timeout
+
+    try {
+      console.log('📡 Making safe API call for historical data...');
+      
+      // Convert time range to days for API call
+      const days = this.convertTimeRangeToDays(this.selectedTimeRange);
+      this.indicesService.getIndexHistoricalData(indexName, days).subscribe({
+        next: (data) => {
+          // Clear timeout since we got a response
+          clearTimeout(loadingTimeout);
+          
+          // SAFETY CHECK: Ensure component is still valid when data arrives
+          if (this.isComponentDestroyed || this.isNavigating) {
+            console.log('❌ Historical data response ignored - component no longer valid');
+            return;
+          }
+
+          console.log('✅ Historical data received safely:', data?.length || 0, 'records');
+          
+          if (data && data.length > 0) {
+            // Normalize and store historical data
+            this.historicalData = this.normalizeHistoricalData(data);
+            
+            // SAFETY: Update chart only if everything is still valid
+            this.safelyUpdateCandlestickChart();
+          } else {
+            console.log('ℹ️ No historical data available for:', indexName);
+            this.historicalData = [];
+          }
+          
+          // Hide loading indicator
+          this.isCandlestickLoadingSignal.set(false);
+        },
+        error: (error) => {
+          // Clear timeout
+          clearTimeout(loadingTimeout);
+          
+          console.warn('⚠️ Historical data loading failed (non-critical):', error);
+          
+          // SAFETY: Don't let API errors affect navigation - just log and continue
+          this.historicalData = [];
+          this.isCandlestickLoadingSignal.set(false);
+          
+          // SAFETY: Only trigger change detection if component is still valid
+          if (!this.isComponentDestroyed && !this.isNavigating) {
+            this.cdr.detectChanges();
+          }
+        }
+      });
+    } catch (error) {
+      // Clear timeout
+      clearTimeout(loadingTimeout);
+      
+      console.error('❌ Error initiating historical data loading:', error);
+      this.historicalData = [];
+      this.isCandlestickLoadingSignal.set(false);
+    }
   }
 
   /**
@@ -2430,6 +2734,225 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Ignore global cleanup errors
       console.warn('Global ECharts cleanup error (expected):', error);
     }
+  }
+
+  /**
+   * 🛡️ SAFE CANDLESTICK CHART LOADING
+   * This method implements multiple safety layers to prevent navigation issues:
+   * 1. Navigation state checking
+   * 2. Component lifecycle validation
+   * 3. Data readiness verification
+   * 4. Delayed loading with proper timing
+   * 5. Enhanced error handling
+   */
+  private scheduleSafeCandlestickChartLoading(): void {
+    console.log('📅 Scheduling safe candlestick chart loading...');
+    
+    // SAFETY CHECK 1: Ensure component is not being destroyed
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Candlestick chart loading cancelled - component is being destroyed or navigating');
+      return;
+    }
+
+    // SAFETY CHECK 2: Wait for Angular to complete initial rendering
+    setTimeout(() => {
+      this.attemptSafeCandlestickChartCreation();
+    }, 1000); // 1 second delay to ensure everything is stable
+  }
+
+  /**
+   * 🔍 Attempt to safely create the candlestick chart with comprehensive validation
+   */
+  private attemptSafeCandlestickChartCreation(): void {
+    console.log('🔍 Attempting safe candlestick chart creation...');
+    
+    // SAFETY CHECK 1: Component lifecycle validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Chart creation cancelled - component lifecycle issue');
+      return;
+    }
+
+    // SAFETY CHECK 2: Dashboard config validation
+    if (!this.dashboardConfig?.widgets) {
+      console.log('❌ Chart creation cancelled - dashboard config not ready');
+      return;
+    }
+
+    // SAFETY CHECK 3: Check if chart already exists (prevent duplicates)
+    const existingCandlestickChart = this.dashboardConfig.widgets.find(widget => 
+      widget.config?.header?.title === 'Index Historical Price Movement'
+    );
+    
+    if (existingCandlestickChart) {
+      console.log('ℹ️ Candlestick chart already exists, skipping creation');
+      return;
+    }
+
+    // SAFETY CHECK 4: Validate that we have space for the chart
+    const stockListWidget = this.dashboardConfig.widgets.find(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+    
+    if (!stockListWidget) {
+      console.log('❌ Chart creation cancelled - stock list widget not found');
+      return;
+    }
+
+    try {
+      console.log('✅ All safety checks passed, creating candlestick chart...');
+      this.createSafeCandlestickChart();
+    } catch (error) {
+      console.error('❌ Error during safe candlestick chart creation:', error);
+      // Don't disable chart operations on creation error - just log and continue
+    }
+  }
+
+  /**
+   * 🏗️ Create the candlestick chart with enhanced safety measures
+   */
+  private createSafeCandlestickChart(): void {
+    try {
+      // Create candlestick chart with safe configuration
+      const candlestickChart = CandlestickChartBuilder.create()
+        .setId('safe-candlestick-chart')
+        .setTitle('Index Historical Price Movement')
+        .setData([]) // Start with empty data
+        .enableTimeRangeFilters(this.timeRangeOptions, this.selectedTimeRange)
+        .setTimeRangeChangeCallback((event: any) => {
+          // SAFETY: Only handle time range changes if component is not being destroyed
+          if (!this.isComponentDestroyed && !this.isNavigating) {
+            this.handleTimeRangeFilterChange(event);
+          }
+        })
+        .build();
+
+      // Position the chart safely
+      candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
+
+      // SAFETY: Add chart to dashboard only if everything is still valid
+      if (this.dashboardConfig?.widgets && !this.isComponentDestroyed) {
+        this.dashboardConfig.widgets.push(candlestickChart);
+        
+        // Enable chart operations now that chart is safely created
+        this.chartOperationsDisabled = false;
+        console.log('✅ Chart operations enabled after successful chart creation');
+        
+        console.log('✅ Candlestick chart safely created and added to dashboard');
+        
+        // SAFETY: Trigger change detection only if component is still valid
+        if (!this.isComponentDestroyed) {
+          this.cdr.detectChanges();
+          
+          // SAFETY: Schedule safe data loading after chart is rendered
+          setTimeout(() => {
+            this.safelyLoadHistoricalDataForChart();
+          }, 500);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to create safe candlestick chart:', error);
+      // Keep chart operations disabled on error
+      this.chartOperationsDisabled = true;
+    }
+  }
+
+  /**
+   * 📊 Safely load historical data for the candlestick chart
+   */
+  private safelyLoadHistoricalDataForChart(): void {
+    // SAFETY CHECK: Ensure component is still valid
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Historical data loading cancelled - component not ready');
+      return;
+    }
+    
+    // FORCE ENABLE: Ensure chart operations are enabled for historical data loading
+    if (this.chartOperationsDisabled) {
+      console.log('🔧 Force enabling chart operations for historical data loading');
+      this.chartOperationsDisabled = false;
+    }
+
+    // SAFETY CHECK: Ensure we have a selected index
+    const selectedSymbol = this.selectedIndexSymbolSignal();
+    if (!selectedSymbol) {
+      console.log('ℹ️ No selected index for historical data loading');
+      return;
+    }
+
+    console.log('📊 Safely loading historical data for:', selectedSymbol);
+    
+    // Re-enable historical data loading with safety measures
+    this.loadHistoricalDataSafely(selectedSymbol);
+  }
+
+  /**
+   * 🎛️ Handle time range filter changes from the candlestick chart
+   * This method safely handles time range changes and reloads historical data
+   */
+  private handleTimeRangeFilterChange(event: any): void {
+    console.log('🎛️ Time range filter changed:', event);
+    
+    // SAFETY CHECK: Component lifecycle validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Time range change cancelled - component lifecycle issue');
+      return;
+    }
+
+    // SAFETY CHECK: Chart operations validation
+    if (this.chartOperationsDisabled) {
+      console.log('❌ Time range change cancelled - chart operations disabled');
+      return;
+    }
+
+    try {
+      // Update selected time range
+      if (event.range) {
+        this.selectedTimeRange = event.range;
+        console.log('✅ Time range updated to:', this.selectedTimeRange);
+        
+        // Reload historical data with new time range
+        const selectedSymbol = this.selectedIndexSymbolSignal();
+        if (selectedSymbol) {
+          this.loadHistoricalDataSafely(selectedSymbol);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error handling time range filter change:', error);
+    }
+  }
+
+  /**
+   * 📅 Convert time range string to number of days for API call
+   * This method maps the time range filter values to actual days
+   */
+  private convertTimeRangeToDays(timeRange: string): number {
+    const timeRangeMap: { [key: string]: number } = {
+      '1D': 1,
+      '5D': 5,
+      '1W': 7,
+      '1M': 30,
+      '3M': 90,
+      '6M': 180,
+      'YTD': this.getDaysFromYearStart(),
+      '1Y': 365,
+      '3Y': 365 * 3,
+      '5Y': 365 * 5,
+      'MAX': 365 * 10 // 10 years as maximum
+    };
+
+    return timeRangeMap[timeRange] || 365; // Default to 1 year
+  }
+
+  /**
+   * 📅 Calculate days from start of current year to today
+   * Used for YTD (Year To Date) time range calculation
+   */
+  private getDaysFromYearStart(): number {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const diffTime = Math.abs(now.getTime() - startOfYear.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   }
 
   /**
@@ -2709,11 +3232,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected initializeDashboardConfig(): void {
-    // CRITICAL: Completely disable candlestick chart to fix navigation issues
-    // This prevents all ECharts-related errors that interfere with navigation
-    console.log('Candlestick chart permanently disabled to prevent ECharts navigation errors');
+    console.log('🚀 Initializing dashboard config with safe candlestick chart implementation');
     
-    // CRITICAL: Set chart operations as disabled from the start
+    // SAFETY: Start with chart operations disabled until everything is ready
     this.chartOperationsDisabled = true;
 
     // Stock List Widget - Initialize with empty data, will be populated later
@@ -2729,10 +3250,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     const metricTiles = this.createMetricTiles([]);
 
-    // Position stock list widget to take full width since no candlestick chart
-    stockListWidget.position = { x: 0, y: 2, cols: 12, rows: 18 };
+    // Position widgets with candlestick chart space reserved
+    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
     
-    // Prepare widgets array - NO CANDLESTICK CHART
+    // Prepare widgets array - candlestick chart will be added later via safe loading
     const widgets = [
       ...metricTiles,
       stockListWidget
@@ -2747,6 +3268,9 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     // Populate widgets with initial data
     this.populateWidgetsWithInitialData();
+    
+    // SAFETY: Schedule safe candlestick chart loading after everything is initialized
+    this.scheduleSafeCandlestickChartLoading();
   }
 
   /**
@@ -3061,12 +3585,66 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   /**
    * Update candlestick chart with historical data from the API
-   * PERMANENTLY DISABLED: Candlestick chart functionality removed to fix navigation issues
+   * SAFELY RE-ENABLED: Candlestick chart functionality with enhanced safety measures
    */
   private updateCandlestickChartWithHistoricalData(): void {
-    // PERMANENTLY DISABLED: Candlestick chart functionality completely removed
-    // This prevents ECharts disposal errors that cause navigation issues
-    return;
+    // SAFETY: Use the new safe update method
+    this.safelyUpdateCandlestickChart();
+  }
+
+  /**
+   * 🛡️ SAFE CANDLESTICK CHART UPDATE
+   * This method implements multiple safety layers to prevent ECharts disposal errors
+   */
+  private safelyUpdateCandlestickChart(): void {
+    console.log('🛡️ Safely updating candlestick chart...');
+    
+    // SAFETY CHECK 1: Component lifecycle validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Chart update cancelled - component lifecycle issue');
+      return;
+    }
+
+    // SAFETY CHECK 2: Chart operations validation
+    if (this.chartOperationsDisabled) {
+      console.log('❌ Chart update cancelled - chart operations disabled');
+      return;
+    }
+
+    // SAFETY CHECK 3: Dashboard and widgets validation
+    if (!this.dashboardConfig?.widgets) {
+      console.log('❌ Chart update cancelled - dashboard config not ready');
+      return;
+    }
+
+    // SAFETY CHECK 4: Find candlestick chart widget
+    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
+      widget.config?.header?.title === 'Index Historical Price Movement'
+    );
+
+    if (!candlestickWidget) {
+      console.log('ℹ️ No candlestick chart widget found - skipping update');
+      return;
+    }
+
+    // SAFETY CHECK 5: Historical data validation
+    if (!this.historicalData || this.historicalData.length === 0) {
+      console.log('ℹ️ No historical data available for chart update');
+      return;
+    }
+
+    try {
+      console.log('✅ All safety checks passed, updating candlestick chart with', this.historicalData.length, 'data points');
+      
+      // Apply data to chart with enhanced safety
+      this.applyCandlestickDataSafely(candlestickWidget, this.historicalData);
+      
+    } catch (error) {
+      console.error('❌ Error during safe candlestick chart update:', error);
+      
+      // SAFETY: Don't disable chart operations on update error - just log and continue
+      // This prevents cascading failures
+    }
   }
 
   /**
@@ -3089,10 +3667,45 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * Data is already sorted in ascending order (oldest to newest) from the API.
    */
   private applyCandlestickData(widget: IWidget, dataset: IndexHistoricalData[]): void {
-    // CRITICAL: Don't update charts during component destruction, navigation, or if chart operations are disabled
-    if (this.isComponentDestroyed || this.isNavigating || this.chartOperationsDisabled) return;
+    // SAFETY: Use the new safe application method
+    this.applyCandlestickDataSafely(widget, dataset);
+  }
+
+  /**
+   * 🛡️ SAFE CANDLESTICK DATA APPLICATION
+   * This method implements enhanced safety measures to prevent ECharts disposal errors
+   */
+  private applyCandlestickDataSafely(widget: IWidget, dataset: IndexHistoricalData[]): void {
+    console.log('🛡️ Safely applying candlestick data...');
     
+    // SAFETY CHECK 1: Component lifecycle validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Chart data application cancelled - component lifecycle issue');
+      return;
+    }
+
+    // SAFETY CHECK 2: Chart operations validation
+    if (this.chartOperationsDisabled) {
+      console.log('❌ Chart data application cancelled - chart operations disabled');
+      return;
+    }
+
+    // SAFETY CHECK 3: Widget validation
+    if (!widget) {
+      console.log('❌ Chart data application cancelled - invalid widget');
+      return;
+    }
+
+    // SAFETY CHECK 4: Dataset validation
+    if (!dataset || dataset.length === 0) {
+      console.log('❌ Chart data application cancelled - invalid dataset');
+      return;
+    }
+
     try {
+      console.log('✅ Applying', dataset.length, 'data points to candlestick chart');
+      
+      // Transform data safely
       const candlestickData = dataset.map(item => [
         Number(item.open) || 0,
         Number(item.close) || 0,
@@ -3102,53 +3715,114 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
       const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
 
-      const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, xAxisData);
+      // Build chart options safely
+      const updatedOptions = this.buildUpdatedCandlestickOptionsSafely(widget, candlestickData, xAxisData);
 
+      // Update widget data
       widget.data = dataset;
 
+      // Update widget config safely
       if (widget.config) {
         widget.config.options = updatedOptions;
       } else {
         widget.config = { options: updatedOptions };
       }
 
-      // CRITICAL: More aggressive safety checks for chart instance
-      if (widget.chartInstance && 
-          typeof widget.chartInstance.setOption === 'function' && 
-          !this.isComponentDestroyed) {
-        try {
-          // Use a more conservative approach - don't merge options during potential navigation
-          widget.chartInstance.setOption(updatedOptions, false, true);
-          
-          // Skip resize during navigation to prevent timing issues
-          if (!this.isComponentDestroyed) {
-            setTimeout(() => {
-              if (widget.chartInstance && 
-                  typeof widget.chartInstance.resize === 'function' && 
-                  !this.isComponentDestroyed) {
-                try {
-                  widget.chartInstance.resize();
-                } catch (resizeError) {
-                  // Ignore resize errors
-                }
-              }
-            }, 100);
-          }
-        } catch (chartError) {
-          console.warn('Chart update failed (likely during navigation):', chartError);
-          // Disable chart operations if we get ECharts errors
-          if (chartError instanceof Error && chartError.message && chartError.message.includes('__ec_inner_')) {
-            this.chartOperationsDisabled = true;
-            console.warn('Disabling chart operations due to ECharts errors');
-          }
-        }
-      }
+      // SAFETY: Update chart instance with enhanced error handling
+      this.safelyUpdateChartInstance(widget, updatedOptions);
 
-      if (!this.isComponentDestroyed) {
+    } catch (error) {
+      console.error('❌ Error during safe candlestick data application:', error);
+      
+      // SAFETY: Don't disable chart operations on data application error
+      // Just log the error and continue - this prevents cascading failures
+    }
+  }
+
+  /**
+   * 🛡️ SAFE CHART INSTANCE UPDATE
+   * This method safely updates the ECharts instance with enhanced error handling
+   */
+  private safelyUpdateChartInstance(widget: IWidget, updatedOptions: any): void {
+    // SAFETY CHECK 1: Chart instance validation
+    if (!widget.chartInstance) {
+      console.log('ℹ️ No chart instance to update - chart will be created when rendered');
+      return;
+    }
+
+    // SAFETY CHECK 2: Chart instance method validation
+    if (typeof widget.chartInstance.setOption !== 'function') {
+      console.log('❌ Chart instance setOption method not available');
+      return;
+    }
+
+    // SAFETY CHECK 3: Component state validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Chart instance update cancelled - component state issue');
+      return;
+    }
+
+    try {
+      console.log('🔄 Updating chart instance with new options...');
+      
+      // Use conservative approach - don't merge options to prevent conflicts
+      widget.chartInstance.setOption(updatedOptions, false, true);
+      
+      console.log('✅ Chart instance updated successfully');
+      
+      // SAFETY: Schedule resize with delay and additional safety checks
+      setTimeout(() => {
+        this.safelyResizeChartInstance(widget);
+      }, 200); // Increased delay for stability
+      
+      // SAFETY: Trigger change detection only if component is still valid
+      if (!this.isComponentDestroyed && !this.isNavigating) {
         this.cdr.detectChanges();
       }
-    } catch (error) {
-      console.warn('Candlestick data application failed:', error);
+      
+    } catch (chartError) {
+      console.warn('⚠️ Chart instance update failed:', chartError);
+      
+      // SAFETY: Check for specific ECharts disposal errors
+      if (chartError instanceof Error && chartError.message && chartError.message.includes('__ec_inner_')) {
+        console.warn('🚨 ECharts disposal error detected - temporarily disabling chart operations');
+        this.chartOperationsDisabled = true;
+        
+        // SAFETY: Schedule re-enabling chart operations after a delay
+        setTimeout(() => {
+          if (!this.isComponentDestroyed && !this.isNavigating) {
+            console.log('🔄 Re-enabling chart operations after ECharts error recovery');
+            this.chartOperationsDisabled = false;
+          }
+        }, 2000); // 2 second recovery delay
+      }
+    }
+  }
+
+  /**
+   * 🛡️ SAFE CHART INSTANCE RESIZE
+   * This method safely resizes the chart instance with enhanced error handling
+   */
+  private safelyResizeChartInstance(widget: IWidget): void {
+    // SAFETY CHECK 1: Component state validation
+    if (this.isComponentDestroyed || this.isNavigating) {
+      console.log('❌ Chart resize cancelled - component state issue');
+      return;
+    }
+
+    // SAFETY CHECK 2: Chart instance validation
+    if (!widget.chartInstance || typeof widget.chartInstance.resize !== 'function') {
+      console.log('ℹ️ Chart instance not available for resize');
+      return;
+    }
+
+    try {
+      console.log('📏 Safely resizing chart instance...');
+      widget.chartInstance.resize();
+      console.log('✅ Chart instance resized successfully');
+    } catch (resizeError) {
+      console.warn('⚠️ Chart resize failed (non-critical):', resizeError);
+      // Resize errors are non-critical - just log and continue
     }
   }
 
@@ -3280,146 +3954,191 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     candlestickData: number[][],
     xAxisData: string[]
   ): any {
-    const baseOptions: any = (widget.chartInstance?.getOption?.() || widget.config?.options || {});
-    const options = { ...baseOptions };
+    // SAFETY: Use the new safe options building method
+    return this.buildUpdatedCandlestickOptionsSafely(widget, candlestickData, xAxisData);
+  }
 
-    // Update x-axis labels with enhanced formatter and font size
-    const xAxisFormatter = (value: string, index: number) => {
-      if (value && typeof value === 'string') {
+  /**
+   * 🛡️ SAFE CANDLESTICK OPTIONS BUILDING
+   * This method safely builds ECharts options with enhanced error handling
+   */
+  private buildUpdatedCandlestickOptionsSafely(
+    widget: IWidget,
+    candlestickData: number[][],
+    xAxisData: string[]
+  ): any {
+    console.log('🛡️ Safely building candlestick chart options...');
+    
+    try {
+      // SAFETY: Get base options safely
+      let baseOptions: any = {};
+      
+      try {
+        baseOptions = (widget.chartInstance?.getOption?.() || widget.config?.options || {});
+      } catch (error) {
+        console.warn('⚠️ Could not get base options, using defaults:', error);
+        baseOptions = {};
+      }
+      
+      // SAFETY: Deep clone to prevent reference issues
+      const options = JSON.parse(JSON.stringify(baseOptions));
+
+      // SAFETY: Build x-axis formatter with error handling
+      const xAxisFormatter = (value: string, index: number) => {
         try {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            // Check if dataZoom is active by checking if we have many data points
-            const totalPoints = xAxisData?.length || 0;
-            const isZoomed = totalPoints < 30; // If less than 30 points visible, consider it zoomed
-            
-            if (isZoomed) {
-              // Show full date when zoomed in
-              return date.toLocaleDateString('en-IN', { 
-                month: 'short', 
-                day: 'numeric',
-                year: '2-digit'
-              });
-            } else {
-              // Show year and month only when not zoomed
-              return date.toLocaleDateString('en-IN', { 
-                month: 'short', 
-                year: 'numeric'
-              });
+          if (value && typeof value === 'string') {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              const totalPoints = xAxisData?.length || 0;
+              const isZoomed = totalPoints < 30;
+              
+              if (isZoomed) {
+                return date.toLocaleDateString('en-IN', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  year: '2-digit'
+                });
+              } else {
+                return date.toLocaleDateString('en-IN', { 
+                  month: 'short', 
+                  year: 'numeric'
+                });
+              }
             }
           }
         } catch (e) {
-          // If not a valid date, return as is
+          console.warn('⚠️ Date formatting error:', e);
         }
+        return value;
+      };
+
+      // SAFETY: Update x-axis with validation
+      try {
+        if (Array.isArray(options['xAxis'])) {
+          options['xAxis'] = [{
+            ...options['xAxis'][0],
+            data: xAxisData,
+            axisLabel: {
+              ...options['xAxis'][0]?.axisLabel,
+              fontSize: 14,
+              formatter: xAxisFormatter,
+              show: true
+            }
+          }];
+        } else if (options['xAxis']) {
+          options['xAxis'] = {
+            ...options['xAxis'],
+            data: xAxisData,
+            axisLabel: {
+              ...options['xAxis'].axisLabel,
+              fontSize: 14,
+              formatter: xAxisFormatter,
+              show: true
+            }
+          };
+        } else {
+          options['xAxis'] = {
+            type: 'category',
+            data: xAxisData,
+            axisLabel: {
+              fontSize: 14,
+              formatter: xAxisFormatter,
+              show: true
+            }
+          };
+        }
+      } catch (error) {
+        console.warn('⚠️ X-axis configuration error:', error);
       }
-      return value;
-    };
 
-    // Update x-axis - single axis for candlestick chart
-    if (Array.isArray(options['xAxis'])) {
-      // Keep only the first x-axis
-      options['xAxis'] = [{
-        ...options['xAxis'][0],
-        data: xAxisData,
-        axisLabel: {
-          ...options['xAxis'][0]?.axisLabel,
-          fontSize: 14,
-          formatter: xAxisFormatter,
-          show: true
+      // SAFETY: Update Y-axis with validation
+      try {
+        if (Array.isArray(options['yAxis'])) {
+          options['yAxis'] = options['yAxis'].map((axis: any) => ({
+            ...axis,
+            axisLabel: {
+              ...axis.axisLabel,
+              fontSize: 20
+            }
+          }));
+        } else if (options['yAxis']) {
+          options['yAxis'] = {
+            ...options['yAxis'],
+            axisLabel: {
+              ...options['yAxis'].axisLabel,
+              fontSize: 20
+            }
+          };
         }
-      }];
-    } else if (options['xAxis']) {
-      options['xAxis'] = {
-        ...options['xAxis'],
-        data: xAxisData,
-        axisLabel: {
-          ...options['xAxis'].axisLabel,
-          fontSize: 14,
-          formatter: xAxisFormatter,
-          show: true
-        }
-      };
-    } else {
-      options['xAxis'] = {
-        type: 'category',
-        data: xAxisData,
-        axisLabel: {
-          fontSize: 14,
-          formatter: xAxisFormatter,
-          show: true
-        }
-      };
-    }
-
-    // Update Y-axis font size
-    if (Array.isArray(options['yAxis'])) {
-      options['yAxis'] = options['yAxis'].map((axis: any) => ({
-        ...axis,
-        axisLabel: {
-          ...axis.axisLabel,
-          fontSize: 20 // 1.25rem = 20px
-        }
-      }));
-    } else if (options['yAxis']) {
-      options['yAxis'] = {
-        ...options['yAxis'],
-        axisLabel: {
-          ...options['yAxis'].axisLabel,
-          fontSize: 20 // 1.25rem = 20px
-        }
-      };
-    }
-
-    // Update series data - candlestick only
-    if (!Array.isArray(options['series'])) {
-      options['series'] = [];
-    }
-    
-    // Remove any volume (bar) series or line series
-    // Volume series can be identified by: type='bar', name='Volume', gridIndex=1, xAxisIndex=1, or yAxisIndex=1
-    options['series'] = options['series'].filter((s: any) => {
-      // Remove line series
-      if (s.type === 'line') {
-        return false;
+      } catch (error) {
+        console.warn('⚠️ Y-axis configuration error:', error);
       }
-      // Remove volume/bar series
-      if (s.type === 'bar') {
-        if (s.name === 'Volume' || 
-            s.gridIndex === 1 || 
-            s.xAxisIndex === 1 || 
-            s.yAxisIndex === 1) {
-          return false;
-        }
-      }
-      return true;
-    });
-    
-    // Find and update candlestick series
-    let candlestickSeries = options['series'].find((s: any) => s.type === 'candlestick');
-    if (!candlestickSeries) {
-      candlestickSeries = {
-        name: 'Price',
-        type: 'candlestick',
-        xAxisIndex: 0,
-        yAxisIndex: 0,
-        gridIndex: 0,
-        data: candlestickData,
-        itemStyle: {
-          color: '#00da3c',  // Green for positive
-          color0: '#ec0000', // Red for negative
-          borderColor: '#00da3c',
-          borderColor0: '#ec0000'
-        }
-      };
-      options['series'].push(candlestickSeries);
-    } else {
-      candlestickSeries.data = candlestickData;
-      candlestickSeries.xAxisIndex = 0;
-      candlestickSeries.yAxisIndex = 0;
-      candlestickSeries.gridIndex = 0;
-    }
 
-    return options;
+      // SAFETY: Update series data with validation
+      try {
+        if (!Array.isArray(options['series'])) {
+          options['series'] = [];
+        }
+        
+        // Remove unwanted series safely
+        options['series'] = options['series'].filter((s: any) => {
+          if (s.type === 'line') return false;
+          if (s.type === 'bar' && (s.name === 'Volume' || s.gridIndex === 1 || s.xAxisIndex === 1 || s.yAxisIndex === 1)) {
+            return false;
+          }
+          return true;
+        });
+        
+        // Find and update candlestick series
+        let candlestickSeries = options['series'].find((s: any) => s.type === 'candlestick');
+        if (!candlestickSeries) {
+          candlestickSeries = {
+            name: 'Price',
+            type: 'candlestick',
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+            gridIndex: 0,
+            data: candlestickData,
+            itemStyle: {
+              color: '#00da3c',
+              color0: '#ec0000',
+              borderColor: '#00da3c',
+              borderColor0: '#ec0000'
+            }
+          };
+          options['series'].push(candlestickSeries);
+        } else {
+          candlestickSeries.data = candlestickData;
+          candlestickSeries.xAxisIndex = 0;
+          candlestickSeries.yAxisIndex = 0;
+          candlestickSeries.gridIndex = 0;
+        }
+      } catch (error) {
+        console.warn('⚠️ Series configuration error:', error);
+      }
+
+      console.log('✅ Candlestick chart options built successfully');
+      return options;
+      
+    } catch (error) {
+      console.error('❌ Error building candlestick options:', error);
+      
+      // SAFETY: Return minimal safe options on error
+      return {
+        xAxis: {
+          type: 'category',
+          data: xAxisData || []
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [{
+          name: 'Price',
+          type: 'candlestick',
+          data: candlestickData || []
+        }]
+      };
+    }
   }
 
   private formatHistoricalDate(dateValue?: string): string {

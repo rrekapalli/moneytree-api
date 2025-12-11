@@ -67,7 +67,7 @@ kite:
 
 # CORS configuration for REST API endpoints
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://moneytree.tailce422e.ts.net}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200,https://moneytree.tailce422e.ts.net}
   allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS,PATCH}
   allowed-headers: ${CORS_ALLOWED_HEADERS:*}
   allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}

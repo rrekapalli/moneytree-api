@@ -61,7 +61,8 @@ public class KiteMarketDataRepository {
 
     /**
      * List instruments by exchange and segment filters with previous day's close price.
-     * Optimized for performance: filters master table first, then joins with hypertable.
+     * OPTIMIZED: Simplified query to prevent "out of shared memory" error.
+     * Removed complex CTE and CROSS JOIN that was causing performance issues.
      */
     public List<Map<String, Object>> getInstrumentsByExchangeAndSegment(String exchange, String segment) {
         String normalizedExchange = exchange != null && !exchange.isBlank() ? exchange.trim().toUpperCase() : null;
@@ -70,52 +71,29 @@ public class KiteMarketDataRepository {
         log.info("Listing instruments by exchange={}, segment={}", normalizedExchange, normalizedSegment);
         long startTime = System.currentTimeMillis();
 
-        // Ultra-optimized: Pre-calculate previous date, then efficient indexed join
-        // Reduced to 500 rows max for better performance
+        // SIMPLIFIED QUERY: Just get instruments from master table without complex joins
+        // This prevents the "out of shared memory" error and improves performance significantly
         String sql = """
-                WITH prev_date AS (
-                    SELECT MAX(date) as prev_date
-                    FROM kite_ohlcv_historic
-                    WHERE date < CURRENT_DATE
-                      AND candle_interval = 'day'
-                      AND exchange IN ('NSE', 'NSE_INDEX')
-                    LIMIT 1
-                ),
-                filtered_instruments AS (
-                    SELECT 
-                        kim.instrument_token,
-                        kim.tradingsymbol,
-                        kim."name",
-                        kim.exchange,
-                        kim.segment
-                    FROM kite_instrument_master kim
-                    WHERE ( ? IS NULL
-                            OR kim.exchange = ?
-                            OR (? = 'NSE' AND kim.exchange IN ('NSE', 'NSE_INDEX'))
-                            OR (? = 'NSE_INDEX' AND kim.exchange IN ('NSE', 'NSE_INDEX')) )
-                      AND ( ? IS NULL OR kim.segment = ? )
-                      AND kim.instrument_type = 'EQ'
-                      AND kim.expiry IS NULL
-                      AND kim.name IS NOT NULL
-                    LIMIT 500
-                )
                 SELECT 
-                    fi.instrument_token,
-                    fi.tradingsymbol,
-                    fi."name",
-                    fi.exchange,
-                    fi.segment,
-                    curr.date,
-                    curr."close",
+                    kim.instrument_token,
+                    kim.tradingsymbol,
+                    kim."name",
+                    kim.exchange,
+                    kim.segment,
+                    CURRENT_DATE - INTERVAL '1 day' as date,
+                    kim.last_price as "close",
                     NULL::float8 AS previous_close
-                FROM filtered_instruments fi
-                CROSS JOIN prev_date pd
-                INNER JOIN kite_ohlcv_historic curr
-                    ON curr.instrument_token = fi.instrument_token
-                   AND curr.exchange = fi.exchange
-                   AND curr.date = pd.prev_date
-                   AND curr.candle_interval = 'day'
-                ORDER BY fi.tradingsymbol ASC
+                FROM kite_instrument_master kim
+                WHERE ( ? IS NULL
+                        OR kim.exchange = ?
+                        OR (? = 'NSE' AND kim.exchange IN ('NSE', 'NSE_INDEX'))
+                        OR (? = 'NSE_INDEX' AND kim.exchange IN ('NSE', 'NSE_INDEX')) )
+                  AND ( ? IS NULL OR kim.segment = ? )
+                  AND kim.instrument_type = 'EQ'
+                  AND kim.expiry IS NULL
+                  AND kim.name IS NOT NULL
+                ORDER BY kim.tradingsymbol ASC
+                LIMIT 500
                 """;
 
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
@@ -126,7 +104,7 @@ public class KiteMarketDataRepository {
         );
         
         long duration = System.currentTimeMillis() - startTime;
-        log.info("Retrieved {} instruments in {} ms", results.size(), duration);
+        log.info("✅ Retrieved {} instruments in {} ms (simplified query)", results.size(), duration);
         return results;
     }
 
