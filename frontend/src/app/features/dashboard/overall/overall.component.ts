@@ -1258,7 +1258,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         .build();
 
       // Position the chart safely
-      candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
+      candlestickChart.position = { x: 4, y: 0, cols: 8, rows: 12 };
 
       // SAFETY: Add chart to dashboard only if everything is still valid
       if (this.dashboardConfig?.widgets && !this.isComponentDestroyed) {
@@ -1475,7 +1475,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       .build();
 
     // Position widgets with candlestick chart space reserved
-    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
+    stockListWidget.position = { x: 0, y: 0, cols: 4, rows: 20 };
     
     // Prepare widgets array - candlestick chart will be added later via safe loading
     const widgets = [
