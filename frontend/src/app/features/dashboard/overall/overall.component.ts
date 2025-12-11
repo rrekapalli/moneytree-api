@@ -1145,11 +1145,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     // ALWAYS use NIFTY 50 - if not found in data, use fallback instead of first index
     if (!targetIndex) {
-      console.log('NIFTY 50 not found in data, using fallback. Sample indices:', data.slice(0, 10).map(d => ({ 
-        symbol: d.symbol, 
-        tradingsymbol: d.tradingsymbol, 
-        companyName: d.companyName 
-      })));
       this.loadDefaultNifty50DataFallback();
       return;
     }
@@ -1995,12 +1990,10 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const candlestickWidget = this.findCandlestickWidget();
 
     if (!candlestickWidget) {
-      console.warn('Candlestick widget not found');
       return;
     }
 
     if (!this.historicalData || this.historicalData.length === 0) {
-      console.warn('No historical data available for candlestick chart');
       this.clearCandlestickChart();
       return;
     }
@@ -2008,7 +2001,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     const filteredData = this.filterHistoricalDataByTimeRange(this.selectedTimeRange);
     
     if (filteredData.length === 0) {
-      console.warn('No filtered historical data available for selected time range');
       this.clearCandlestickChart();
       return;
     }
@@ -2097,8 +2089,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       ]);
 
       const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
-
-      console.log(`Applying candlestick data: ${candlestickData.length} data points, widget ID: ${widget.id}`);
 
       const updatedOptions = this.buildUpdatedCandlestickOptionsSafely(widget, candlestickData, xAxisData);
 
