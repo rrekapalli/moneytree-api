@@ -110,13 +110,22 @@
 }
 
 .stock-symbol {
-  font-weight: 600;
+  font-weight: normal;
   color: #1f2937;
   transition: color 0.2s ease;
 }
 
 .stock-row:hover .stock-symbol {
   color: #3b82f6;
+}
+
+.stock-price-bold {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stock-change-percent-bold {
+  font-weight: 600;
 }
 
 .selected-stock {

@@ -58,6 +58,7 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
   @Input() stocks: StockListData[] = [];
   @Input() isLoadingStocks: boolean = false;
   @Input() selectedStockSymbol: string = ''; // Add input for selected stock
+  @Input() showCurrencySymbol: boolean = true; // Control whether to show currency symbol (₹)
   @Output() stockSelected = new EventEmitter<SelectedStockData>();
   @Output() stockDoubleClicked = new EventEmitter<SelectedStockData>();
   @Output() refreshRequested = new EventEmitter<void>();
