@@ -4,6 +4,7 @@
         *ngIf="widget.config?.component === 'stock-list-table'"
         [widget]="widget"
         [selectedStockSymbol]="widget.data?.selectedStockSymbol || ''"
+        [showCurrencySymbol]="widget.data?.showCurrencySymbol ?? true"
         (stockSelected)="onStockSelected.emit($event)"
         (stockDoubleClicked)="onStockDoubleClicked.emit($event)">
     </app-stock-list-table>

@@ -81,18 +81,18 @@
                       <span class="stock-symbol" title="Click to view chart">{{ stock.symbol }}</span>
                   </td>
                   <td class="text-right">
-                      <span>₹{{ stock.lastPrice | number:'1.2-2' }}</span>
+                      <span class="stock-price-bold">{{ showCurrencySymbol ? '₹' : '' }}{{ stock.lastPrice | number:'1.2-2' }}</span>
                   </td>
                   <td class="text-right">
                       <span [ngClass]="{
                         'text-green-500': stock.priceChange >= 0,
                         'text-red-500': stock.priceChange < 0
                       }">
-                        {{ stock.priceChange >= 0 ? '+' : '' }}₹{{ stock.priceChange | number:'1.2-2' }}
+                        {{ stock.priceChange >= 0 ? '+' : '' }}{{ showCurrencySymbol ? '₹' : '' }}{{ stock.priceChange | number:'1.2-2' }}
                       </span>
                   </td>
                   <td class="text-right">
-                      <span [ngClass]="{
+                      <span class="stock-change-percent-bold" [ngClass]="{
                         'text-green-500': stock.percentChange >= 0,
                         'text-red-500': stock.percentChange < 0
                       }">
@@ -151,11 +151,11 @@
             <div class="tooltip-data-row" *ngIf="hoveredStock?.openPrice || hoveredStock?.previousClose">
                 <div class="data-item" *ngIf="hoveredStock?.openPrice">
                     <span class="label">Open:</span>
-                    <span class="value">₹{{hoveredStock?.openPrice | number:'1.2-2'}}</span>
+                    <span class="value">{{ showCurrencySymbol ? '₹' : '' }}{{hoveredStock?.openPrice | number:'1.2-2'}}</span>
                 </div>
                 <div class="data-item" *ngIf="hoveredStock?.previousClose">
                     <span class="label">Prev Close:</span>
-                    <span class="value">₹{{hoveredStock?.previousClose | number:'1.2-2'}}</span>
+                    <span class="value">{{ showCurrencySymbol ? '₹' : '' }}{{hoveredStock?.previousClose | number:'1.2-2'}}</span>
                 </div>
             </div>
             
@@ -163,11 +163,11 @@
             <div class="tooltip-data-row" *ngIf="hoveredStock?.dayHigh || hoveredStock?.dayLow">
                 <div class="data-item" *ngIf="hoveredStock?.dayHigh">
                     <span class="label">Day High:</span>
-                    <span class="value">₹{{hoveredStock?.dayHigh | number:'1.2-2'}}</span>
+                    <span class="value">{{ showCurrencySymbol ? '₹' : '' }}{{hoveredStock?.dayHigh | number:'1.2-2'}}</span>
                 </div>
                 <div class="data-item" *ngIf="hoveredStock?.dayLow">
                     <span class="label">Day Low:</span>
-                    <span class="value">₹{{hoveredStock?.dayLow | number:'1.2-2'}}</span>
+                    <span class="value">{{ showCurrencySymbol ? '₹' : '' }}{{hoveredStock?.dayLow | number:'1.2-2'}}</span>
                 </div>
             </div>
             
