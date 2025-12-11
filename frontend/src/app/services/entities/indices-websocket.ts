@@ -46,6 +46,14 @@ export interface IndexDataDto {
   // Additional fields from actual WebSocket response
   ingestionTimestamp?: string;
   tickTimestamp?: string;
+  
+  // OHLC data from WebSocket
+  ohlc?: {
+    open?: number;
+    high?: number;
+    low?: number;
+    close?: number;
+  };
 }
 
 /**

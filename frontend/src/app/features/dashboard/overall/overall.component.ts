@@ -623,14 +623,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     return incomingTicks.map(tick => {
       const symbol = tick.indexSymbol || tick.indexName || tick.key || '';
       const lastPrice = tick.lastPrice || tick.last || 0;
-      const priceChange = tick.variation || tick.change || 0;
-      const percentChange = tick.percentChange || 0;
       
-      // Calculate previousClose from current price and change if not provided
-      let previousClose = tick.previousClose || 0;
-      if (previousClose === 0 && lastPrice > 0 && priceChange !== 0) {
-        previousClose = lastPrice - priceChange;
-      }
+      // Get OHLC close from WebSocket data - this is the reference price for change calculations
+      const ohlcClose = tick.ohlc?.close || 0;
+      
+      // Calculate Change and Change % based on WebSocket OHLC data
+      // Change = lastTradedPrice - ohlc.close
+      // Change % = (lastTradedPrice - ohlc.close) / ohlc.close * 100
+      const priceChange = ohlcClose > 0 ? (lastPrice - ohlcClose) : 0;
+      const percentChange = ohlcClose > 0 ? ((priceChange / ohlcClose) * 100) : 0;
       
       const stockData: StockDataDto = {
         tradingsymbol: symbol,
@@ -639,13 +640,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
         lastPrice: lastPrice,
         percentChange: percentChange,
         priceChange: priceChange,
-        previousClose: previousClose,
+        previousClose: ohlcClose, // Use OHLC close as previousClose
         totalTradedValue: 0,
         sector: 'Indices',
         industry: 'Indices',
-        openPrice: tick.openPrice || tick.open || 0,
-        dayHigh: tick.dayHigh || tick.high || 0,
-        dayLow: tick.dayLow || tick.low || 0,
+        openPrice: tick.openPrice || tick.open || tick.ohlc?.open || 0,
+        dayHigh: tick.dayHigh || tick.high || tick.ohlc?.high || 0,
+        dayLow: tick.dayLow || tick.low || tick.ohlc?.low || 0,
         lastUpdateTime: tick.tickTimestamp || tick.ingestionTimestamp || new Date().toISOString()
       };
       
@@ -699,26 +700,30 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       }
       
       const newLastPrice = tick.lastPrice || tick.last || 0;
+      // Get OHLC close from WebSocket data - this is the reference price for change calculations
+      const ohlcClose = tick.ohlc?.close || 0;
       
       if (result.has(symbol)) {
         // Update existing item with new tick data
         const existingItem = result.get(symbol)!;
-        const previousClose = existingItem.previousClose || 0;
         
-        // Calculate accurate price changes using baseline previousClose
-        const priceChange = previousClose > 0 ? (newLastPrice - previousClose) : 0;
-        const percentChange = previousClose > 0 ? ((priceChange / previousClose) * 100) : 0;
+        // Calculate price changes using OHLC close from WebSocket data
+        // Change = lastTradedPrice - ohlc.close
+        // Change % = (lastTradedPrice - ohlc.close) / ohlc.close * 100
+        const priceChange = ohlcClose > 0 ? (newLastPrice - ohlcClose) : 0;
+        const percentChange = ohlcClose > 0 ? ((priceChange / ohlcClose) * 100) : 0;
         
         // Update only the fields that change with ticks
         const updatedItem: StockDataDto = {
           ...existingItem, // Preserve all baseline data
           lastPrice: newLastPrice, // Update with real-time price
-          priceChange: priceChange, // Calculated from baseline
-          percentChange: percentChange, // Calculated from baseline
+          priceChange: priceChange, // Calculated from OHLC close
+          percentChange: percentChange, // Calculated from OHLC close
           // Update OHLC if available in tick
-          dayHigh: tick.dayHigh || tick.high || existingItem.dayHigh || 0,
-          dayLow: tick.dayLow || tick.low || existingItem.dayLow || 0,
-          openPrice: tick.openPrice || tick.open || existingItem.openPrice || 0,
+          dayHigh: tick.dayHigh || tick.high || tick.ohlc?.high || existingItem.dayHigh || 0,
+          dayLow: tick.dayLow || tick.low || tick.ohlc?.low || existingItem.dayLow || 0,
+          openPrice: tick.openPrice || tick.open || tick.ohlc?.open || existingItem.openPrice || 0,
+          previousClose: ohlcClose || existingItem.previousClose || 0, // Update previousClose from OHLC close
           // Update timestamp
           lastUpdateTime: tick.tickTimestamp || tick.ingestionTimestamp || new Date().toISOString()
         };
@@ -736,12 +741,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           tradingsymbol: symbol,
           companyName: tick.indexName || symbol,
           lastPrice: newLastPrice,
-          previousClose: 0, // No baseline data available
-          priceChange: 0, // Cannot calculate without baseline
-          percentChange: 0, // Cannot calculate without baseline
-          openPrice: tick.openPrice || tick.open || 0,
-          dayHigh: tick.dayHigh || tick.high || 0,
-          dayLow: tick.dayLow || tick.low || 0,
+          previousClose: ohlcClose, // Use OHLC close from WebSocket
+          // Calculate price changes using OHLC close from WebSocket data
+          priceChange: ohlcClose > 0 ? (newLastPrice - ohlcClose) : 0,
+          percentChange: ohlcClose > 0 ? (((newLastPrice - ohlcClose) / ohlcClose) * 100) : 0,
+          openPrice: tick.openPrice || tick.open || tick.ohlc?.open || 0,
+          dayHigh: tick.dayHigh || tick.high || tick.ohlc?.high || 0,
+          dayLow: tick.dayLow || tick.low || tick.ohlc?.low || 0,
           totalTradedValue: 0,
           sector: 'Indices',
           industry: 'Indices',
