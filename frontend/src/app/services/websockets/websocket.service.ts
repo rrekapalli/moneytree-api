@@ -571,7 +571,14 @@ export class WebSocketService {
       chartTodayPath: indexData.chartTodayPath || '',
       // Additional timestamps commonly present in engine ticks
       ingestionTimestamp: indexData.ingestionTimestamp || indexData.ingestion_time || '',
-      tickTimestamp: indexData.tickTimestamp || indexData.tick_time || ''
+      tickTimestamp: indexData.tickTimestamp || indexData.tick_time || '',
+      // OHLC data from WebSocket
+      ohlc: indexData.ohlc ? {
+        open: indexData.ohlc.open || 0,
+        high: indexData.ohlc.high || 0,
+        low: indexData.ohlc.low || 0,
+        close: indexData.ohlc.close || 0
+      } : undefined
     };
   }
 

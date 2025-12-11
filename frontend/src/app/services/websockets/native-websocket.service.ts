@@ -345,7 +345,14 @@ export class NativeWebSocketService implements IWebSocketService {
       chart30dPath: '',
       chartTodayPath: '',
       ingestionTimestamp: tick.timestamp || '',
-      tickTimestamp: tick.timestamp || ''
+      tickTimestamp: tick.timestamp || '',
+      // Pass through OHLC data for change calculations
+      ohlc: tick.ohlc ? {
+        open: tick.ohlc.open || 0,
+        high: tick.ohlc.high || 0,
+        low: tick.ohlc.low || 0,
+        close: tick.ohlc.close || 0
+      } : undefined
     };
 
     // Update the all indices data
