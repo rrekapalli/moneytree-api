@@ -77,8 +77,8 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
 
   // Search and sort properties
   searchText: string = '';
-  sortField: string = 'lastPrice';
-  sortOrder: number = -1; // -1 for descending (highest first)
+  sortField: string = 'symbol'; // Default sort by symbol (tradingsymbol/index_name)
+  sortOrder: number = 1; // 1 for ascending (A-Z) for symbol
   
   sortOptions = [
     { label: 'Price (High)', value: 'lastPrice' },
@@ -89,6 +89,13 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
 
   // Filtered stocks for display
   filteredStocks: StockListData[] = [];
+
+  // Footer statistics
+  footerStats = {
+    totalCount: 0,
+    positiveCount: 0,
+    negativeCount: 0
+  };
 
   // Keep track of previous widget data for change detection
   private previousStocksLength: number = 0;
@@ -138,10 +145,13 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
    * Calculate scroll height based on widget height
    */
   private calculateScrollHeight(): void {
+    // Footer height is approximately 60px (padding + content)
+    const footerHeight = 60;
+    
     if (this.widget?.height) {
-      // Use the full widget height minus header and padding (110px)
-      const scrollHeight = this.widget.height - 110;
-      this.tableScrollHeight = `${scrollHeight}px`;
+      // Use the full widget height minus header, padding, and footer (110px + 60px = 170px)
+      const scrollHeight = this.widget.height - 110 - footerHeight;
+      this.tableScrollHeight = `${Math.max(scrollHeight, 200)}px`;
     } else {
       // Try to find the gridster-item parent element
       let element = this.elementRef?.nativeElement;
@@ -158,12 +168,12 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
       
       const parentHeight = gridsterItem?.offsetHeight || this.elementRef?.nativeElement?.parentElement?.parentElement?.offsetHeight;
       if (parentHeight && parentHeight > 200) {
-        // Subtract 85px for header and padding
-        const scrollHeight = parentHeight - 85;
-        this.tableScrollHeight = `${scrollHeight}px`;
+        // Subtract 85px for header and padding, plus footer height
+        const scrollHeight = parentHeight - 85 - footerHeight;
+        this.tableScrollHeight = `${Math.max(scrollHeight, 200)}px`;
       } else {
-        // Fallback to a large value that will work for most viewports
-        this.tableScrollHeight = '800px';
+        // Fallback to a large value that will work for most viewports, minus footer
+        this.tableScrollHeight = `${800 - footerHeight}px`;
       }
     }
   }
@@ -181,13 +191,44 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
         this.selectedStockSymbol = this.widget.data.selectedStockSymbol;
       }
       
+      // Always calculate footer statistics from stocks data
+      // Use widget data if provided, otherwise calculate from stocks
+      if (this.widget.data.footerStats && 
+          this.widget.data.footerStats.totalCount > 0) {
+        this.footerStats = {
+          totalCount: this.widget.data.footerStats.totalCount || 0,
+          positiveCount: this.widget.data.footerStats.positiveCount || 0,
+          negativeCount: this.widget.data.footerStats.negativeCount || 0
+        };
+      } else {
+        // Calculate footer statistics from stocks data
+        this.calculateFooterStats();
+      }
+      
       // Apply filters when stocks are updated
       this.applyFilters();
     } else if (!this.stocks || this.stocks.length === 0) {
       // Ensure stocks is initialized as empty array if no data
       this.stocks = [];
       this.filteredStocks = [];
+      this.footerStats = { totalCount: 0, positiveCount: 0, negativeCount: 0 };
     }
+  }
+
+  /**
+   * Calculate footer statistics from stocks data
+   */
+  private calculateFooterStats(): void {
+    if (!this.stocks || this.stocks.length === 0) {
+      this.footerStats = { totalCount: 0, positiveCount: 0, negativeCount: 0 };
+      return;
+    }
+
+    this.footerStats = {
+      totalCount: this.stocks.length,
+      positiveCount: this.stocks.filter(stock => (stock.percentChange || 0) > 0).length,
+      negativeCount: this.stocks.filter(stock => (stock.percentChange || 0) < 0).length
+    };
   }
 
   /**
