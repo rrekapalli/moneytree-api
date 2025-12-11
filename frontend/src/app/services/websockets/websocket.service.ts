@@ -58,7 +58,8 @@ export class WebSocketService {
       webSocketFactory: () => {
         // Use native WebSocket connection to socketengine
         // Connect to /ws/indices/all for all NSE indices streaming
-        const wsUrl = 'ws://localhost:8081/ws/indices/all';
+        const baseUrl = environment.enginesWebSocketUrl;
+        const wsUrl = `${baseUrl}/ws/indices/all`;
         return new WebSocket(wsUrl) as any;
       },
       debug: () => {

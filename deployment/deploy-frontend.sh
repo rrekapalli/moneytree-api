@@ -352,12 +352,32 @@ log_info "Frontend files verified: index.html found in ${APP_DIR}/dist/"
 # Update environment configuration in built files if needed
 # Note: This is a simple approach. For production, you might want to rebuild with proper env vars
 # Find all JavaScript files recursively (Angular 20 uses chunked files)
-find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|http://localhost:8080/api|${BACKEND_API_URL}|g" {} + 2>/dev/null || true
-find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|https://backend.tailce422e.ts.net:8080/api|${BACKEND_API_URL}|g" {} + 2>/dev/null || true
-find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|http://localhost:8081/engines|${SOCKETENGINE_API_URL}|g" {} + 2>/dev/null || true
-find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|https://socketengine.tailce422e.ts.net:8081/engines|${SOCKETENGINE_API_URL}|g" {} + 2>/dev/null || true
-find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|ws://localhost:8081/engines|${SOCKETENGINE_WS_URL}|g" {} + 2>/dev/null || true
-find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|wss://socketengine.tailce422e.ts.net:8081/engines|${SOCKETENGINE_WS_URL}|g" {} + 2>/dev/null || true
+
+# Extract base URLs (remove paths if present)
+SOCKETENGINE_WS_BASE=$(echo "$SOCKETENGINE_WS_URL" | sed 's|/engines$||' | sed 's|^wss://|https://|' | sed 's|^ws://|http://|')
+SOCKETENGINE_HTTP_BASE=$(echo "$SOCKETENGINE_HTTP_URL" | sed 's|/engines$||')
+
+# Extract base backend URL (without /api)
+BACKEND_BASE=$(echo "$BACKEND_API_URL" | sed 's|/api$||')
+
+# Replace backend URLs - do base URL replacement FIRST to catch all paths (/api, /oauth2, etc.)
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|http://localhost:8080|${BACKEND_BASE}|g" {} + 2>/dev/null || true
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|https://backend.tailce422e.ts.net:8080|${BACKEND_BASE}|g" {} + 2>/dev/null || true
+# Then replace /api specifically to ensure it uses the correct API URL format
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|${BACKEND_BASE}/api|${BACKEND_API_URL}|g" {} + 2>/dev/null || true
+
+# CRITICAL: Replace base socketengine URLs FIRST (without path) - this is used by SockJS for /info endpoint
+# Must be done BEFORE specific path replacements to avoid partial matches
+# Replace HTTP base URLs (used by SockJS)
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|http://localhost:8081|${SOCKETENGINE_HTTP_BASE}|g" {} + 2>/dev/null || true
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|https://socketengine.tailce422e.ts.net:8081|${SOCKETENGINE_HTTP_BASE}|g" {} + 2>/dev/null || true
+# Replace WebSocket base URLs
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|ws://localhost:8081|${SOCKETENGINE_WS_BASE}|g" {} + 2>/dev/null || true
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|wss://socketengine.tailce422e.ts.net:8081|${SOCKETENGINE_WS_BASE}|g" {} + 2>/dev/null || true
+
+# Replace socketengine API URLs (with /engines path) - these are now safe since base URLs are already replaced
+find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|${SOCKETENGINE_HTTP_BASE}/engines|${SOCKETENGINE_API_URL}|g" {} + 2>/dev/null || true
+
 # Replace OAuth redirect URIs
 find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|http://localhost:4200|${FRONTEND_URL}|g" {} + 2>/dev/null || true
 find "${APP_DIR}/dist" -type f -name "*.js" -exec sed -i "s|https://moneytree.tailce422e.ts.net|${FRONTEND_URL}|g" {} + 2>/dev/null || true

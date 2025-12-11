@@ -652,7 +652,16 @@ else
 fi
 
 log_info "Starting service..."
-if run_sudo systemctl start "${SERVICE_NAME}"; then
+# If service is already running, restart it to pick up new JAR
+if run_sudo systemctl is-active --quiet "${SERVICE_NAME}" 2>/dev/null; then
+    log_info "Service is already running, restarting to pick up new JAR..."
+    run_sudo systemctl restart "${SERVICE_NAME}" || {
+        log_error "Failed to restart service"
+        run_sudo systemctl status "${SERVICE_NAME}" --no-pager -l | head -20 || true
+        exit 1
+    }
+    log_info "Service restarted successfully"
+elif run_sudo systemctl start "${SERVICE_NAME}"; then
     log_info "Service start command executed"
 else
     log_error "Failed to execute systemctl start command"
