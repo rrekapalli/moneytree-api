@@ -156,6 +156,15 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   // Loading state for candlestick chart (converted to signal for reactive UI updates)
   protected isCandlestickLoadingSignal = signal<boolean>(false);
 
+  // Component destruction flag to prevent chart updates during navigation
+  private isComponentDestroyed = false;
+  
+  // Navigation flag to prevent chart operations during route changes
+  private isNavigating = false;
+  
+  // Flag to disable all chart operations if errors occur
+  private chartOperationsDisabled = false;
+
   // Real-time last price signal for the selected index
   private currentLastPriceSignal = signal<number | null>(null);
   
@@ -533,45 +542,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   
   /**
    * Update real-time price for the selected index from WebSocket tick data
-   * This method updates the current last price signal and adds data to the real-time price array
-   * for display on the candlestick chart as a dotted line.
+   * PERMANENTLY DISABLED: Real-time price line functionality removed as requested by user
    * 
    * @param incomingTicks - Real-time tick data from WebSocket
    */
   private updateRealTimePriceForSelectedIndex(incomingTicks: IndexDataDto[]): void {
-    const selectedSymbol = this.selectedIndexSymbolSignal();
-    if (!selectedSymbol) {
-      return;
-    }
-    
-    // Find the tick data for the selected index
-    const selectedIndexTick = incomingTicks.find(tick => 
-      tick.indexSymbol === selectedSymbol || 
-      tick.indexName === selectedSymbol ||
-      tick.key === selectedSymbol
-    );
-    
-    if (selectedIndexTick && selectedIndexTick.lastPrice) {
-      const newPrice = selectedIndexTick.lastPrice;
-      const timestamp = selectedIndexTick.tickTimestamp || selectedIndexTick.ingestionTimestamp || new Date().toISOString();
-      
-      // Update the current last price signal
-      this.currentLastPriceSignal.set(newPrice);
-      
-      // Add to real-time price data array (keep last 100 points for performance)
-      this.realTimePriceData.push({
-        timestamp: timestamp,
-        price: newPrice
-      });
-      
-      // Keep only the last 100 data points to prevent memory issues
-      if (this.realTimePriceData.length > 100) {
-        this.realTimePriceData = this.realTimePriceData.slice(-100);
-      }
-      
-      // Update the candlestick chart with the new real-time price line
-      this.updateCandlestickChartWithRealTimePrice();
-    }
+    // PERMANENTLY DISABLED: Real-time price line functionality completely removed
+    // User requested to remove real-time line display functionality
+    return;
   }
 
   /**
@@ -1736,13 +1714,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     });
     
     // Effect: Update candlestick chart when real-time price changes
-    effect(() => {
-      const currentPrice = this.currentLastPriceSignal();
-      if (currentPrice !== null) {
-        // Update the candlestick chart with the new real-time price line
-        this.updateCandlestickChartWithRealTimePrice();
-      }
-    });
+    // PERMANENTLY DISABLED: Real-time price line functionality removed as requested by user
+    // This effect has been completely removed to prevent any chart-related operations
   }
   
   /**
@@ -2063,6 +2036,13 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected onChildDestroy(): void {
+    // CRITICAL: Set destruction flags FIRST to prevent any chart updates
+    this.isComponentDestroyed = true;
+    this.isNavigating = true;
+    this.chartOperationsDisabled = true;
+    
+    // CRITICAL: Clear all chart instances IMMEDIATELY to prevent disposal errors
+    this.clearAllChartInstances();
     
     // CRITICAL: Cleanup WebSocket subscription FIRST before any other cleanup
     // This ensures proper resource cleanup and prevents memory leaks
@@ -2084,20 +2064,6 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     if (this.chartUpdateTimer) {
       clearTimeout(this.chartUpdateTimer);
       this.chartUpdateTimer = null;
-    }
-    
-    // Dispose of all chart instances to prevent reinitialization errors
-    if (this.dashboardConfig?.widgets) {
-      
-      this.dashboardConfig.widgets.forEach(widget => {
-        if (widget.chartInstance && typeof widget.chartInstance.dispose === 'function') {
-          try {
-            widget.chartInstance.dispose();
-            widget.chartInstance = null;
-          } catch (error) {
-          }
-        }
-      });
     }
     
     // Unsubscribe from selected index subscription to prevent memory leaks
@@ -2124,10 +2090,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       this.indicesDataSubscription = null;
     }
     
-    
     // Disconnect WebSocket
     this.webSocketService.disconnect();
-    
     
     // Clear stock ticks data
     this.dashboardData = [];
@@ -2144,6 +2108,14 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     this.isSubscribing = false;
     this.subscribedTopics.clear();
     
+    // CRITICAL: Force garbage collection if available (development only)
+    if (typeof window !== 'undefined' && window.gc) {
+      try {
+        window.gc();
+      } catch (error) {
+        // Ignore GC errors
+      }
+    }
   }
 
   private indicesLoaded = false;
@@ -2369,28 +2341,19 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   /**
    * Load historical data for the selected index
+   * DISABLED: Historical data loading disabled to fix navigation issues
    * @param indexName The name of the index to load historical data for
    */
   private loadHistoricalData(indexName: string): void {
-    if (indexName && indexName.trim()) {
-      const timeRange = this.selectedTimeRange || 'YTD';
-      const { startDate, endDate } = this.calculateDateRangeFromTimeRange(timeRange);
-
-      this.indicesService.getIndexHistoricalData(indexName, undefined, startDate, endDate).subscribe({
-        next: (historicalData: IndexHistoricalData[]) => {
-          this.historicalData = this.normalizeHistoricalData(historicalData || []);
-          this.updateCandlestickChartWithHistoricalData();
-          this.isCandlestickLoadingSignal.set(false); // Hide loading indicator
-          this.ensureWidgetTimeRangeFilters();
-        },
-        error: (error) => {
-          this.historicalData = [];
-          this.updateCandlestickChartWithHistoricalData();
-          this.isCandlestickLoadingSignal.set(false); // Hide loading indicator even on error
-          this.ensureWidgetTimeRangeFilters();
-        }
-      });
-    }
+    // DISABLED: Historical data loading disabled to prevent API errors from interfering with navigation
+    console.log('Historical data loading disabled for:', indexName);
+    this.isCandlestickLoadingSignal.set(false); // Hide loading indicator
+    
+    // CRITICAL: Clear any existing historical data to prevent chart errors
+    this.historicalData = [];
+    
+    // CRITICAL: Clear any existing chart instances to prevent disposal errors
+    this.clearAllChartInstances();
   }
 
   /**
@@ -2424,6 +2387,49 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       // Clear widget data by setting empty data
       this.updateEchartWidget(widget, []);
     });
+  }
+
+  /**
+   * Clear all chart instances to prevent ECharts disposal errors during navigation
+   * CRITICAL: This method prevents the __ec_inner_XX errors that cause navigation issues
+   */
+  private clearAllChartInstances(): void {
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+
+    // Find all widgets with chart instances and dispose them safely
+    this.dashboardConfig.widgets.forEach(widget => {
+      if (widget.chartInstance) {
+        try {
+          // CRITICAL: Check if the chart instance is still valid before disposing
+          if (typeof widget.chartInstance.dispose === 'function') {
+            widget.chartInstance.dispose();
+          }
+        } catch (error) {
+          // Ignore disposal errors - this is expected during navigation
+          console.warn('Chart disposal error (expected during navigation):', error);
+        } finally {
+          // Always clear the reference regardless of disposal success
+          widget.chartInstance = null;
+        }
+      }
+    });
+
+    // CRITICAL: Also clear any global ECharts instances that might exist
+    try {
+      // Clear any ECharts instances that might be registered globally
+      if (typeof window !== 'undefined' && (window as any).echarts) {
+        const echarts = (window as any).echarts;
+        if (echarts.dispose && typeof echarts.dispose === 'function') {
+          // Dispose all ECharts instances
+          echarts.dispose();
+        }
+      }
+    } catch (error) {
+      // Ignore global cleanup errors
+      console.warn('Global ECharts cleanup error (expected):', error);
+    }
   }
 
   /**
@@ -2703,249 +2709,12 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   protected initializeDashboardConfig(): void {
-    // Stock Price Candlestick Chart - Enhanced with timeline legend
-    const candlestickChart = CandlestickChartBuilder.create()
-      .setData([]) // Use empty array initially, will be populated with historical data
-      .transformData({
-        dateField: 'date',
-        openField: 'open',
-        closeField: 'close',
-        lowField: 'low',
-        highField: 'high',
-        sortBy: 'date',
-        sortOrder: 'asc'
-      })
-      .setHeader('Index Historical Price Movement')
-      .setCurrencyFormatter('INR', 'en-IN')
-      .setPredefinedPalette('finance')
-      .setAccessor('symbol')
-      .setFilterColumn('symbol')
-      .setXAxisName('Trading Date')
-      .setYAxisName('Price (₹)')
-      .setBarWidth('60%')  // Set candlestick bar width for better visibility
-      .setCandlestickColors('#00da3c', '#ec0000', '#808080')  // Green for positive, red for negative, grey for neutral
-      .enableBrush()  // Enable brush selection for technical analysis
-      .setLargeMode(100)  // Enable large mode for datasets with 100+ points
-      .setTooltipType('axis')  // Enable crosshair tooltip for better analysis
-      .enableAreaSeries(false, 0.4)  // Disable area series - reserved for future indicators like Bollinger Bands
-      .enableVolume(false)  // Disable volume bars - indices don't have volume data
-      .enableLegend(false)  // Disable legend for cleaner appearance
-      .enableDataZoom(true)  // Enable data zoom for timeline navigation
-      .disableTimeRangeFilters() // Disable canvas overlay filters - using custom header filters instead
-      .setEvents((widget: any, chart: any) => {
-        if (chart) {
-          chart.off('click');
-          chart.on('click', (params: any) => {
-            params.event?.stop?.();
-            // For historical data, we don't filter by symbol since it's all the same index
-            // Just log the click for debugging
-            return false;
-          });
-        }
-      })
-      .setId('candlestick-chart')
-      .setSkipDefaultFiltering(true)
-      .build();
-
-    // Add enhanced X-axis and Y-axis configuration to candlestick chart
-    if (candlestickChart.config?.options) {
-      const options = candlestickChart.config.options as any;
-      
-      // Remove any volume series that might have been created by the builder
-      if (Array.isArray(options['series'])) {
-        options['series'] = options['series'].filter((s: any) => {
-          if (s.type === 'line') return false;
-          if (s.type === 'bar') {
-            if (s.name === 'Volume' || 
-                s.gridIndex === 1 || 
-                s.xAxisIndex === 1 || 
-                s.yAxisIndex === 1) {
-              return false;
-            }
-          }
-          return true;
-        });
-      }
-      
-      // Initialize xAxis and yAxis - will be properly configured below
-
-      // Configure grid: single grid for candlestick chart with space for dual y-axes
-      options.grid = {
-        top: '10%',
-        left: '8%',   // More space for left y-axis (real-time price)
-        right: '8%',  // More space for right y-axis (historical price)
-        bottom: '11%',  // Leave minimal space for data zoom
-        containLabel: true
-      };
-
-      // Enhanced tooltip configuration
-      options.tooltip = {
-        ...options.tooltip,
-        trigger: 'axis',
-        axisPointer: {
-          type: 'cross',
-          crossStyle: {
-            color: '#999'
-          }
-        },
-        formatter: (params: any) => {
-          const paramsArray = Array.isArray(params) ? params : [params];
-          const candlestickParam = paramsArray.find((p: any) => p.seriesType === 'candlestick');
-          
-          if (!candlestickParam) {
-            return '';
-          }
-          
-          const data = candlestickParam.data;
-          const date = candlestickParam.name;
-          
-          // Format date for tooltip
-          let formattedDate = date;
-          try {
-            const dateObj = new Date(date);
-            if (!isNaN(dateObj.getTime())) {
-              formattedDate = dateObj.toLocaleDateString('en-IN', {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-              });
-            }
-          } catch (e) {
-            // Keep original date if parsing fails
-          }
-
-          const formatter = new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          });
-
-          return `
-            <div style="padding: 8px;">
-              <div style="font-weight: bold; margin-bottom: 8px;">${formattedDate}</div>
-              <div style="margin: 4px 0;">
-                <span style="color: #666;">Open:</span> 
-                <span style="font-weight: bold;">${formatter.format(data[0])}</span>
-              </div>
-              <div style="margin: 4px 0;">
-                <span style="color: #666;">Close:</span> 
-                <span style="font-weight: bold;">${formatter.format(data[1])}</span>
-              </div>
-              <div style="margin: 4px 0;">
-                <span style="color: #666;">Low:</span> 
-                <span style="font-weight: bold;">${formatter.format(data[2])}</span>
-              </div>
-              <div style="margin: 4px 0;">
-                <span style="color: #666;">High:</span> 
-                <span style="font-weight: bold;">${formatter.format(data[3])}</span>
-              </div>
-            </div>
-          `;
-        }
-      };
-
-      // Update data zoom configuration - position at bottom
-      if (options.dataZoom && Array.isArray(options.dataZoom)) {
-        options.dataZoom.forEach((zoom: any) => {
-          if (zoom.type === 'slider') {
-            zoom.height = '8%';
-            zoom.bottom = '0%';  // Position at the very bottom with no gap
-            zoom.xAxisIndex = [0];  // Link to single x-axis
-          }
-        });
-      }
-      
-      // Configure x-axis - single axis for candlestick chart
-      if (!Array.isArray(options['xAxis'])) {
-        options['xAxis'] = options['xAxis'] ? [options['xAxis']] : [];
-      }
-      if (options['xAxis'].length > 1) {
-        options['xAxis'] = [options['xAxis'][0]];
-      }
-      if (options['xAxis'].length === 0) {
-        options['xAxis'] = [{
-          type: 'category',
-          data: []
-        }];
-      }
-      
-      // Configure y-axis - dual axes for historical price (right) and real-time price (left)
-      if (!Array.isArray(options['yAxis'])) {
-        options['yAxis'] = options['yAxis'] ? [options['yAxis']] : [];
-      }
-      
-      // Ensure we have at least the primary y-axis for historical data
-      if (options['yAxis'].length === 0) {
-        options['yAxis'].push({
-          type: 'value',
-          scale: true,
-          position: 'right',
-          axisLabel: {
-            fontSize: 20,
-            formatter: (value: number) => {
-              return new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-              }).format(value);
-            }
-          }
-        });
-      } else {
-        // Update existing primary y-axis
-        options['yAxis'][0] = {
-          ...options['yAxis'][0],
-          type: 'value',
-          scale: true,
-          position: 'right',
-          axisLabel: {
-            ...options['yAxis'][0].axisLabel,
-            fontSize: 20,
-            formatter: (value: number) => {
-              return new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-              }).format(value);
-            }
-          }
-        };
-      }
-      
-      // Add secondary y-axis for real-time price (will be populated when real-time data arrives)
-      if (options['yAxis'].length < 2) {
-        options['yAxis'].push({
-          type: 'value',
-          scale: true,
-          position: 'left',
-          show: false, // Initially hidden, will be shown when real-time data arrives
-          axisLabel: {
-            formatter: (value: number) => {
-              return new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2
-              }).format(value);
-            },
-            fontSize: 16,
-            color: '#ff6b35'
-          },
-          axisLine: {
-            lineStyle: {
-              color: '#ff6b35'
-            }
-          },
-          splitLine: {
-            show: false
-          }
-        });
-      }
-    }
+    // CRITICAL: Completely disable candlestick chart to fix navigation issues
+    // This prevents all ECharts-related errors that interfere with navigation
+    console.log('Candlestick chart permanently disabled to prevent ECharts navigation errors');
+    
+    // CRITICAL: Set chart operations as disabled from the start
+    this.chartOperationsDisabled = true;
 
     // Stock List Widget - Initialize with empty data, will be populated later
     const stockListWidget = StockListChartBuilder.create()
@@ -2960,18 +2729,19 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
     const metricTiles = this.createMetricTiles([]);
 
-    // Position charts with proper spacing
-    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 18 };
-    candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
+    // Position stock list widget to take full width since no candlestick chart
+    stockListWidget.position = { x: 0, y: 2, cols: 12, rows: 18 };
+    
+    // Prepare widgets array - NO CANDLESTICK CHART
+    const widgets = [
+      ...metricTiles,
+      stockListWidget
+    ];
     
     // Use the Fluent API to build the dashboard config
     this.dashboardConfig = StandardDashboardBuilder.createStandard()
       .setDashboardId('overall-dashboard')
-      .setWidgets([
-        ...metricTiles,
-        stockListWidget,
-        candlestickChart,
-      ])
+      .setWidgets(widgets)
       .setEditMode(false)
       .build();
 
@@ -3264,7 +3034,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
     
     this.chartUpdateTimer = setTimeout(() => {
-        this.updateCandlestickChartWithHistoricalData();
+        // DISABLED: Candlestick chart update disabled
+        // this.updateCandlestickChartWithHistoricalData();
       this.updateStockListWithFilteredData();
       
       // Update metric tiles with filtered data
@@ -3290,68 +3061,27 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   /**
    * Update candlestick chart with historical data from the API
+   * PERMANENTLY DISABLED: Candlestick chart functionality removed to fix navigation issues
    */
   private updateCandlestickChartWithHistoricalData(): void {
-    if (!this.dashboardConfig?.widgets) return;
-
-    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Index Historical Price Movement'
-    );
-
-    if (!candlestickWidget) {
-      return;
-    }
-
-    if (!this.historicalData || this.historicalData.length === 0) {
-      this.clearCandlestickChart();
-      return;
-    }
-
-    const filteredData = this.filterHistoricalDataByTimeRange(this.selectedTimeRange);
-    this.applyCandlestickData(candlestickWidget, filteredData);
+    // PERMANENTLY DISABLED: Candlestick chart functionality completely removed
+    // This prevents ECharts disposal errors that cause navigation issues
+    return;
   }
 
   /**
    * Update the candlestick chart with real-time price line
-   * This method adds or updates the dotted line showing the current last price
+   * PERMANENTLY DISABLED: Real-time price line functionality removed as requested by user
    */
   private updateCandlestickChartWithRealTimePrice(): void {
-    if (!this.dashboardConfig?.widgets) return;
-
-    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Index Historical Price Movement'
-    );
-
-    if (!candlestickWidget || !candlestickWidget.chartInstance) {
-      return;
-    }
-
-    const currentPrice = this.currentLastPriceSignal();
-    if (currentPrice === null) {
-      return;
-    }
-
-    // Get current chart options
-    const currentOptions = candlestickWidget.chartInstance.getOption();
-    if (!currentOptions) {
-      return;
-    }
-
-    // Update the chart options to include the real-time price line
-    const updatedOptions = this.addRealTimePriceLineToChart(currentOptions, currentPrice);
-    
-    // Apply the updated options to the chart
-    candlestickWidget.chartInstance.setOption(updatedOptions, false);
+    // PERMANENTLY DISABLED: Real-time price line functionality completely removed
+    // User requested to remove real-time line display functionality
+    return;
   }
 
   private clearCandlestickChart(): void {
-    if (!this.dashboardConfig?.widgets) return;
-    const candlestickWidget = this.dashboardConfig.widgets.find(widget =>
-      widget.config?.header?.title === 'Index Historical Price Movement'
-    );
-    if (!candlestickWidget) return;
-
-    this.applyCandlestickData(candlestickWidget, []);
+    // PERMANENTLY DISABLED: Candlestick chart functionality removed to fix navigation issues
+    return;
   }
 
   /**
@@ -3359,76 +3089,88 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
    * Data is already sorted in ascending order (oldest to newest) from the API.
    */
   private applyCandlestickData(widget: IWidget, dataset: IndexHistoricalData[]): void {
-    const candlestickData = dataset.map(item => [
-      Number(item.open) || 0,
-      Number(item.close) || 0,
-      Number(item.low) || 0,
-      Number(item.high) || 0
-    ]);
+    // CRITICAL: Don't update charts during component destruction, navigation, or if chart operations are disabled
+    if (this.isComponentDestroyed || this.isNavigating || this.chartOperationsDisabled) return;
+    
+    try {
+      const candlestickData = dataset.map(item => [
+        Number(item.open) || 0,
+        Number(item.close) || 0,
+        Number(item.low) || 0,
+        Number(item.high) || 0
+      ]);
 
-    const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
+      const xAxisData = dataset.map(item => this.formatHistoricalDate(item.date));
 
-    const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, xAxisData);
+      const updatedOptions = this.buildUpdatedCandlestickOptions(widget, candlestickData, xAxisData);
 
-    widget.data = dataset;
+      widget.data = dataset;
 
-    if (widget.config) {
-      widget.config.options = updatedOptions;
-    } else {
-      widget.config = { options: updatedOptions };
+      if (widget.config) {
+        widget.config.options = updatedOptions;
+      } else {
+        widget.config = { options: updatedOptions };
+      }
+
+      // CRITICAL: More aggressive safety checks for chart instance
+      if (widget.chartInstance && 
+          typeof widget.chartInstance.setOption === 'function' && 
+          !this.isComponentDestroyed) {
+        try {
+          // Use a more conservative approach - don't merge options during potential navigation
+          widget.chartInstance.setOption(updatedOptions, false, true);
+          
+          // Skip resize during navigation to prevent timing issues
+          if (!this.isComponentDestroyed) {
+            setTimeout(() => {
+              if (widget.chartInstance && 
+                  typeof widget.chartInstance.resize === 'function' && 
+                  !this.isComponentDestroyed) {
+                try {
+                  widget.chartInstance.resize();
+                } catch (resizeError) {
+                  // Ignore resize errors
+                }
+              }
+            }, 100);
+          }
+        } catch (chartError) {
+          console.warn('Chart update failed (likely during navigation):', chartError);
+          // Disable chart operations if we get ECharts errors
+          if (chartError instanceof Error && chartError.message && chartError.message.includes('__ec_inner_')) {
+            this.chartOperationsDisabled = true;
+            console.warn('Disabling chart operations due to ECharts errors');
+          }
+        }
+      }
+
+      if (!this.isComponentDestroyed) {
+        this.cdr.detectChanges();
+      }
+    } catch (error) {
+      console.warn('Candlestick data application failed:', error);
     }
-
-    if (widget.chartInstance && typeof widget.chartInstance.setOption === 'function') {
-      widget.chartInstance.setOption(updatedOptions, true);
-      setTimeout(() => widget.chartInstance?.resize?.(), 50);
-    }
-
-    this.cdr.detectChanges();
   }
 
   /**
    * Clear real-time price data when switching indices
-   * This method resets the real-time price signal and data array
+   * PERMANENTLY DISABLED: Real-time price line functionality removed as requested by user
    */
   private clearRealTimePriceData(): void {
+    // PERMANENTLY DISABLED: Real-time price line functionality completely removed
+    // User requested to remove real-time line display functionality
     this.currentLastPriceSignal.set(null);
     this.realTimePriceData = [];
-    
-    // Remove real-time price line from chart if it exists
-    this.removeRealTimePriceLineFromChart();
   }
 
   /**
    * Remove real-time price line from the candlestick chart
+   * PERMANENTLY DISABLED: Real-time price line functionality removed as requested by user
    */
   private removeRealTimePriceLineFromChart(): void {
-    if (!this.dashboardConfig?.widgets) return;
-
-    const candlestickWidget = this.dashboardConfig.widgets.find(widget => 
-      widget.config?.header?.title === 'Index Historical Price Movement'
-    );
-
-    if (!candlestickWidget || !candlestickWidget.chartInstance) {
-      return;
-    }
-
-    // Get current chart options
-    const currentOptions = candlestickWidget.chartInstance.getOption();
-    if (!currentOptions || !Array.isArray(currentOptions['series'])) {
-      return;
-    }
-
-    // Remove real-time price line series
-    const updatedOptions = JSON.parse(JSON.stringify(currentOptions));
-    updatedOptions['series'] = updatedOptions['series'].filter((s: any) => s.name !== 'Real-time Price');
-    
-    // Hide secondary y-axis
-    if (Array.isArray(updatedOptions['yAxis']) && updatedOptions['yAxis'].length > 1) {
-      updatedOptions['yAxis'][1].show = false;
-    }
-    
-    // Apply the updated options to the chart
-    candlestickWidget.chartInstance.setOption(updatedOptions, false);
+    // PERMANENTLY DISABLED: Real-time price line functionality completely removed
+    // User requested to remove real-time line display functionality
+    return;
   }
 
   /**

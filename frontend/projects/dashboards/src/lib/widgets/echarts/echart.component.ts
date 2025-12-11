@@ -1,4 +1,4 @@
-import {Component, Input, EventEmitter, ViewChild, ChangeDetectorRef} from '@angular/core';
+import {Component, Input, EventEmitter, ViewChild, ChangeDetectorRef, OnDestroy, AfterViewInit} from '@angular/core';
 import {IWidget} from '../../entities/IWidget';
 import {CommonModule} from '@angular/common';
 import {NgxEchartsDirective, provideEchartsCore} from 'ngx-echarts';
@@ -24,21 +24,52 @@ import { IFilterValues } from '../../entities/IFilterValues';
     echarts: () => import('echarts'),
   })],
 })
-export class EchartComponent {
+export class EchartComponent implements OnDestroy, AfterViewInit {
   @Input() widget!: IWidget;
   @Input() onDataLoad!: EventEmitter<IWidget>;
   @Input() onUpdateFilter!: EventEmitter<any>;
   @ViewChild('chart', { static: false }) chart!: NgxEchartsDirective;
 
   isSingleClick: boolean = true;
+  private isDestroyed = false;
   
   constructor(private cdr: ChangeDetectorRef) {}
+
+  ngAfterViewInit(): void {
+    // Ensure chart is properly initialized after view init
+    if (this.chart && !this.isDestroyed) {
+      setTimeout(() => {
+        this.forceChartResize();
+      }, 100);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.isDestroyed = true;
+    
+    // Clean up chart instance first
+    if (this.widget?.chartInstance) {
+      try {
+        this.widget.chartInstance.dispose();
+      } catch (error) {
+        // Ignore disposal errors
+      }
+      this.widget.chartInstance = null;
+    }
+    
+    // The ngx-echarts directive will handle its own cleanup in its ngOnDestroy
+    // We don't need to manually dispose it since dispose() is private
+  }
   
   get chartOptions() {
     return this.widget?.config?.options as EChartsOption;
   }
 
   onChartInit(instance: any) {
+    if (this.isDestroyed) {
+      return;
+    }
+    
     this.widget.chartInstance = instance;
     
     // Check if there are event handlers to set up
@@ -47,11 +78,15 @@ export class EchartComponent {
     }
     
     setTimeout(() => {
-      this.onDataLoad?.emit(this.widget);
-      // Force resize after a short delay to ensure chart uses full height
-      setTimeout(() => {
-        this.forceChartResize();
-      }, 100);
+      if (!this.isDestroyed) {
+        this.onDataLoad?.emit(this.widget);
+        // Force resize after a short delay to ensure chart uses full height
+        setTimeout(() => {
+          if (!this.isDestroyed) {
+            this.forceChartResize();
+          }
+        }, 100);
+      }
     });
   }
 
@@ -222,19 +257,29 @@ export class EchartComponent {
    * Force chart update when widget data changes
    */
   forceChartUpdate(): void {
-    if (this.widget.chartInstance) {
-      this.widget.chartInstance.setOption(this.chartOptions);
+    if (!this.isDestroyed && this.widget?.chartInstance) {
+      try {
+        this.widget.chartInstance.setOption(this.chartOptions);
+      } catch (error) {
+        // Ignore chart update errors if component is being destroyed
+      }
     }
-    // Force change detection
-    this.cdr.detectChanges();
+    // Force change detection only if not destroyed
+    if (!this.isDestroyed) {
+      this.cdr.detectChanges();
+    }
   }
 
   /**
    * Force chart resize to use full widget height
    */
   forceChartResize(): void {
-    if (this.widget.chartInstance) {
-      this.widget.chartInstance.resize();
+    if (!this.isDestroyed && this.widget?.chartInstance) {
+      try {
+        this.widget.chartInstance.resize();
+      } catch (error) {
+        // Ignore resize errors if component is being destroyed
+      }
     }
   }
 }

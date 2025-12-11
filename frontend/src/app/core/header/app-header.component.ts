@@ -235,50 +235,36 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
   }
 
   private initMenuItems() {
-    // Create a function that will call updateActiveMenuItem after a short delay
-    const updateStylesAfterClick = () => {
-      // Use setTimeout to ensure this runs after navigation is complete
-      setTimeout(() => {
-        this.updateActiveMenuItem();
-      }, 50);
-    };
-
     this.menuItems = [
       {
         label: 'Dashboard',
         //icon: 'pi pi-chart-bar',
-        routerLink: ['/dashboard'],
-        command: updateStylesAfterClick
+        command: () => this.navigateToRoute('/dashboard')
       },
       {
         label: 'Portfolios',
         //icon: 'pi pi-folder',
-        routerLink: ['/portfolios'],
-        command: updateStylesAfterClick
+        command: () => this.navigateToRoute('/portfolios')
       },
       {
         label: 'Strategies',
         //icon: 'pi pi-sitemap',
-        routerLink: ['/strategies'],
-        command: updateStylesAfterClick
+        command: () => this.navigateToRoute('/strategies')
       },
       {
         label: 'Screeners',
         //icon: 'pi pi-search',
-        routerLink: ['/screeners'],
-        command: updateStylesAfterClick
+        command: () => this.navigateToRoute('/screeners')
       },
       {
         label: 'Positions',
         //icon: 'pi pi-chart-line',
-        routerLink: ['/positions'],
-        command: updateStylesAfterClick
+        command: () => this.navigateToRoute('/positions')
       },
       {
         label: 'Holdings',
         //icon: 'pi pi-briefcase',
-        routerLink: ['/holdings'],
-        command: updateStylesAfterClick
+        command: () => this.navigateToRoute('/holdings')
       }
     ];
   }
@@ -454,29 +440,57 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     return segments[0] || 'dashboard';
   }
 
+  /**
+   * Navigate to a specific route
+   * @param route The route to navigate to
+   */
+  private navigateToRoute(route: string): void {
+    console.log('Navigating to route:', route);
+    
+    // CRITICAL: Use navigateByUrl for more reliable navigation
+    // This bypasses Angular's route resolution issues that can cause double-click problems
+    this.router.navigateByUrl(route).then(success => {
+      console.log('Navigation success:', success);
+      console.log('Current URL after navigation:', this.router.url);
+      
+      // CRITICAL: Force a small delay to ensure navigation completes
+      // This prevents rapid successive navigation attempts
+      setTimeout(() => {
+        console.log('Navigation completed for:', route);
+      }, 100);
+      
+    }).catch(error => {
+      console.error('Navigation error:', error);
+      
+      // FALLBACK: Try standard navigate as backup
+      console.log('Trying fallback navigation method...');
+      this.router.navigate([route]).then(fallbackSuccess => {
+        console.log('Fallback navigation success:', fallbackSuccess);
+      }).catch(fallbackError => {
+        console.error('Fallback navigation also failed:', fallbackError);
+      });
+    });
+  }
+
   public updateActiveMenuItem() {
     const currentUrl = this.router.url;
-
-    // First pass: update the menu items immediately
     this.updateMenuItemStyles(currentUrl);
-
-    // Second pass: update again after a short delay to ensure styles are applied
-    // This helps overcome any PrimeNG internal rendering that might reset our styles
-    setTimeout(() => {
-      this.updateMenuItemStyles(currentUrl);
-
-      // Third pass: update once more after a slightly longer delay
-      // This ensures our styles persist even if there are multiple rendering cycles
-      setTimeout(() => {
-        this.updateMenuItemStyles(currentUrl);
-      }, 100);
-    }, 0);
   }
 
   private updateMenuItemStyles(currentUrl: string) {
+    // Map menu labels to their corresponding routes
+    const routeMap: { [key: string]: string } = {
+      'Dashboard': '/dashboard',
+      'Portfolios': '/portfolios',
+      'Strategies': '/strategies',
+      'Screeners': '/screeners',
+      'Positions': '/positions',
+      'Holdings': '/holdings'
+    };
+
     this.menuItems.forEach(item => {
-      if (item.routerLink && item.routerLink.length > 0) {
-        const routePath = item.routerLink[0];
+      const routePath = routeMap[item.label || ''];
+      if (routePath) {
         // Add custom class for active items
         item.styleClass = currentUrl.startsWith(routePath) ? 'p-menuitem-active custom-active-menuitem' : '';
 
