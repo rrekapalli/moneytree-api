@@ -46,7 +46,7 @@ export const loginRequest = {
 
 export const protectedResources = {
   api: {
-    endpoint: 'http://localhost:8080/api',
+    endpoint: environment.apiUrl,
     scopes: ['openid', 'profile', 'email']
   }
 }; 

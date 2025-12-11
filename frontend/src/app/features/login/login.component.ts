@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/security/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -68,7 +69,11 @@ export class LoginComponent implements OnInit {
     this.errorMessage = '';
     
     // Redirect to backend OAuth2 endpoint
-    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+    // Handle both relative (/api) and absolute (http://...) URLs
+    const backendBaseUrl = environment.apiUrl.startsWith('http') 
+      ? environment.apiUrl.replace('/api', '')
+      : ''; // For relative URLs, use current origin
+    window.location.href = `${backendBaseUrl}/oauth2/authorization/google`;
   }
 
   signInWithMicrosoft(): void {
@@ -76,7 +81,11 @@ export class LoginComponent implements OnInit {
     this.errorMessage = '';
     
     // Redirect to backend OAuth2 endpoint
-    window.location.href = 'http://localhost:8080/oauth2/authorization/microsoft';
+    // Handle both relative (/api) and absolute (http://...) URLs
+    const backendBaseUrl = environment.apiUrl.startsWith('http')
+      ? environment.apiUrl.replace('/api', '')
+      : ''; // For relative URLs, use current origin
+    window.location.href = `${backendBaseUrl}/oauth2/authorization/microsoft`;
   }
 
   getErrorMessage(): string {

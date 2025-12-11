@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { IndexDataDto, IndicesDto, WebSocketConnectionState } from '../entities/indices-websocket';
 import { IWebSocketService } from './websocket.interface';
+import { environment } from '../../../environments/environment';
 import SockJS from 'sockjs-client';
 
 /**
@@ -49,7 +50,8 @@ export class NativeWebSocketService implements IWebSocketService {
 
     try {
       // Connect to socketengine WebSocket endpoint for all indices using SockJS
-      const sockJsUrl = 'http://localhost:8081/ws/indices/all';
+      const baseUrl = environment.enginesHttpUrl;
+      const sockJsUrl = `${baseUrl}/ws/indices/all`;
       const sockjs = new SockJS(sockJsUrl);
       this.ws = sockjs as any;
 
