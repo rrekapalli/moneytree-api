@@ -144,7 +144,7 @@
   width: 100%;
 }
 
-.table-footer-container {
+.table-container {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -342,16 +342,16 @@
   }
 }
 
-/* Footer Statistics */
+/* Footer Statistics - Now positioned above table */
 .footer-stats {
   display: flex;
   justify-content: space-around;
   align-items: center;
   padding: 0.75rem 1rem;
   background-color: var(--surface-ground, #f8f9fa);
-  border-top: 1px solid var(--surface-border, #e9ecef);
-  margin-top: 0;
-  border-radius: 0 0 8px 8px;
+  border: 1px solid var(--surface-border, #e9ecef);
+  margin: 0 1rem 0.5rem 1rem;
+  border-radius: 8px;
   flex-wrap: wrap;
   gap: 1rem;
   flex-shrink: 0;
@@ -374,7 +374,7 @@
     }
 
     .footer-value {
-      font-size: 1rem;
+      font-size: 1.2rem;
       font-weight: 600;
       color: var(--text-color, #1f2937);
       

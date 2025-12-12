@@ -40,8 +40,24 @@
   </div>
 </div>
 
-<!-- Table and Footer Container -->
-<div class="table-footer-container" *ngIf="!isLoadingStocks">
+<!-- Footer Statistics - Moved above table -->
+<div class="footer-stats" *ngIf="!isLoadingStocks && stocks && stocks.length > 0">
+    <div class="footer-stat-item">
+        <span class="footer-label">Total Index Count:</span>
+        <span class="footer-value">{{ footerStats.totalCount }}</span>
+    </div>
+    <div class="footer-stat-item">
+        <span class="footer-label">Advances</span>
+        <span class="footer-value text-green-500">{{ footerStats.positiveCount }}</span>
+    </div>
+    <div class="footer-stat-item">
+        <span class="footer-label">Declines</span>
+        <span class="footer-value text-red-500">{{ footerStats.negativeCount }}</span>
+    </div>
+</div>
+
+<!-- Table Container -->
+<div class="table-container" *ngIf="!isLoadingStocks">
   <!-- Main stock table -->
   <p-table
               [value]="filteredStocks"
@@ -114,23 +130,8 @@
               </tr>
           </ng-template>
   </p-table>
-
-  <!-- Footer Statistics -->
-  <div class="footer-stats" *ngIf="stocks && stocks.length > 0">
-      <div class="footer-stat-item">
-          <span class="footer-label">Total Index Count:</span>
-          <span class="footer-value">{{ footerStats.totalCount }}</span>
-      </div>
-      <div class="footer-stat-item">
-          <span class="footer-label">Advances</span>
-          <span class="footer-value text-green-500">{{ footerStats.positiveCount }}</span>
-      </div>
-      <div class="footer-stat-item">
-          <span class="footer-label">Declines</span>
-          <span class="footer-value text-red-500">{{ footerStats.negativeCount }}</span>
-      </div>
-  </div>
 </div>
+
 
 <!-- Tooltip Template -->
 <ng-template #stockTooltipTemplate>
