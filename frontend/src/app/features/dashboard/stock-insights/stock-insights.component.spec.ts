@@ -33,8 +33,7 @@ describe('StockInsightsComponent - Filter Management', () => {
     
     const indicesServiceSpy = jasmine.createSpyObj('IndicesService', [
       'getIndicesByExchangeSegment',
-      'getIndexHistoricalData',
-      'getPreviousDayIndexData'
+      'getIndexHistoricalData'
     ]);
     
     const webSocketServiceSpy = jasmine.createSpyObj('WebSocketService', [

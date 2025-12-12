@@ -56,8 +56,7 @@ describe('OverallComponent - WebSocket Integration', () => {
 
     mockIndicesService = jasmine.createSpyObj('IndicesService', [
       'getIndicesByExchangeSegment',
-      'getIndexHistoricalData',
-      'getPreviousDayIndexData'
+      'getIndexHistoricalData'
     ]);
 
     mockComponentCommunicationService = jasmine.createSpyObj('ComponentCommunicationService', [
@@ -70,7 +69,6 @@ describe('OverallComponent - WebSocket Integration', () => {
     mockComponentCommunicationService.getSelectedIndex.and.returnValue(of(null));
     mockIndicesService.getIndicesByExchangeSegment.and.returnValue(of([]));
     mockIndicesService.getIndexHistoricalData.and.returnValue(of([]));
-    mockIndicesService.getPreviousDayIndexData.and.returnValue(of({ indices: [] }));
     mockWebSocketService.connect.and.returnValue(Promise.resolve());
     mockWebSocketService.subscribeToAllIndices.and.returnValue(of({ indices: [] }));
 

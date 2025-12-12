@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, computed, effect, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, signal } from '@angular/core';
 import { Observable, tap, interval, Subscription } from 'rxjs';
 import { ApiService } from '../apis/api.base';
 import { Notification } from '../entities/notification';
@@ -28,7 +28,7 @@ const initialState: NotificationsState = {
   providedIn: 'root'
 })
 export class NotificationsStateService implements OnDestroy {
-  private readonly endpoint = '/notifications';
+  private readonly endpoint = '/v1/notifications';
 
   // State signal
   private state = signal<NotificationsState>(initialState);
@@ -132,16 +132,17 @@ export class NotificationsStateService implements OnDestroy {
   }
 
   /**
-   * Get all notifications
+   * Get all notifications (always fresh from API since they're generated on-demand)
    * @param force Whether to force an API call or use cache
    * @returns An Observable of Notification array
    */
   getNotifications(force: boolean = false): Observable<Notification[]> {
-    // If not forcing and we have cached data that's not too old, return the cached data
+    // For lightweight notifications, we always fetch fresh data
+    // but still respect caching for performance
     if (!force && this.notifications().length > 0 && this.lastUpdated()) {
       const cacheAge = new Date().getTime() - this.lastUpdated()!.getTime();
-      // Use cache if it's less than 5 minutes old
-      if (cacheAge < 5 * 60 * 1000) {
+      // Use cache if it's less than 30 seconds old (shorter cache for real-time notifications)
+      if (cacheAge < 30 * 1000) {
         return new Observable<Notification[]>(observer => {
           observer.next(this.notifications());
           observer.complete();
@@ -149,7 +150,7 @@ export class NotificationsStateService implements OnDestroy {
       }
     }
 
-    // Otherwise, make the API call
+    // Make the API call for fresh notifications
     this.setLoading(true);
     this.setError(null);
 
