@@ -30,7 +30,7 @@ import { AuthService } from '../../services/security/auth.service';
   styleUrl: './app-header.component.scss'
 })
 export class AppHeaderComponent implements OnInit, OnDestroy {
-  title = 'MoneyPlant';
+  title = 'MoneyTree';
   menuItems: MenuItem[] = [];
   userMenuItems: MenuItem[] = [];
   private routerSubscription: Subscription | undefined;
@@ -445,25 +445,19 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
    * @param route The route to navigate to
    */
   private navigateToRoute(route: string): void {
-    console.log('Navigating to route:', route);
-    
     // CRITICAL: Use navigateByUrl for more reliable navigation
     // This bypasses Angular's route resolution issues that can cause double-click problems
     this.router.navigateByUrl(route).then(success => {
-      console.log('Navigation success:', success);
-      console.log('Current URL after navigation:', this.router.url);
       
       // CRITICAL: Force a small delay to ensure navigation completes
       // This prevents rapid successive navigation attempts
       setTimeout(() => {
-        console.log('Navigation completed for:', route);
       }, 100);
       
     }).catch(error => {
       console.error('Navigation error:', error);
       
       // FALLBACK: Try standard navigate as backup
-      console.log('Trying fallback navigation method...');
       this.router.navigate([route]).then(fallbackSuccess => {
         console.log('Fallback navigation success:', fallbackSuccess);
       }).catch(fallbackError => {

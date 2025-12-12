@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: '/api',
+  apiUrl: 'http://localhost:8080/api',
   enginesApiUrl: 'http://socketengine.tailce422e.ts.net:8081/engines',
   enginesWebSocketUrl: 'ws://socketengine.tailce422e.ts.net:8081', // Base WebSocket URL (append /ws/indices/all)
   enginesHttpUrl: 'http://socketengine.tailce422e.ts.net:8081', // Base HTTP URL for SockJS connections (append /ws/indices/all)
