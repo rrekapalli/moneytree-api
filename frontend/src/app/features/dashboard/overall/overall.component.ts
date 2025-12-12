@@ -60,7 +60,6 @@ declare global {
 import { 
   IWidget,
   DashboardContainerComponent,
-  DashboardHeaderComponent,
   // Fluent API
   StandardDashboardBuilder,
   ExcelExportService,
@@ -106,8 +105,7 @@ import { environment } from '../../../../environments/environment';
     MessageModule,
     ScrollPanelModule,
     // Dashboard components
-    DashboardContainerComponent,
-    DashboardHeaderComponent
+    DashboardContainerComponent
   ],
   templateUrl: './overall.component.html',
   styleUrls: ['./overall.component.scss'],
@@ -416,37 +414,25 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
     
-    // CRITICAL: ALWAYS use WebSocket data directly for Stock List widget (no baseline merging)
-    // The WebSocket data contains all necessary fields: lastTradedPrice, ohlc.close, etc.
+    // Process WebSocket data directly
     const directData = this.processWebSocketDataDirectly(indicesDto.indices);
     
-    // Update signals with direct WebSocket data
-    this.indicesDataSignal.set(directData);
+    // CRITICAL: Push data directly to BehaviorSubject for immediate widget updates
+    // This is the fastest path from WebSocket to Stock List Widget
     this.indicesDataSubject.next(directData);
     
-    // CRITICAL: Update dashboard data to ensure widget has latest WebSocket values
+    // Update component data for other uses
     this.dashboardData = [...directData];
     this.filteredDashboardData = [...directData];
+    this.indicesDataSignal.set(directData);
     
     // Mark indices as loaded
     this.indicesLoaded = true;
-    
-    // Update widgets directly with WebSocket data
-    this.updateStockListWidgetDirectly(directData);
-    
-    const dataWithIndicators = directData.map(item => ({
-      ...item,
-      changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
-    }));
-    this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
     
     // Load default NIFTY 50 if no index is currently selected
     if (!this.defaultIndexLoaded && !this.selectedIndexSymbolSignal()) {
       this.setDefaultIndexFromData(directData);
     }
-    
-    // CRITICAL: Force change detection to ensure widget updates
-    this.cdr.detectChanges();
     
   }
   
@@ -538,17 +524,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   public forceRefreshStockListWidgets(): void {
     const currentData = this.indicesDataSignal();
     if (currentData && currentData.length > 0) {
-      
-      // Force both update methods
-      this.updateStockListWidgetDirectly(currentData);
-      
-      const dataWithIndicators = currentData.map(item => ({
-        ...item,
-        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange)
-      }));
-      this.updateIndexListWidget(dataWithIndicators, this.selectedIndexSymbolSignal());
-      
-    } else {
+      // Push data through BehaviorSubject for immediate widget update
+      this.indicesDataSubject.next(currentData);
     }
   }
   
@@ -556,21 +533,16 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
   
   /**
-   * Set up BehaviorSubject subscription for widget updates
+   * Set up BehaviorSubject subscription for direct WebSocket-to-widget updates
    */
   private setupBehaviorSubjectSubscription(): void {
-    // Subscribe to indices data changes via BehaviorSubject
-    this.indicesDataSubscription = this.indicesDataSubject.subscribe(data => {
-      
+    // Direct subscription to WebSocket data stream for Stock List Widget
+    this.indicesDataSubscription = this.indicesDataSubject.asObservable().subscribe((data: StockDataDto[]) => {
       if (data && data.length > 0) {
-        
-        // Update widgets directly
-        this.updateStockListWidgetDirectly(data);
-        
-      } else {
+        // Direct widget update with optimized change detection
+        this.updateStockListWidgetViaSubject(data);
       }
     });
-    
   }
 
   /**
@@ -597,19 +569,16 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     });
     
     // Effect: Update widgets when indices data changes
-    // This effect automatically triggers UI updates without manual change detection
+    // This effect is now simplified since BehaviorSubject handles direct updates
     effect(() => {
       const dataWithIndicators = this.indicesWithChangeIndicatorsSignal();
       const selectedSymbol = this.selectedIndexSymbolSignal();
       
-      
+      // The BehaviorSubject stream now handles all widget updates directly
+      // This effect mainly tracks state changes for debugging
       if (dataWithIndicators && dataWithIndicators.length > 0) {
-        
-        // Update the Index List widget with new data including change indicators
-        // The signal-based approach ensures automatic UI updates
-        this.updateIndexListWidget(dataWithIndicators, selectedSymbol);
-        
-      } else {
+        // Widget updates are handled by BehaviorSubject subscription
+        // No additional processing needed here
       }
     });
     
@@ -740,118 +709,66 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
   }
 
   /**
-   * Update Index List widget with signal-based data
-   * This method reads from signals and updates the widget automatically
-   * Requirements: 3.1, 3.2, 3.3, 3.5, 7.2, 7.3
-   * 
-   * @param data - The indices data from signal with change indicators
-   * @param selectedSymbol - The currently selected index symbol from signal
+   * Optimized widget update method via BehaviorSubject stream
+   * This method provides the fastest path from WebSocket to widget display
    */
-  private updateIndexListWidget(data: (StockDataDto & { changeIndicator?: 'positive' | 'negative' | 'neutral' })[], selectedSymbol: string): void {
+  private updateStockListWidgetViaSubject(data: StockDataDto[]): void {
     
     if (!this.dashboardConfig?.widgets) {
       return;
     }
 
-    // Find all stock list widgets
     const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
       widget.config?.component === 'stock-list-table'
     );
 
-
     if (stockListWidgets.length === 0) {
       return;
     }
+    
+    const timestamp = Date.now();
+    
+    stockListWidgets.forEach((widget) => {
+      // Create streamlined data array with minimal processing
+      const processedStocks = data.map((item, index) => ({
+        ...item,
+        id: `${item.symbol || item.tradingsymbol}-${timestamp}`,
+        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange),
+        _subjectUpdate: timestamp
+      }));
 
-    stockListWidgets.forEach((widget, index) => {
-      // Sort data by tradingsymbol (index_name) in ascending order
-      const sortedData = [...data].sort((a, b) => {
+      // Sort by symbol for consistent display
+      const sortedStocks = processedStocks.sort((a, b) => {
         const aSymbol = (a.tradingsymbol || a.symbol || '').toUpperCase();
         const bSymbol = (b.tradingsymbol || b.symbol || '').toUpperCase();
         return aSymbol.localeCompare(bSymbol);
       });
 
       // Calculate footer statistics
-      const totalCount = sortedData.length;
-      const positiveCount = sortedData.filter(item => (item.percentChange || 0) > 0).length;
-      const negativeCount = sortedData.filter(item => (item.percentChange || 0) < 0).length;
-
-      // CRITICAL: Create a completely new array - use original values directly to preserve WebSocket data
-      const newStockDataArray = sortedData.map((item, itemIndex) => {
-        // CRITICAL: Use original item values directly - don't clone to avoid losing WebSocket data
-        return {
-          ...item, // Spread original item to preserve all WebSocket values
-          // CRITICAL: Explicitly ensure numeric values are preserved from original item
-          lastPrice: (typeof item.lastPrice === 'number') ? item.lastPrice : 0,
-          priceChange: (typeof item.priceChange === 'number') ? item.priceChange : 0,
-          percentChange: (typeof item.percentChange === 'number') ? item.percentChange : 0,
-          changeIndicator: item.changeIndicator || 'neutral',
-          // Ensure symbol fields are present
-          symbol: item.symbol || item.tradingsymbol || '',
-          tradingsymbol: item.tradingsymbol || item.symbol || '',
-          companyName: item.companyName || item.symbol || '',
-          // Add multiple unique identifiers to force re-rendering
-          _signalUpdateId: Date.now() + Math.random() + itemIndex,
-          _signalId: `signal-${Date.now()}-${Math.random()}-${itemIndex}`,
-          _signalTimestamp: Date.now(),
-          _signalVersion: Date.now() + itemIndex,
-          // Force trackBy to detect changes
-          id: item.id || item.symbol || item.tradingsymbol || `signal-item-${itemIndex}`,
-          // Add a changing property that trackBy functions will detect
-          _signalLastModified: Date.now() + Math.random()
-        };
-      });
-      
-      
-      // CRITICAL: Force complete data replacement with aggressive re-render triggers
-      const newWidgetData = {
-        stocks: newStockDataArray,
-        isLoadingStocks: false,
-        selectedStockSymbol: selectedSymbol,
-        showCurrencySymbol: false, // Disable currency symbols for indices
-        // Footer statistics
-        footerStats: {
-          totalCount: totalCount,
-          positiveCount: positiveCount,
-          negativeCount: negativeCount
-        },
-        // Add timestamp to force widget refresh
-        lastSignalUpdate: Date.now(),
-        // Add a unique key to force complete re-render
-        signalDataKey: `signal-stocks-${Date.now()}-${Math.random()}`,
-        // Force refresh flag
-        signalForceRefresh: true,
-        // Add version to track updates
-        signalVersion: Date.now()
+      const footerStats = {
+        totalCount: sortedStocks.length,
+        positiveCount: sortedStocks.filter(item => (item.percentChange || 0) > 0).length,
+        negativeCount: sortedStocks.filter(item => (item.percentChange || 0) < 0).length
       };
-      
-      // CRITICAL: Replace the entire data object AND trigger widget refresh
-      widget.data = newWidgetData;
-      
-      // CRITICAL: Force widget to refresh by updating its internal state
-      if (widget.config) {
-        (widget.config as any).lastSignalUpdate = Date.now();
-        (widget.config as any).signalForceRefresh = true;
-      }
-      
-      // CRITICAL: Mark widget as dirty to force re-render
-      (widget as any)._signalDirty = true;
-      (widget as any)._lastSignalUpdate = Date.now();
-      (widget as any)._signalForceRefresh = true;
-      
+
+      // Direct widget data update
+      widget.data = {
+        stocks: sortedStocks,
+        isLoadingStocks: false,
+        selectedStockSymbol: this.selectedIndexSymbol,
+        showCurrencySymbol: false,
+        footerStats: footerStats,
+        _subjectStreamUpdate: timestamp
+      };
     });
-    
-    // Update legacy properties for backward compatibility
-    this.dashboardData = [...data];
-    this.filteredDashboardData = [...data];
-    
-    
-    // Force change detection for signal-based updates
+
+    // Optimized change detection
     this.ngZone.run(() => {
       this.cdr.detectChanges();
-      this.cdr.markForCheck();
     });
   }
+
+
   
   /**
    * Cleanup WebSocket subscription for all indices
@@ -1236,9 +1153,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
           
           if (normalizedData.length === 0) {
             console.warn(`No historical data returned for index: ${indexName}`);
-          } else {
-            console.log(`Loaded ${normalizedData.length} historical data points for ${indexName}`);
-          }
+          } 
           
           this.safelyUpdateCandlestickChart();
           this.isCandlestickLoadingSignal.set(false);
