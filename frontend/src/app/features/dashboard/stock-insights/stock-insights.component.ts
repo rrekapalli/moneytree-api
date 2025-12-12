@@ -77,13 +77,10 @@ import {
   StockListChartBuilder,
   // Filter enum
   FilterBy,
-  // Tile Builder for updating tiles
-  TileBuilder,
-  StockTileBuilder
+
 } from '@dashboards/public-api';
 
-// Import only essential widget creation functions and data
-import { createMetricTiles as createMetricTilesFunction } from './widgets/metric-tiles';
+
 
 // Import base dashboard component
 import { BaseDashboardComponent } from '@dashboards/public-api';
@@ -101,6 +98,10 @@ import { IndexResponseDto } from '../../../services/entities/indices';
 
 // Import consolidated WebSocket service and entities
 import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
+
+// Import stocks WebSocket service
+import { StocksWebSocketService, StocksWebSocketConnectionState } from '../../../services/websockets/stocks-websocket.service';
+import { StockTicksDto } from '../../../services/entities/stock-ticks';
 
 // Import instrument filter service and interfaces
 import { InstrumentFilterService, FilterOptions, InstrumentFilter, InstrumentDto } from '../../../services/apis/instrument-filter.service';
@@ -122,7 +123,6 @@ import { ToastService } from '../../../services/toast.service';
     InputTextModule,
     SelectModule,
     TooltipModule,
-    // Dashboard components
     DashboardContainerComponent,
     DashboardHeaderComponent
   ],
@@ -194,10 +194,13 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   private isSubscribing: boolean = false; // Track if we're currently in the process of subscribing
   private subscribedTopics: Set<string> = new Set(); // Track which topics we're already subscribed to
 
+  // Stocks WebSocket connection state tracking
+  private isStocksWebSocketConnected: boolean = false;
+  private stocksWebSocketSubscription: Subscription | null = null;
+  private stocksWebSocketConnectionStateSubscription: Subscription | null = null;
+
   // Debug flag to control verbose console logging
   private readonly enableDebugLogging: boolean = false;
-  // Track the last index for which previous-day data was fetched (to avoid repeated calls)
-  private lastPrevDayFetchIndex: string | null = null;
 
 
   constructor(
@@ -207,6 +210,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     private componentCommunicationService: ComponentCommunicationService,
     private indicesService: IndicesService,
     private webSocketService: WebSocketService,
+    private stocksWebSocketService: StocksWebSocketService,
     private ngZone: NgZone,
     private instrumentFilterService: InstrumentFilterService,
     private toastService: ToastService
@@ -219,7 +223,11 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   }
 
   protected onChildInit(): void {
-    // WebSocket initialization disabled - WebSockets are not yet implemented
+    // Initialize stocks WebSocket for Stock List widget
+    this.initializeStocksWebSocket();
+    this.monitorStocksWebSocketConnectionState();
+
+    // WebSocket initialization disabled for indices - WebSockets are not yet implemented
     // TODO: Re-enable when WebSocket server is available
     // this.initializeWebSocket();
     // this.monitorWebSocketConnectionState();
@@ -314,9 +322,13 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       this.webSocketConnectionStateSubscription.unsubscribe();
       this.webSocketConnectionStateSubscription = null;
     }
+
+    // Cleanup stocks WebSocket subscriptions
+    this.cleanupStocksWebSocketSubscription();
     
-    // Disconnect WebSocket
+    // Disconnect WebSocket services
     this.webSocketService.disconnect();
+    this.stocksWebSocketService.disconnect();
     
     // Clear stock ticks data
     this.dashboardData = [];
@@ -329,6 +341,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     this.currentSubscribedIndex = null;
     this.isSubscribing = false;
     this.subscribedTopics.clear();
+    this.isStocksWebSocketConnected = false;
   }
   
   /**
@@ -529,7 +542,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     this.filteredDashboardData = [...data];
     
     this.updateStockListWithFilteredData();
-    this.updateMetricTilesWithFilters([]);
     this.cdr.detectChanges();
   }
 
@@ -786,211 +798,31 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       });
     }
     
-    // CRITICAL FIX: Force metric tiles to refresh with new index data
-    this.forceMetricTilesRefresh();
 
-    // Conditionally fetch previous-day data only when WebSocket is not connected
-    if (indexName) {
-      // Reset last previous-day fetch when index changes
-      this.lastPrevDayFetchIndex = null;
-      this.maybeFetchPreviousDay(indexName);
-    }
+
+
     
     // Trigger change detection and update widgets
     this.populateWidgetsWithInitialData();
     this.cdr.detectChanges();
   }
 
-  /**
-   * Force metric tiles to refresh with current index data
-   */
-  private forceMetricTilesRefresh(): void {
 
-    
-    // CRITICAL FIX: Completely recreate metric tiles with new data
-    if (this.dashboardConfig?.widgets) {
-      // Find and remove existing metric tiles
-      const existingTiles = this.dashboardConfig.widgets.filter(widget => 
-        widget.config?.component === 'tile' || widget.config?.component === 'stock-tile'
-      );
-      
-      // Remove existing tiles
-      existingTiles.forEach(tile => {
-        const index = this.dashboardConfig.widgets.indexOf(tile);
-        if (index > -1) {
-          this.dashboardConfig.widgets.splice(index, 1);
-        }
-      });
-      
-      // Create new metric tiles with current data
-      const newMetricTiles = this.createMetricTiles(this.filteredDashboardData || this.dashboardData);
-      
-      // Add new tiles at the beginning
-      this.dashboardConfig.widgets.unshift(...newMetricTiles);
-      
 
-    }
-    
-    // Update metric tiles with current data
-    this.updateMetricTilesWithFilters([]);
-    
-    // Force change detection
-    this.cdr.detectChanges();
-    
-    // Additional refresh after a short delay to ensure tiles are updated
-    setTimeout(() => {
-      this.updateMetricTilesWithFilters([]);
-      this.cdr.detectChanges();
-    }, 100);
-  }
+
 
   /**
-   * Fetch previous-day data for the current index and update the metric tiles
-   */
-  private fetchAndUpdateCurrentIndexData(): void {
-    // Note: This method will be invoked only when selected index changes and WebSocket is not connected
-    if (!this.currentSelectedIndexData?.indexName) {
-      return;
-    }
-    
-    const indexName = this.currentSelectedIndexData.indexName;
-
-    
-    // Fetch previous-day data for the current index
-    this.indicesService.getPreviousDayIndexData(indexName).subscribe({
-      next: (fallbackData) => {
-        if (fallbackData && fallbackData.indices && fallbackData.indices.length > 0) {
-          const indexData = fallbackData.indices[0];
-
-          
-          // Update the current selected index data with fallback data
-          this.currentSelectedIndexData = {
-            indexName: indexData.indexName || indexData.index || indexName,
-            indexSymbol: indexData.indexSymbol || indexName,
-            lastPrice: indexData.lastPrice || indexData.last || 0,
-            variation: indexData.variation || 0,
-            percentChange: indexData.percentChange || 0
-          };
-          
-          
-          
-          // Force metric tiles to refresh with new data
-          this.updateMetricTilesWithFilters([]);
-          this.cdr.detectChanges();
-        }
-      },
-      error: (error) => {
-        console.warn(`Failed to fetch previous-day data for ${indexName}:`, error);
-      }
-    });
-  }
-
-  /**
-   * Conditionally fetch previous-day data only when the WebSocket is not connected
-   */
-  private maybeFetchPreviousDay(indexName: string): void {
-    if (!indexName) {
-      return;
-    }
-    // Only fetch if WebSocket is not connected and we haven't fetched for this index yet
-    if (!this.isWebSocketConnected && this.lastPrevDayFetchIndex !== indexName) {
-      this.lastPrevDayFetchIndex = indexName;
-      this.fetchAndUpdateCurrentIndexData();
-    }
-  }
-
-  /**
-   * Create metric tiles using stock ticks data and indices data
-   * @param data - Dashboard data (not used, we use stockTicksData instead)
+   * Create metric tiles - now returns empty array as metric tiles are removed
    */
   protected createMetricTiles(data: StockDataDto[]): IWidget[] {
-    return createMetricTilesFunction(
-      this.filteredDashboardData || this.dashboardData, 
-      this.currentSelectedIndexData,
-      this.webSocketService,
-      this.indicesService
-    );
+    return [];
   }
 
   /**
-   * Override updateMetricTilesWithFilters to use filtered data
+   * Override updateMetricTilesWithFilters - now no-op as metric tiles are removed
    */
   protected override updateMetricTilesWithFilters(filters: any[]): void {
-    // Ensure dashboardConfig and widgets exist before proceeding
-    if (!this.dashboardConfig?.widgets || this.dashboardConfig.widgets.length === 0) {
-      // No widgets available yet; safely exit
-      // Optionally, we could schedule a retry, but avoiding repeated retries to prevent loops
-      return;
-    }
-
-    // Find all tile widgets (both regular tiles and stock tiles)
-    const tileWidgets = (this.dashboardConfig?.widgets || []).filter(widget => 
-      widget?.config?.component === 'tile' || widget?.config?.component === 'stock-tile'
-    );
-
-    if (!tileWidgets.length) {
-      // Nothing to update
-      return;
-    }
-
-    // Create new metric tiles with filtered data - use filteredDashboardData
-    const updatedMetricTiles = this.createMetricTiles(this.filteredDashboardData || this.dashboardData);
-
-    // Update each tile widget with new data
-    tileWidgets.forEach((widget, index) => {
-      if (index < updatedMetricTiles.length) {
-        const updatedTile = updatedMetricTiles[index];
-        
-        // Check if this tile should update on data change
-        const currentTileOptions = widget?.config?.options as any;
-        const shouldUpdate = currentTileOptions?.updateOnDataChange !== false;
-        
-        if (shouldUpdate) {
-          // Extract tile data properties from the updated tile
-          const newTileOptions = updatedTile?.config?.options as any;
-          
-          if (widget?.config?.component === 'stock-tile') {
-            // Handle stock tile updates
-            const stockTileData = {
-              value: newTileOptions?.value ?? '',
-              change: newTileOptions?.change ?? '',
-              changeType: newTileOptions?.changeType ?? 'neutral',
-              description: newTileOptions?.description ?? '',
-              icon: newTileOptions?.icon ?? '',
-              color: newTileOptions?.color ?? '',
-              backgroundColor: newTileOptions?.backgroundColor ?? '',
-              highValue: newTileOptions?.highValue ?? '',
-              lowValue: newTileOptions?.lowValue ?? '',
-              currency: newTileOptions?.currency ?? '₹'
-            };
-            
-            // Use StockTileBuilder to properly update the stock tile data
-            StockTileBuilder.updateData(widget, stockTileData);
-          } else {
-            // Handle regular tile updates
-            const tileData = {
-              value: newTileOptions?.value ?? '',
-              change: newTileOptions?.change ?? '',
-              changeType: newTileOptions?.changeType ?? 'neutral',
-              description: newTileOptions?.description ?? '',
-              icon: newTileOptions?.icon ?? '',
-              color: newTileOptions?.color ?? '',
-              backgroundColor: newTileOptions?.backgroundColor ?? '',
-              title: newTileOptions?.title ?? '',
-              subtitle: newTileOptions?.subtitle ?? newTileOptions?.customData?.subtitle ?? ''
-            };
-            
-            // Use TileBuilder to properly update the tile data
-            TileBuilder.updateData(widget, tileData);
-          }
-        }
-      }
-    });
-    
-    // Trigger change detection to ensure tiles are refreshed
-    setTimeout(() => {
-      this.cdr?.detectChanges?.();
-    }, 50);
+    // Metric tiles have been removed - no operation needed
   }
 
   protected initializeDashboardConfig(): void {
@@ -1361,17 +1193,14 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
       .setId('stock-list-widget')
       .build();
 
-    const metricTiles = this.createMetricTiles([]);
-
-    // Position charts with proper spacing - Stock List extends to bottom of viewport
-    stockListWidget.position = { x: 0, y: 2, cols: 4, rows: 20 };
-    candlestickChart.position = { x: 4, y: 2, cols: 8, rows: 11 };
+    // Position charts with proper spacing - Stock List extends to full height
+    stockListWidget.position = { x: 0, y: 0, cols: 4, rows: 20 };
+    candlestickChart.position = { x: 4, y: 0, cols: 8, rows: 11 };
     
     // Use the Fluent API to build the dashboard config
     this.dashboardConfig = StandardDashboardBuilder.createStandard()
       .setDashboardId('stock-insights-dashboard')
       .setWidgets([
-        ...metricTiles,
         stockListWidget,
         candlestickChart,
       ])
@@ -1428,12 +1257,14 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
           widget.data.stocks = stockData;
           widget.data.isLoadingStocks = false;
           widget.data.selectedStockSymbol = this.selectedIndexSymbol;
+          widget.data.showCurrencySymbol = true; // Enable currency symbols for stocks
         } else {
           // Initialize widget data if it doesn't exist
           widget.data = {
             stocks: stockData,
             isLoadingStocks: false,
-            selectedStockSymbol: this.selectedIndexSymbol
+            selectedStockSymbol: this.selectedIndexSymbol,
+            showCurrencySymbol: true // Enable currency symbols for stocks
           };
         }
       } else {
@@ -1441,20 +1272,18 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         if (widget.data) {
           widget.data.stocks = [];
           widget.data.isLoadingStocks = false;
+          widget.data.showCurrencySymbol = true; // Enable currency symbols for stocks
         } else {
           widget.data = {
             stocks: [],
-            isLoadingStocks: false
+            isLoadingStocks: false,
+            showCurrencySymbol: true // Enable currency symbols for stocks
           };
         }
       }
     });
 
-    // Populate metric tiles with initial data
-    this.updateMetricTilesWithFilters([]);
 
-    // Trigger immediate fallback data fetch for metric tiles if no valid data
-    this.triggerImmediateFallbackDataFetch();
 
     // Trigger change detection to ensure widgets are updated
     setTimeout(() => {
@@ -1462,69 +1291,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     }, 100);
   }
 
-  /**
-   * Trigger immediate fallback data fetch for metric tiles if no valid data is available
-   */
-  private triggerImmediateFallbackDataFetch(): void {
-    // Check if we have valid index data
-    if (!this.currentSelectedIndexData || 
-        !this.currentSelectedIndexData.lastPrice || 
-        this.currentSelectedIndexData.lastPrice === 0) {
-      // Only attempt previous-day fetch when WebSocket is not connected
-      if (this.isWebSocketConnected) {
-        return;
-      }
 
-      // Determine target index name (default to NIFTY 50)
-      const indexName = this.currentSelectedIndexData?.indexName || 'NIFTY 50';
-
-      // Avoid repeated fetches for the same index
-      if (this.lastPrevDayFetchIndex === indexName) {
-        return;
-      }
-
-      // Skip if offline (no point calling backend without internet)
-      try {
-        if (typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false) {
-          if (this.enableDebugLogging) {
-            console.warn('Offline detected, skipping previous-day fetch');
-          }
-          return;
-        }
-      } catch { /* no-op */ }
-
-
-
-      // Mark as fetched for this index to prevent duplicates
-      this.lastPrevDayFetchIndex = indexName;
-
-      // Fetch previous-day data
-      this.indicesService.getPreviousDayIndexData(indexName).subscribe({
-        next: (fallbackData) => {
-          if (fallbackData && fallbackData.indices && fallbackData.indices.length > 0) {
-            const indexData = fallbackData.indices[0];
-            
-            
-            // Update the current selected index data with fallback data
-            this.currentSelectedIndexData = {
-              indexName: indexData.indexName || indexName,
-              indexSymbol: indexData.indexSymbol || indexName,
-              lastPrice: indexData.lastPrice || 0,
-              variation: indexData.variation || 0,
-              percentChange: indexData.percentChange || 0
-            };
-            
-            // Refresh tiles
-            this.updateMetricTilesWithFilters([]);
-            this.cdr.detectChanges();
-          }
-        },
-        error: (error) => {
-          console.warn(`Failed to fetch previous-day data for ${indexName}:`, error);
-        }
-      });
-    }
-  }
 
   /**
    * Get data for widget based on chart type detection
@@ -2003,11 +1770,13 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         widget.data.stocks = newStockDataArray;
         widget.data.isLoadingStocks = false;
         widget.data.selectedStockSymbol = this.selectedIndexSymbol;
+        widget.data.showCurrencySymbol = true; // Enable currency symbols for stocks
       } else {
         widget.data = {
           stocks: newStockDataArray,
           isLoadingStocks: false,
-          selectedStockSymbol: this.selectedIndexSymbol
+          selectedStockSymbol: this.selectedIndexSymbol,
+          showCurrencySymbol: true // Enable currency symbols for stocks
         };
       }
     });
@@ -2193,11 +1962,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         
         // Check if dashboard is ready before updating
         if (!this.dashboardConfig?.widgets || this.dashboardConfig.widgets.length === 0) {
-          console.warn('Dashboard not ready yet, deferring first tile update');
-          // Schedule the update for later
-          setTimeout(() => {
-            this.updateFirstTileWithRealTimeData(indexData);
-          }, 1000);
+          console.warn('Dashboard not ready yet, deferring update');
           return;
         }
         
@@ -2208,9 +1973,6 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         this.chartUpdateTimer = setTimeout(() => {
           try {
             // Update the first tile (index price tile) with real-time data
-            this.updateFirstTileWithRealTimeData(indexData);
-            // Update metric tiles in-place with new data (non-destructive)
-            this.recreateMetricTiles();
             // Trigger change detection
             this.cdr.detectChanges();
           } finally {
@@ -2249,120 +2011,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     }
   }
 
-  /**
-   * Update the first tile (index price tile) with real-time WebSocket data
-   * @param realTimeIndexData - Real-time index data from WebSocket
-   */
-  private updateFirstTileWithRealTimeData(realTimeIndexData: IndexDataDto): void {
-    // Wait for dashboard to be ready
-    if (!this.dashboardConfig?.widgets || this.dashboardConfig.widgets.length === 0) {
-      // Wait for dashboard to be ready and retry
-      setTimeout(() => {
-        this.updateFirstTileWithRealTimeData(realTimeIndexData);
-      }, 500);
-      return;
-    }
 
-    // Find the first tile (index price tile) - try multiple strategies
-    let firstTile = this.dashboardConfig.widgets.find(widget =>
-      widget.position?.x === 0 && widget.position?.y === 0 &&
-      (widget.config?.component === 'stock-tile' || widget.config?.component === 'tile')
-    );
-
-    // If not found at (0,0), try to find any stock-tile or tile
-    if (!firstTile) {
-      firstTile = this.dashboardConfig.widgets.find(widget =>
-        widget.config?.component === 'stock-tile' || widget.config?.component === 'tile'
-      );
-    }
-
-    // If still not found, try to find by title
-    if (!firstTile) {
-      firstTile = this.dashboardConfig.widgets.find(widget =>
-        widget.config?.header?.title?.toLowerCase().includes('nifty') ||
-        widget.config?.header?.title?.toLowerCase().includes('index') ||
-        widget.config?.header?.title?.toLowerCase().includes('price')
-      );
-    }
-
-    if (!firstTile) {
-      console.warn('No suitable tile found for real-time updates');
-      return;
-    }
-
-
-
-    if (!realTimeIndexData) {
-      console.warn('No real-time index data available for first tile update');
-      return;
-    }
-
-    try {
-      // Extract real-time data using WebSocket field names
-      const indexName = realTimeIndexData.indexName || realTimeIndexData.indexSymbol || 'Index';
-      const lastPrice = realTimeIndexData.lastPrice || 0;
-      const percentChange = realTimeIndexData.percentChange || 0;
-      const dayHigh = realTimeIndexData.dayHigh || 0;
-      const dayLow = realTimeIndexData.dayLow || 0;
-      const variation = realTimeIndexData.variation || 0;
-
-
-
-      if (firstTile.config?.component === 'stock-tile') {
-        // Update stock tile with real-time data using exact WebSocket fields
-        const stockTileData = {
-          value: lastPrice.toFixed(2),
-          change: variation.toFixed(2), // Use variation field from WebSocket
-          changeType: (percentChange >= 0 ? 'positive' : 'negative') as 'positive' | 'negative' | 'neutral',
-          description: indexName, // Use indexName from WebSocket
-          icon: 'fas fa-chart-line',
-          color: percentChange >= 0 ? '#16a34a' : '#dc2626',
-          backgroundColor: percentChange >= 0 ? '#bbf7d0' : '#fecaca',
-          highValue: dayHigh.toFixed(2), // Use dayHigh from WebSocket
-          lowValue: dayLow.toFixed(2), // Use dayLow from WebSocket
-          currency: '₹'
-        };
-
-
-
-        // Use StockTileBuilder to properly update the stock tile data
-        StockTileBuilder.updateData(firstTile, stockTileData);
-
-        // Also update the widget data property directly
-        firstTile.data = { ...firstTile.data, ...stockTileData };
-
-
-      } else {
-        // Update regular tile with real-time data
-        const tileData = {
-          value: lastPrice.toFixed(2),
-          change: variation.toFixed(2),
-          changeType: (percentChange >= 0 ? 'positive' : 'negative') as 'positive' | 'negative' | 'neutral',
-          description: indexName,
-          icon: 'fas fa-chart-line',
-          color: percentChange >= 0 ? '#16a34a' : '#dc2626',
-          backgroundColor: percentChange >= 0 ? '#bbf7d0' : '#fecaca',
-          title: indexName,
-          subtitle: `Change: ${percentChange.toFixed(2)}%`
-        };
-
-        // Use TileBuilder to properly update the tile data
-        TileBuilder.updateData(firstTile, tileData);
-
-        // Also update the widget data property directly
-        firstTile.data = { ...firstTile.data, ...tileData };
-
-
-      }
-
-      // Force change detection for OnPush strategy
-      this.cdr.markForCheck();
-      this.cdr.detectChanges();
-
-    } catch (error) {
-      console.error('Error updating first tile with real-time data:', error);
-    }
-  }
 
   /**
    * Force refresh the dashboard to update all widgets
@@ -2377,75 +2026,15 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   
   /**
    * Public method to force tile refresh (called from dashboard header)
+   * Note: Metric tiles have been removed, so this is now a no-op
    */
   public forceTileRefresh(): void {
-    // Safe refresh: update tiles and trigger change detection
-    this.updateMetricTilesWithFilters([]);
+    // Metric tiles have been removed - just trigger change detection
     this.cdr.markForCheck();
     this.cdr.detectChanges();
-    
-    setTimeout(() => {
-      this.cdr.detectChanges();
-    }, 100);
   }
 
-  private recreateMetricTiles(): void {
-    const currentMetricTiles = this.dashboardConfig.widgets.filter(widget => 
-      widget.config?.component === 'tile' || widget.config?.component === 'stock-tile'
-    );
 
-    const newMetricTiles = this.createMetricTiles(this.filteredDashboardData || this.dashboardData);
-
-    currentMetricTiles.forEach((widget, index) => {
-      if (index < newMetricTiles.length) {
-        const updatedTile = newMetricTiles[index];
-        
-        // Check if this tile should update on data change
-        const tileOptions = widget.config?.options as any;
-        const shouldUpdate = tileOptions?.updateOnDataChange !== false;
-        
-        if (shouldUpdate) {
-          // Extract tile data properties from the updated tile
-          const tileOptions = updatedTile.config?.options as any;
-          
-          if (widget.config?.component === 'stock-tile') {
-            // Handle stock tile updates
-            const stockTileData = {
-              value: tileOptions?.value || '',
-              change: tileOptions?.change || '',
-              changeType: tileOptions?.changeType || 'neutral',
-              description: tileOptions?.description || '',
-              icon: tileOptions?.icon || '',
-              color: tileOptions?.color || '',
-              backgroundColor: tileOptions?.backgroundColor || '',
-              highValue: tileOptions?.highValue || '',
-              lowValue: tileOptions?.lowValue || '',
-              currency: tileOptions?.currency || '₹'
-            };
-            
-            // Use StockTileBuilder to properly update the stock tile data
-            StockTileBuilder.updateData(widget, stockTileData);
-          } else {
-            // Handle regular tile updates
-            const tileData = {
-              value: tileOptions?.value || '',
-              change: tileOptions?.change || '',
-              changeType: tileOptions?.changeType || 'neutral',
-              description: tileOptions?.description || '',
-              icon: tileOptions?.icon || '',
-              color: tileOptions?.color || '',
-              backgroundColor: tileOptions?.backgroundColor || '',
-              title: tileOptions?.title || '',
-              subtitle: tileOptions?.subtitle || tileOptions?.customData?.subtitle || ''
-            };
-            
-            // Use TileBuilder to properly update the tile data
-            TileBuilder.updateData(widget, tileData);
-          }
-        }
-      }
-    });
-  }
 
   /**
    * Handle time range change events from the candlestick chart
@@ -2751,6 +2340,321 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
           }
         }
       });
+  }
+
+  /**
+   * Initialize stocks WebSocket connection and subscribe to all stocks data
+   * This method establishes the WebSocket connection and subscribes to the /ws/stocks/nse/all endpoint
+   * for real-time updates of all NSE stocks data.
+   */
+  private initializeStocksWebSocket(): void {
+    // Register this component with stocks WebSocket service
+    this.stocksWebSocketService.registerComponent('StockInsightsComponent');
+    
+    // Connect to stocks WebSocket service
+    this.stocksWebSocketService.connect()
+      .then(() => {
+        // Connection successful - subscribe to all stocks topic
+        this.stocksWebSocketSubscription = this.stocksWebSocketService
+          .subscribeToAllStocks()
+          .subscribe({
+            next: (stocksDto: StockTicksDto) => {
+              this.handleIncomingStocksData(stocksDto);
+            },
+            error: (error) => {
+              // Use centralized subscription error handler with retry logic
+              this.handleStocksSubscriptionError('/ws/stocks/nse/all', error, 0);
+            }
+          });
+        
+        // Update connection state
+        this.isStocksWebSocketConnected = true;
+        
+      })
+      .catch((error) => {
+        // Connection failed - use centralized error handler
+        this.handleStocksConnectionError(error);
+      });
+  }
+
+  /**
+   * Handle stocks WebSocket connection errors
+   */
+  private handleStocksConnectionError(error: any): void {
+    this.isStocksWebSocketConnected = false;
+    // Continue displaying fallback data - no user-facing error
+    // The application remains fully functional with REST API data
+  }
+
+  /**
+   * Handle stocks WebSocket subscription errors
+   */
+  private handleStocksSubscriptionError(topic: string, error: any, retryCount: number = 0): void {
+    // Maximum retry attempts
+    const MAX_RETRIES = 5;
+    
+    // Check if we should retry
+    if (retryCount < MAX_RETRIES) {
+      // Calculate exponential backoff delay: 2^retryCount * 1000ms
+      const delayMs = Math.pow(2, retryCount) * 1000;
+      
+      // Schedule retry with exponential backoff
+      setTimeout(() => {
+        this.retryStocksSubscription(topic, retryCount + 1);
+      }, delayMs);
+    } else {
+      // Max retries exceeded - continue with fallback data
+      this.isStocksWebSocketConnected = false;
+    }
+  }
+
+  /**
+   * Retry stocks WebSocket subscription after a failure
+   */
+  private retryStocksSubscription(topic: string, retryCount: number): void {
+    // Attempt to resubscribe to all stocks
+    this.stocksWebSocketSubscription = this.stocksWebSocketService
+      .subscribeToAllStocks()
+      .subscribe({
+        next: (stocksDto: StockTicksDto) => {
+          // Subscription successful - reset retry count
+          this.handleIncomingStocksData(stocksDto);
+        },
+        error: (error) => {
+          // Subscription failed again - call error handler with incremented retry count
+          this.handleStocksSubscriptionError(topic, error, retryCount);
+        }
+      });
+  }
+
+  /**
+   * Handle incoming stocks data from WebSocket
+   * This method processes real-time stocks data received via WebSocket and updates the Stock List widget.
+   */
+  private handleIncomingStocksData(stocksDto: StockTicksDto): void {
+    // Validate incoming data
+    if (!stocksDto?.data || stocksDto.data.length === 0) {
+      return;
+    }
+    
+    // Process WebSocket data directly
+    const directData = this.processStocksWebSocketDataDirectly(stocksDto.data);
+    
+    // Update Stock List widget with real-time data
+    this.updateStockListWithWebSocketData(directData);
+  }
+
+  /**
+   * Process stocks WebSocket data directly
+   * This method converts WebSocket tick data directly to StockDataDto format
+   */
+  private processStocksWebSocketDataDirectly(incomingTicks: StockDataDto[]): StockDataDto[] {
+    return incomingTicks.map(tick => {
+      // Extract symbol
+      const symbol = tick.symbol || tick.tradingsymbol || '';
+      
+      // Extract lastPrice directly from WebSocket data
+      let lastPrice: number = tick.lastPrice || 0;
+      
+      // Calculate changes if we have valid data
+      const previousClose = tick.previousClose || 0;
+      let priceChange = tick.priceChange || 0;
+      let percentChange = tick.percentChange || 0;
+      
+      if (lastPrice > 0 && previousClose > 0 && (priceChange === 0 || percentChange === 0)) {
+        priceChange = lastPrice - previousClose;
+        percentChange = (priceChange / previousClose) * 100;
+      }
+      
+      // Create StockDataDto with explicit values
+      const stockData: StockDataDto = {
+        tradingsymbol: symbol,
+        symbol: symbol,
+        companyName: tick.companyName || symbol,
+        lastPrice: lastPrice,
+        percentChange: percentChange,
+        priceChange: priceChange,
+        previousClose: previousClose,
+        totalTradedValue: tick.totalTradedValue || 0,
+        totalTradedVolume: tick.totalTradedVolume || 0,
+        sector: tick.sector || tick.industry || '',
+        industry: tick.industry || tick.sector || '',
+        openPrice: tick.openPrice || 0,
+        dayHigh: tick.dayHigh || 0,
+        dayLow: tick.dayLow || 0,
+        lastUpdateTime: tick.lastUpdateTime || new Date().toISOString(),
+        // Additional fields
+        yearHigh: tick.yearHigh || 0,
+        yearLow: tick.yearLow || 0,
+        isFnoSec: tick.isFnoSec || false,
+        isCaSec: tick.isCaSec || false,
+        isSlbSec: tick.isSlbSec || false,
+        isDebtSec: tick.isDebtSec || false,
+        isSuspended: tick.isSuspended || false,
+        isEtfSec: tick.isEtfSec || false,
+        isDelisted: tick.isDelisted || false,
+        isin: tick.isin || '',
+        listingDate: tick.listingDate || ''
+      };
+      
+      return stockData;
+    });
+  }
+
+  /**
+   * Update Stock List widget with WebSocket data
+   */
+  private updateStockListWithWebSocketData(data: StockDataDto[]): void {
+    if (!this.dashboardConfig?.widgets) {
+      return;
+    }
+
+    const stockListWidgets = this.dashboardConfig.widgets.filter(widget => 
+      widget.config?.component === 'stock-list-table'
+    );
+
+    if (stockListWidgets.length === 0) {
+      return;
+    }
+
+    const timestamp = Date.now();
+    
+    stockListWidgets.forEach((widget) => {
+      // Create streamlined data array with minimal processing
+      const processedStocks = data.map((item, index) => ({
+        ...item,
+        id: `${item.symbol || item.tradingsymbol}-${timestamp}`,
+        changeIndicator: this.calculateChangeIndicator(item.priceChange, item.percentChange),
+        _webSocketUpdate: timestamp
+      }));
+
+      // Sort by symbol for consistent display
+      const sortedStocks = processedStocks.sort((a, b) => {
+        const aSymbol = (a.tradingsymbol || a.symbol || '').toUpperCase();
+        const bSymbol = (b.tradingsymbol || b.symbol || '').toUpperCase();
+        return aSymbol.localeCompare(bSymbol);
+      });
+
+      // Calculate footer statistics
+      const footerStats = {
+        totalCount: sortedStocks.length,
+        positiveCount: sortedStocks.filter(item => (item.percentChange || 0) > 0).length,
+        negativeCount: sortedStocks.filter(item => (item.percentChange || 0) < 0).length
+      };
+
+      // Direct widget data update
+      widget.data = {
+        stocks: sortedStocks,
+        isLoadingStocks: false,
+        selectedStockSymbol: this.selectedIndexSymbol,
+        showCurrencySymbol: true, // Enable currency symbols for stocks
+        footerStats: footerStats,
+        _webSocketStreamUpdate: timestamp
+      };
+    });
+
+    // Update component data for other uses
+    this.dashboardData = [...data];
+    this.filteredDashboardData = [...data];
+
+    // Optimized change detection
+    this.ngZone.run(() => {
+      this.cdr.detectChanges();
+    });
+  }
+
+  /**
+   * Calculate change indicator based on price and percent changes
+   */
+  private calculateChangeIndicator(priceChange?: number, percentChange?: number): 'positive' | 'negative' | 'neutral' {
+    const price = priceChange || 0;
+    const percent = percentChange || 0;
+    
+    if (price > 0 || percent > 0) {
+      return 'positive';
+    } else if (price < 0 || percent < 0) {
+      return 'negative';
+    } else {
+      return 'neutral';
+    }
+  }
+
+  /**
+   * Monitor stocks WebSocket connection state changes
+   */
+  private monitorStocksWebSocketConnectionState(): void {
+    this.stocksWebSocketConnectionStateSubscription = this.stocksWebSocketService.connectionState
+      .subscribe({
+        next: (state: StocksWebSocketConnectionState) => {
+          this.isStocksWebSocketConnected = state === StocksWebSocketConnectionState.CONNECTED;
+          
+          if (this.isStocksWebSocketConnected) {
+            // Connection established - subscription is handled in initializeStocksWebSocket
+          } else if (state === StocksWebSocketConnectionState.DISCONNECTED || state === StocksWebSocketConnectionState.ERROR) {
+            // Attempt reconnection
+            this.attemptStocksWebSocketReconnection();
+          }
+        },
+        error: (error) => {
+          this.isStocksWebSocketConnected = false;
+          // Attempt reconnection on error
+          this.attemptStocksWebSocketReconnection();
+        }
+      });
+  }
+
+  /**
+   * Attempt to reconnect to stocks WebSocket
+   */
+  private async attemptStocksWebSocketReconnection(): Promise<void> {
+    try {
+      await this.stocksWebSocketService.connect();
+      
+      if (this.stocksWebSocketService.connected) {
+        // Resubscribe to all stocks
+        this.stocksWebSocketSubscription = this.stocksWebSocketService
+          .subscribeToAllStocks()
+          .subscribe({
+            next: (stocksDto: StockTicksDto) => {
+              this.handleIncomingStocksData(stocksDto);
+            },
+            error: (error) => {
+              this.handleStocksSubscriptionError('/ws/stocks/nse/all', error, 0);
+            }
+          });
+      }
+    } catch (error) {
+      // Schedule another reconnection attempt after a delay
+      setTimeout(() => {
+        this.attemptStocksWebSocketReconnection();
+      }, 5000); // 5 second delay before retry
+    }
+  }
+
+  /**
+   * Cleanup stocks WebSocket subscription
+   */
+  private cleanupStocksWebSocketSubscription(): void {
+    // Unsubscribe from stocks subscription if active
+    if (this.stocksWebSocketSubscription) {
+      this.stocksWebSocketSubscription.unsubscribe();
+      this.stocksWebSocketSubscription = null;
+    }
+
+    // Unsubscribe from stocks connection state monitoring
+    if (this.stocksWebSocketConnectionStateSubscription) {
+      this.stocksWebSocketConnectionStateSubscription.unsubscribe();
+      this.stocksWebSocketConnectionStateSubscription = null;
+    }
+    
+    // Call stocks WebSocket service to unsubscribe from all topics
+    this.stocksWebSocketService.unsubscribeFromAll();
+    
+    // Unregister this component from stocks WebSocket service
+    this.stocksWebSocketService.unregisterComponent('StockInsightsComponent');
+    
+    // Update connection state
+    this.isStocksWebSocketConnected = false;
   }
 
 }

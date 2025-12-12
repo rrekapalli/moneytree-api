@@ -1342,9 +1342,7 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
     }
     
 
-    // Conditionally fetch previous-day data only when WebSocket is not connected
-    if (indexName) {
-    }
+
     
     // Trigger change detection and update widgets
     this.populateWidgetsWithInitialData();
