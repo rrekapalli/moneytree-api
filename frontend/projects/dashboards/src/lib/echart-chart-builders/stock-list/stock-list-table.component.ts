@@ -101,6 +101,7 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
   // Keep track of previous widget data for change detection
   private previousStocksLength: number = 0;
   private previousIsLoading: boolean = false;
+  private previousUpdateTimestamp: number = 0;
 
   // Scroll height for table
   public tableScrollHeight: string = '800px';
@@ -131,11 +132,19 @@ export class StockListTableComponent implements OnInit, OnChanges, DoCheck, Afte
     // Manually check for changes in widget.data.stocks
     const currentStocksLength = this.widget?.data?.stocks?.length || 0;
     const currentIsLoading = this.widget?.data?.isLoadingStocks || false;
+    
+    // CRITICAL: Also check for content changes using update timestamp
+    const currentUpdateTimestamp = this.widget?.data?._subjectStreamUpdate || 
+                                   this.widget?.data?._behaviorSubjectUpdate || 
+                                   this.widget?.data?.lastUpdated || 0;
 
     if (currentStocksLength !== this.previousStocksLength || 
-        currentIsLoading !== this.previousIsLoading) {
+        currentIsLoading !== this.previousIsLoading ||
+        currentUpdateTimestamp !== this.previousUpdateTimestamp) {
+      
       this.previousStocksLength = currentStocksLength;
       this.previousIsLoading = currentIsLoading;
+      this.previousUpdateTimestamp = currentUpdateTimestamp;
       
       this.updateStocksFromWidget();
       this.cdr.detectChanges();
