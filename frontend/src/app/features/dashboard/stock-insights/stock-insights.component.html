@@ -1,19 +1,10 @@
 <!-- Dashboard Header -->
 <vis-dashboard-header 
   [title]="dashboardTitle"
-  [isHighlightingEnabled]="isHighlightingEnabled"
-  [isExportingExcel]="isExportingExcel"
-  [enableStockSearch]="true"
-  [stockSearchList]="allStocks"
   [showInstrumentFilters]="showInstrumentFilters"
   [filterOptions]="filterOptions"
   [selectedFilters]="selectedFilters"
   [isLoadingFilters]="isLoadingFilters"
-  (onExportToExcel)="exportDashboardToExcel()"
-  (onToggleHighlighting)="toggleHighlightingMode()"
-  (onSetHighlightingPreset)="setHighlightingPreset($event)"
-  (onSearchStock)="onHeaderSearchStock($event)"
-  (onForceTileRefresh)="forceTileRefresh()"
   (onFilterChange)="onFilterChange($event)">
 </vis-dashboard-header>
 

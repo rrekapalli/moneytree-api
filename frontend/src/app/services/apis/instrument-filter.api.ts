@@ -14,28 +14,10 @@ import { InstrumentDto, InstrumentFilter } from '../entities/instrument-filter';
 })
 export class InstrumentFilterService {
   private readonly baseEndpoint = '/v1/instruments';
-  private readonly exchangesEndpoint = `${this.baseEndpoint}/filters/exchanges`;
   private readonly indicesEndpoint = `${this.baseEndpoint}/filters/indices`;
-  private readonly segmentsEndpoint = `${this.baseEndpoint}/filters/segments`;
   private readonly filteredEndpoint = `${this.baseEndpoint}/filtered`;
 
   constructor(private apiService: ApiService) {}
-
-  /**
-   * Get distinct exchange values from the database
-   * Results are cached on the backend with 7-day TTL
-   * @returns An Observable of string array containing distinct exchanges
-   */
-  getDistinctExchanges(): Observable<string[]> {
-    return this.apiService.get<string[]>(this.exchangesEndpoint)
-      .pipe(
-        retry(2),
-        catchError((error) => {
-          console.error('Failed to fetch distinct exchanges:', error);
-          throw error;
-        })
-      );
-  }
 
   /**
    * Get distinct index values (tradingsymbols where segment='INDICES')
@@ -54,40 +36,15 @@ export class InstrumentFilterService {
   }
 
   /**
-   * Get distinct segment values from the database
-   * Results are cached on the backend with 7-day TTL
-   * @returns An Observable of string array containing distinct segments
-   */
-  getDistinctSegments(): Observable<string[]> {
-    return this.apiService.get<string[]>(this.segmentsEndpoint)
-      .pipe(
-        retry(2),
-        catchError((error) => {
-          console.error('Failed to fetch distinct segments:', error);
-          throw error;
-        })
-      );
-  }
-
-  /**
-   * Get filtered instruments based on exchange, index, and segment criteria
-   * All filters are applied with AND logic
-   * @param filter The filter criteria (exchange, index, segment)
+   * Get filtered instruments based on index criteria
+   * @param filter The filter criteria (index)
    * @returns An Observable of InstrumentDto array containing filtered instruments
    */
   getFilteredInstruments(filter: InstrumentFilter): Observable<InstrumentDto[]> {
     let params = new HttpParams();
     
-    if (filter.exchange) {
-      params = params.set('exchange', filter.exchange);
-    }
-    
     if (filter.index) {
       params = params.set('index', filter.index);
-    }
-    
-    if (filter.segment) {
-      params = params.set('segment', filter.segment);
     }
     
     return this.apiService.get<InstrumentDto[]>(this.filteredEndpoint, params)

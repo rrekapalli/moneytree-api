@@ -38,66 +38,7 @@ describe('InstrumentFilterService', () => {
     httpMock.verify();
   });
 
-  describe('getDistinctExchanges', () => {
-    it('should call correct endpoint', (done) => {
-      const mockExchanges = ['NSE', 'BSE', 'MCX'];
 
-      service.getDistinctExchanges().subscribe(exchanges => {
-        expect(exchanges).toEqual(mockExchanges);
-        done();
-      });
-
-      const req = httpMock.expectOne('/api/v1/instruments/filters/exchanges');
-      expect(req.request.method).toBe('GET');
-      req.flush(mockExchanges);
-    });
-
-    it('should retry on network error', (done) => {
-      const mockExchanges = ['NSE', 'BSE'];
-      let attemptCount = 0;
-
-      service.getDistinctExchanges().subscribe({
-        next: exchanges => {
-          expect(exchanges).toEqual(mockExchanges);
-          expect(attemptCount).toBe(2); // Initial attempt + 1 retry
-          done();
-        },
-        error: () => done.fail('Should not error after successful retry')
-      });
-
-      // First attempt fails
-      const req1 = httpMock.expectOne('/api/v1/instruments/filters/exchanges');
-      attemptCount++;
-      req1.error(new ProgressEvent('error'));
-
-      // Second attempt (retry) succeeds
-      const req2 = httpMock.expectOne('/api/v1/instruments/filters/exchanges');
-      attemptCount++;
-      req2.flush(mockExchanges);
-    });
-
-    it('should handle error with catchError after retries exhausted', (done) => {
-      service.getDistinctExchanges().subscribe({
-        next: () => done.fail('Should not succeed'),
-        error: error => {
-          expect(error).toBeDefined();
-          done();
-        }
-      });
-
-      // Initial attempt fails
-      const req1 = httpMock.expectOne('/api/v1/instruments/filters/exchanges');
-      req1.error(new ProgressEvent('error'));
-
-      // First retry fails
-      const req2 = httpMock.expectOne('/api/v1/instruments/filters/exchanges');
-      req2.error(new ProgressEvent('error'));
-
-      // Second retry fails
-      const req3 = httpMock.expectOne('/api/v1/instruments/filters/exchanges');
-      req3.error(new ProgressEvent('error'));
-    });
-  });
 
   describe('getDistinctIndices', () => {
     it('should call correct endpoint', (done) => {
@@ -136,42 +77,7 @@ describe('InstrumentFilterService', () => {
     });
   });
 
-  describe('getDistinctSegments', () => {
-    it('should call correct endpoint', (done) => {
-      const mockSegments = ['EQ', 'FO', 'INDICES'];
 
-      service.getDistinctSegments().subscribe(segments => {
-        expect(segments).toEqual(mockSegments);
-        done();
-      });
-
-      const req = httpMock.expectOne('/api/v1/instruments/filters/segments');
-      expect(req.request.method).toBe('GET');
-      req.flush(mockSegments);
-    });
-
-    it('should retry on network error', (done) => {
-      const mockSegments = ['EQ'];
-      let attemptCount = 0;
-
-      service.getDistinctSegments().subscribe({
-        next: segments => {
-          expect(segments).toEqual(mockSegments);
-          expect(attemptCount).toBe(2);
-          done();
-        },
-        error: () => done.fail('Should not error after successful retry')
-      });
-
-      const req1 = httpMock.expectOne('/api/v1/instruments/filters/segments');
-      attemptCount++;
-      req1.error(new ProgressEvent('error'));
-
-      const req2 = httpMock.expectOne('/api/v1/instruments/filters/segments');
-      attemptCount++;
-      req2.flush(mockSegments);
-    });
-  });
 
   describe('getFilteredInstruments', () => {
     it('should call correct endpoint with no parameters', (done) => {
@@ -202,9 +108,9 @@ describe('InstrumentFilterService', () => {
       req.flush(mockInstruments);
     });
 
-    it('should build correct query parameters with exchange only', (done) => {
+    it('should build correct query parameters with index only', (done) => {
       const mockInstruments: InstrumentDto[] = [];
-      const filter: InstrumentFilter = { exchange: 'NSE' };
+      const filter: InstrumentFilter = { index: 'NIFTY 50' };
 
       service.getFilteredInstruments(filter).subscribe(instruments => {
         expect(instruments).toEqual(mockInstruments);
@@ -213,68 +119,16 @@ describe('InstrumentFilterService', () => {
 
       const req = httpMock.expectOne(req => 
         req.url === '/api/v1/instruments/filtered' && 
-        req.params.get('exchange') === 'NSE'
+        req.params.get('index') === 'NIFTY 50'
       );
       expect(req.request.method).toBe('GET');
-      expect(req.request.params.get('exchange')).toBe('NSE');
-      expect(req.request.params.has('index')).toBe(false);
-      expect(req.request.params.has('segment')).toBe(false);
-      req.flush(mockInstruments);
-    });
-
-    it('should build correct query parameters with all filters', (done) => {
-      const mockInstruments: InstrumentDto[] = [];
-      const filter: InstrumentFilter = {
-        exchange: 'NSE',
-        index: 'NIFTY 50',
-        segment: 'EQ'
-      };
-
-      service.getFilteredInstruments(filter).subscribe(instruments => {
-        expect(instruments).toEqual(mockInstruments);
-        done();
-      });
-
-      const req = httpMock.expectOne(req => 
-        req.url === '/api/v1/instruments/filtered' &&
-        req.params.get('exchange') === 'NSE' &&
-        req.params.get('index') === 'NIFTY 50' &&
-        req.params.get('segment') === 'EQ'
-      );
-      expect(req.request.method).toBe('GET');
-      expect(req.request.params.get('exchange')).toBe('NSE');
       expect(req.request.params.get('index')).toBe('NIFTY 50');
-      expect(req.request.params.get('segment')).toBe('EQ');
-      req.flush(mockInstruments);
-    });
-
-    it('should build correct query parameters with index and segment only', (done) => {
-      const mockInstruments: InstrumentDto[] = [];
-      const filter: InstrumentFilter = {
-        index: 'NIFTY BANK',
-        segment: 'FO'
-      };
-
-      service.getFilteredInstruments(filter).subscribe(instruments => {
-        expect(instruments).toEqual(mockInstruments);
-        done();
-      });
-
-      const req = httpMock.expectOne(req => 
-        req.url === '/api/v1/instruments/filtered' &&
-        req.params.get('index') === 'NIFTY BANK' &&
-        req.params.get('segment') === 'FO'
-      );
-      expect(req.request.method).toBe('GET');
-      expect(req.request.params.has('exchange')).toBe(false);
-      expect(req.request.params.get('index')).toBe('NIFTY BANK');
-      expect(req.request.params.get('segment')).toBe('FO');
       req.flush(mockInstruments);
     });
 
     it('should retry on network error', (done) => {
       const mockInstruments: InstrumentDto[] = [];
-      const filter: InstrumentFilter = { exchange: 'NSE' };
+      const filter: InstrumentFilter = { index: 'NIFTY 50' };
       let attemptCount = 0;
 
       service.getFilteredInstruments(filter).subscribe({
@@ -296,7 +150,7 @@ describe('InstrumentFilterService', () => {
     });
 
     it('should handle error with catchError after retries exhausted', (done) => {
-      const filter: InstrumentFilter = { exchange: 'NSE' };
+      const filter: InstrumentFilter = { index: 'NIFTY 50' };
 
       service.getFilteredInstruments(filter).subscribe({
         next: () => done.fail('Should not succeed'),

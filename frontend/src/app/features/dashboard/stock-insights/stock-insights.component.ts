@@ -146,11 +146,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   
   // Filter state management
   public showInstrumentFilters: boolean = true;
-  public filterOptions: FilterOptions = { exchanges: [], indices: [], segments: [] };
+  public filterOptions: FilterOptions = { indices: [] };
   public selectedFilters: InstrumentFilter = {
-    exchange: 'NSE',
-    index: 'NIFTY 50',
-    segment: 'EQ'
+    index: 'NIFTY 50'
   };
   public isLoadingFilters: boolean = false;
   public isLoadingInstruments: boolean = false;
@@ -350,13 +348,11 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   private loadFilterOptions(): void {
     this.isLoadingFilters = true;
     
-    forkJoin({
-      exchanges: this.instrumentFilterService.getDistinctExchanges(),
-      indices: this.instrumentFilterService.getDistinctIndices(),
-      segments: this.instrumentFilterService.getDistinctSegments()
-    }).subscribe({
-      next: (options) => {
-        this.filterOptions = options;
+    this.instrumentFilterService.getDistinctIndices().subscribe({
+      next: (indices) => {
+        // Sort indices in ascending order
+        const sortedIndices = indices.sort((a, b) => a.localeCompare(b));
+        this.filterOptions = { indices: sortedIndices };
         this.isLoadingFilters = false;
         this.cdr.detectChanges();
         
