@@ -612,6 +612,53 @@ public class KiteMarketDataRepository {
                 queryDuration, queryDuration, totalDuration, results.size());
         return results;
     }
+
+    /**
+     * Get instruments that belong to a specific index using nse_eq_sector_index mapping.
+     * This method joins kite_instrument_master with nse_eq_sector_index to find stocks
+     * that belong to the specified index.
+     * 
+     * @param indexName The name of the index (e.g., "NIFTY 50", "NIFTY BANK")
+     * @return List of instruments belonging to the index
+     */
+    public List<Map<String, Object>> getInstrumentsByIndex(String indexName) {
+        long startTime = System.currentTimeMillis();
+        log.debug("Getting instruments for index: {}", indexName);
+        
+        String sql = """
+                SELECT DISTINCT 
+                    kim.exchange,
+                    kim.segment,
+                    kim.instrument_type as instrumentType,
+                    nesi.pd_sector_index as indexName,
+                    kim.tradingsymbol as tradingSymbol,
+                    kim.instrument_token as instrumentToken,
+                    kim.name,
+                    kim.last_price,
+                    kim.lot_size,
+                    kim.tick_size
+                FROM kite_instrument_master kim 
+                INNER JOIN nse_eq_sector_index nesi ON kim.tradingsymbol = nesi.symbol
+                WHERE kim.exchange = 'NSE' 
+                  AND kim.segment = 'NSE' 
+                  AND kim.instrument_type = 'EQ' 
+                  AND kim.expiry IS NULL 
+                  AND kim.lot_size = 1 
+                  AND kim.name IS NOT NULL 
+                  AND kim.name NOT LIKE '%LOAN%'
+                  AND nesi.pd_sector_index = ?
+                ORDER BY kim.tradingsymbol
+                """;
+        
+        long queryStartTime = System.currentTimeMillis();
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, indexName);
+        long queryDuration = System.currentTimeMillis() - queryStartTime;
+        long totalDuration = System.currentTimeMillis() - startTime;
+        
+        log.info("Query getInstrumentsByIndex completed in {} ms (query: {} ms, total: {} ms), returned {} instruments for index '{}'", 
+                queryDuration, queryDuration, totalDuration, results.size(), indexName);
+        return results;
+    }
 }
 
 

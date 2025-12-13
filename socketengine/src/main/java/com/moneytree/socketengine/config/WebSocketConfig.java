@@ -69,7 +69,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 "/ws/indices",           // Selective index subscriptions
                 "/ws/stocks",            // Selective stock subscriptions
                 "/ws/indices/all",       // All indices auto-stream
-                "/ws/stocks/nse/all")    // All NSE stocks auto-stream
+                "/ws/stocks/nse/all",    // All NSE stocks auto-stream
+                "/ws/stocks/nse/index/*") // Index-specific stocks auto-stream
             .setAllowedOriginPatterns(origins)  // Use patterns to support wildcards with credentials
             .withSockJS();  // Enable SockJS fallback for older browsers
         
@@ -78,6 +79,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
         log.info("  - /ws/stocks (selective stock subscriptions)");
         log.info("  - /ws/indices/all (auto-stream all NSE indices)");
         log.info("  - /ws/stocks/nse/all (auto-stream all NSE equity stocks)");
+        log.info("  - /ws/stocks/nse/index/* (auto-stream index-specific stocks)");
     }
     
     /**

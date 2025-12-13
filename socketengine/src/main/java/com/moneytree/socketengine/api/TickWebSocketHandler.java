@@ -230,10 +230,10 @@ public class TickWebSocketHandler extends TextWebSocketHandler {
     
     /**
      * Extracts the endpoint path from the WebSocket session URI.
-     * Determines which of the four endpoints the client connected to.
+     * Determines which of the endpoints the client connected to, including index-specific ones.
      *
      * @param session the WebSocket session
-     * @return the endpoint path (e.g., "/ws/indices", "/ws/indices/all")
+     * @return the endpoint path (e.g., "/ws/indices", "/ws/stocks/nse/index/NIFTY 50")
      */
     private String extractEndpoint(WebSocketSession session) {
         String uri = session.getUri() != null ? session.getUri().getPath() : "";
@@ -245,7 +245,13 @@ public class TickWebSocketHandler extends TextWebSocketHandler {
         uri = uri.replaceAll("/+$", "");
         
         // Match against known endpoints - handle SockJS URLs
-        if (uri.contains("/ws/indices/all")) {
+        // Check for index-specific endpoint first (most specific)
+        if (uri.contains("/ws/stocks/nse/index/")) {
+            // Extract the index name from the URL
+            String indexSpecificEndpoint = extractIndexSpecificEndpoint(uri);
+            log.info("DEBUG: Matched index-specific endpoint: {} for session: {}", indexSpecificEndpoint, session.getId());
+            return indexSpecificEndpoint;
+        } else if (uri.contains("/ws/indices/all")) {
             log.info("DEBUG: Matched /ws/indices/all endpoint for session: {}", session.getId());
             return "/ws/indices/all";
         } else if (uri.contains("/ws/stocks/nse/all")) {
@@ -259,6 +265,53 @@ public class TickWebSocketHandler extends TextWebSocketHandler {
         // Default fallback
         log.warn("Unknown endpoint for session {}: {}", session.getId(), uri);
         return uri;
+    }
+    
+    /**
+     * Extracts the index-specific endpoint from a URI containing /ws/stocks/nse/index/.
+     * Handles SockJS URL patterns and URL decoding.
+     *
+     * @param uri the full URI path
+     * @return the normalized index-specific endpoint (e.g., "/ws/stocks/nse/index/NIFTY 50")
+     */
+    private String extractIndexSpecificEndpoint(String uri) {
+        try {
+            // Find the index part after /ws/stocks/nse/index/
+            String pattern = "/ws/stocks/nse/index/";
+            int startIndex = uri.indexOf(pattern);
+            if (startIndex == -1) {
+                return "/ws/stocks/nse/index/UNKNOWN";
+            }
+            
+            startIndex += pattern.length();
+            
+            // Find the end of the index name (before SockJS session info)
+            String remaining = uri.substring(startIndex);
+            
+            // Remove SockJS session info (e.g., /123/abc/websocket)
+            String indexName = remaining;
+            int sockJsIndex = remaining.indexOf('/');
+            if (sockJsIndex > 0) {
+                indexName = remaining.substring(0, sockJsIndex);
+            }
+            
+            // URL decode the index name
+            indexName = java.net.URLDecoder.decode(indexName, "UTF-8");
+            
+            // Validate and sanitize the index name
+            if (indexName.trim().isEmpty()) {
+                log.warn("Empty index name extracted from URI: {}", uri);
+                return "/ws/stocks/nse/index/UNKNOWN";
+            }
+            
+            String endpoint = "/ws/stocks/nse/index/" + indexName.trim();
+            log.debug("Extracted index-specific endpoint: {} from URI: {}", endpoint, uri);
+            return endpoint;
+            
+        } catch (Exception e) {
+            log.error("Failed to extract index name from URI: {}", uri, e);
+            return "/ws/stocks/nse/index/UNKNOWN";
+        }
     }
     
     /**

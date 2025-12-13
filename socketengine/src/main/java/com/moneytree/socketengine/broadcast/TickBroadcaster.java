@@ -6,6 +6,7 @@ import com.moneytree.socketengine.api.dto.TickDto;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
 import com.moneytree.socketengine.kite.InstrumentLoader;
+import com.moneytree.socketengine.kite.IndexInstrumentService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -25,6 +27,7 @@ import java.util.Set;
  * 1. Sessions with explicit subscriptions to the symbol
  * 2. /ws/indices/all sessions (if the tick is for an index)
  * 3. /ws/stocks/nse/all sessions (if the tick is for a stock)
+ * 4. /ws/stocks/nse/index/{indexName} sessions (if the stock belongs to that index)
  */
 @Component
 @Slf4j
@@ -32,16 +35,19 @@ public class TickBroadcaster {
     
     private final SessionManager sessionManager;
     private final InstrumentLoader instrumentLoader;
+    private final IndexInstrumentService indexInstrumentService;
     private final ObjectMapper objectMapper;
     private final Counter ticksBroadcastCounter;
     
     public TickBroadcaster(
             SessionManager sessionManager,
             InstrumentLoader instrumentLoader,
+            IndexInstrumentService indexInstrumentService,
             ObjectMapper objectMapper,
             MeterRegistry meterRegistry) {
         this.sessionManager = sessionManager;
         this.instrumentLoader = instrumentLoader;
+        this.indexInstrumentService = indexInstrumentService;
         this.objectMapper = objectMapper;
         
         // Register counter for ticks broadcast
@@ -87,6 +93,9 @@ public class TickBroadcaster {
             boolean isStock = instrumentLoader.isStockToken(tick.getInstrumentToken());
             if (isStock) {
                 targetSessions.addAll(sessionManager.getStocksAllSessions());
+                
+                // 4. Index-specific sessions (if this stock belongs to any index)
+                addIndexSpecificSessions(tick, targetSessions);
             }
             
             // Debug logging for troubleshooting
@@ -115,6 +124,44 @@ public class TickBroadcaster {
         } catch (Exception e) {
             // Catch any other unexpected errors to prevent disrupting the hot path
             log.error("Error broadcasting tick for {}", tick.getSymbol(), e);
+        }
+    }
+    
+    /**
+     * Adds sessions from index-specific endpoints if the stock belongs to any index.
+     * This method checks all active index-specific sessions and determines if the
+     * current stock tick should be sent to them.
+     * 
+     * @param tick The stock tick to check
+     * @param targetSessions The set of target sessions to add to
+     */
+    private void addIndexSpecificSessions(Tick tick, Set<String> targetSessions) {
+        try {
+            // Get all active index-specific sessions
+            Map<String, Set<String>> indexSessions = sessionManager.getAllIndexSpecificSessions();
+            
+            if (indexSessions.isEmpty()) {
+                return; // No index-specific sessions active
+            }
+            
+            // For each active index, check if this stock belongs to it
+            for (Map.Entry<String, Set<String>> entry : indexSessions.entrySet()) {
+                String indexName = entry.getKey();
+                Set<String> sessions = entry.getValue();
+                
+                // Check if this stock's trading symbol belongs to the index
+                Set<String> indexSymbols = indexInstrumentService.getTradingSymbolsByIndex(indexName);
+                if (indexSymbols.contains(tick.getSymbol())) {
+                    targetSessions.addAll(sessions);
+                    log.debug("INDEX-SPECIFIC BROADCAST: {} belongs to index {} - adding {} sessions", 
+                        tick.getSymbol(), indexName, sessions.size());
+                }
+            }
+            
+        } catch (Exception e) {
+            // Don't let index-specific session errors affect the main broadcast
+            log.warn("Error determining index-specific sessions for {}: {}", 
+                tick.getSymbol(), e.getMessage());
         }
     }
     

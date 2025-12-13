@@ -6,6 +6,7 @@ import com.moneytree.socketengine.domain.InstrumentType;
 import com.moneytree.socketengine.domain.Tick;
 import com.moneytree.socketengine.domain.events.TickReceivedEvent;
 import com.moneytree.socketengine.kite.InstrumentLoader;
+import com.moneytree.socketengine.kite.IndexInstrumentService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +16,9 @@ import org.springframework.web.socket.WebSocketSession;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +41,7 @@ class TickBroadcasterTest {
     private TickBroadcaster tickBroadcaster;
     private SessionManager sessionManager;
     private InstrumentLoader instrumentLoader;
+    private IndexInstrumentService indexInstrumentService;
     private ObjectMapper objectMapper;
     private MeterRegistry meterRegistry;
 
@@ -45,10 +49,11 @@ class TickBroadcasterTest {
     void setUp() {
         sessionManager = mock(SessionManager.class);
         instrumentLoader = mock(InstrumentLoader.class);
+        indexInstrumentService = mock(IndexInstrumentService.class);
         objectMapper = new ObjectMapper();
         meterRegistry = new SimpleMeterRegistry();
         
-        tickBroadcaster = new TickBroadcaster(sessionManager, instrumentLoader, objectMapper, meterRegistry);
+        tickBroadcaster = new TickBroadcaster(sessionManager, instrumentLoader, indexInstrumentService, objectMapper, meterRegistry);
     }
 
     @Test
@@ -61,6 +66,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("NIFTY 50")).thenReturn(subscribedSessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(256265L)).thenReturn(true);
         when(instrumentLoader.isStockToken(256265L)).thenReturn(false);
 
@@ -83,6 +89,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("NIFTY 50")).thenReturn(new HashSet<>());
         when(sessionManager.getIndicesAllSessions()).thenReturn(indicesAllSessions);
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(256265L)).thenReturn(true);
         when(instrumentLoader.isStockToken(256265L)).thenReturn(false);
 
@@ -105,6 +112,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("RELIANCE")).thenReturn(new HashSet<>());
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(stocksAllSessions);
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new java.util.HashMap<>());
         when(instrumentLoader.isIndexToken(738561L)).thenReturn(false);
         when(instrumentLoader.isStockToken(738561L)).thenReturn(true);
 
@@ -129,6 +137,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("BANKNIFTY")).thenReturn(subscribedSessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(indicesAllSessions);
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(260105L)).thenReturn(true);
         when(instrumentLoader.isStockToken(260105L)).thenReturn(false);
 
@@ -152,6 +161,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("NIFTY 50")).thenReturn(subscribedSessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(256265L)).thenReturn(true);
         when(instrumentLoader.isStockToken(256265L)).thenReturn(false);
         
@@ -177,6 +187,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("UNKNOWN")).thenReturn(new HashSet<>());
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(999999L)).thenReturn(false);
         when(instrumentLoader.isStockToken(999999L)).thenReturn(false);
 
@@ -197,6 +208,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("RELIANCE")).thenReturn(subscribedSessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(738561L)).thenReturn(false);
         when(instrumentLoader.isStockToken(738561L)).thenReturn(true);
 
@@ -239,6 +251,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("NIFTY 50")).thenReturn(subscribedSessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(indicesAllSessions);
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(256265L)).thenReturn(true);
         when(instrumentLoader.isStockToken(256265L)).thenReturn(false);
 
@@ -258,6 +271,36 @@ class TickBroadcasterTest {
     }
 
     @Test
+    void shouldBroadcastStockTicksToIndexSpecificSessions() throws IOException {
+        // Given: A stock tick and index-specific sessions where the stock belongs to the index
+        Tick tick = createSampleTick("RELIANCE", 738561L, InstrumentType.STOCK);
+        TickReceivedEvent event = new TickReceivedEvent(tick);
+        
+        Set<String> nifty50Sessions = new HashSet<>(Arrays.asList("session-nifty50-1", "session-nifty50-2"));
+        Map<String, Set<String>> indexSpecificSessions = new HashMap<>();
+        indexSpecificSessions.put("NIFTY 50", nifty50Sessions);
+        
+        Set<String> relianceSymbols = new HashSet<>(Arrays.asList("RELIANCE"));
+        
+        when(sessionManager.getSessionsSubscribedTo("RELIANCE")).thenReturn(new HashSet<>());
+        when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(indexSpecificSessions);
+        when(indexInstrumentService.getTradingSymbolsByIndex("NIFTY 50")).thenReturn(relianceSymbols);
+        when(instrumentLoader.isIndexToken(738561L)).thenReturn(false);
+        when(instrumentLoader.isStockToken(738561L)).thenReturn(true);
+
+        // When: Broadcasting the tick
+        tickBroadcaster.onTickReceived(event);
+
+        // Then: Should send to index-specific sessions
+        verify(sessionManager, times(2)).sendMessage(anyString(), anyString());
+        verify(sessionManager).sendMessage(eq("session-nifty50-1"), anyString());
+        verify(sessionManager).sendMessage(eq("session-nifty50-2"), anyString());
+        verify(indexInstrumentService).getTradingSymbolsByIndex("NIFTY 50");
+    }
+
+    @Test
     void shouldHandleDuplicateSessionsInTargetSet() throws IOException {
         // Given: A session that appears in both subscribed and indices/all
         // (This shouldn't happen in practice, but we should handle it gracefully)
@@ -270,6 +313,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("NIFTY 50")).thenReturn(subscribedSessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(indicesAllSessions);
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(256265L)).thenReturn(true);
         when(instrumentLoader.isStockToken(256265L)).thenReturn(false);
 
@@ -290,6 +334,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo(anyString())).thenReturn(sessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(anyLong())).thenReturn(false);
         when(instrumentLoader.isStockToken(anyLong())).thenReturn(false);
 
@@ -338,6 +383,7 @@ class TickBroadcasterTest {
         when(sessionManager.getSessionsSubscribedTo("NIFTY 50")).thenReturn(sessions);
         when(sessionManager.getIndicesAllSessions()).thenReturn(new HashSet<>());
         when(sessionManager.getStocksAllSessions()).thenReturn(new HashSet<>());
+        when(sessionManager.getAllIndexSpecificSessions()).thenReturn(new HashMap<>());
         when(instrumentLoader.isIndexToken(256265L)).thenReturn(false);
         when(instrumentLoader.isStockToken(256265L)).thenReturn(false);
 

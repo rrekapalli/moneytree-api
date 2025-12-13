@@ -157,6 +157,36 @@ public class SessionManager {
     }
     
     /**
+     * Gets all sessions connected to index-specific endpoints.
+     * These sessions receive ticks for stocks belonging to a specific index.
+     *
+     * @param indexName the name of the index (e.g., "NIFTY 50")
+     * @return set of session IDs on the index-specific endpoint
+     */
+    public Set<String> getIndexSpecificSessions(String indexName) {
+        String targetEndpoint = "/ws/stocks/nse/index/" + indexName;
+        return sessionEndpoints.entrySet().stream()
+            .filter(e -> targetEndpoint.equals(e.getValue()))
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+    }
+    
+    /**
+     * Gets all sessions connected to any index-specific endpoint.
+     * Returns a map of index name to session IDs.
+     *
+     * @return map of index names to their session IDs
+     */
+    public Map<String, Set<String>> getAllIndexSpecificSessions() {
+        return sessionEndpoints.entrySet().stream()
+            .filter(e -> e.getValue().startsWith("/ws/stocks/nse/index/"))
+            .collect(Collectors.groupingBy(
+                e -> e.getValue().substring("/ws/stocks/nse/index/".length()),
+                Collectors.mapping(Map.Entry::getKey, Collectors.toSet())
+            ));
+    }
+    
+    /**
      * Sends a message to a specific session.
      * Handles IOException gracefully by logging and removing dead sessions.
      *

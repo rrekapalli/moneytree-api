@@ -926,7 +926,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
 
 
   /**
-   * Load default NIFTY 50 data when page loads
+   * Load default NSE indices data when page loads
+   * This loads all NSE indices and then selects NIFTY 50 as the default for the candlestick chart
    */
   private loadDefaultNifty50Data(): void {
     // If indices are already loaded from WebSocket, use that data
@@ -942,8 +943,8 @@ export class OverallComponent extends BaseDashboardComponent<StockDataDto> {
       return;
     }
 
-    // Fallback: Try to fetch indices from API if WebSocket isn't ready
-    this.indicesService.getIndicesByExchangeSegment('NSE', 'NSE').subscribe({
+    // Fallback: Try to fetch all NSE indices from API if WebSocket isn't ready
+    this.indicesService.getIndicesByExchangeSegment('NSE', 'INDICES').subscribe({
       next: (indices) => {
         const mappedData = this.mapIndicesToStockData(indices || []);
         if (mappedData.length === 0) {

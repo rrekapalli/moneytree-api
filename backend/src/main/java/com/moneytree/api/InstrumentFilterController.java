@@ -16,6 +16,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -200,16 +201,68 @@ public class InstrumentFilterController {
     }
 
     /**
+     * Get instruments that belong to a specific index.
+     * Uses nse_eq_sector_index table to map stocks to indices.
+     */
+    @GetMapping("/indices/{indexName}/instruments")
+    @Operation(
+        summary = "Get instruments by index",
+        description = "Retrieve all instruments that belong to the specified index using nse_eq_sector_index mapping. " +
+                     "Returns instruments with their current market data."
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200", 
+            description = "Successfully retrieved instruments for the index",
+            content = @Content(schema = @Schema(implementation = InstrumentDto[].class))
+        ),
+        @ApiResponse(responseCode = "404", description = "Index not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<?> getInstrumentsByIndex(
+            @Parameter(description = "Name of the index (e.g., 'NIFTY 50', 'NIFTY BANK')", example = "NIFTY 50")
+            @PathVariable String indexName) {
+        long startTime = System.currentTimeMillis();
+        try {
+            log.info("Fetching instruments for index: {}", indexName);
+            
+            // Fetch instruments for the index from repository
+            List<Map<String, Object>> rawInstruments = repository.getInstrumentsByIndex(indexName);
+            
+            if (rawInstruments.isEmpty()) {
+                log.warn("No instruments found for index: {}", indexName);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Map to InstrumentDto
+            List<InstrumentDto> instruments = rawInstruments.stream()
+                    .map(this::mapToInstrumentDto)
+                    .collect(Collectors.toList());
+            
+            long duration = System.currentTimeMillis() - startTime;
+            log.info("Retrieved {} instruments for index '{}' in {} ms", instruments.size(), indexName, duration);
+            return ResponseEntity.ok(instruments);
+        } catch (Exception ex) {
+            long duration = System.currentTimeMillis() - startTime;
+            log.error("Error fetching instruments for index '{}' after {} ms", indexName, duration, ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of("error", "Failed to fetch instruments for index: " + indexName)
+            );
+        }
+    }
+
+    /**
      * Helper method to map database result to InstrumentDto.
      */
     private InstrumentDto mapToInstrumentDto(Map<String, Object> row) {
         InstrumentDto dto = new InstrumentDto();
-        dto.setInstrumentToken(getString(row, "instrument_token"));
-        dto.setTradingsymbol(getString(row, "tradingsymbol"));
+        // Handle both old and new column names for backward compatibility
+        dto.setInstrumentToken(getString(row, "instrumentToken") != null ? getString(row, "instrumentToken") : getString(row, "instrument_token"));
+        dto.setTradingsymbol(getString(row, "tradingSymbol") != null ? getString(row, "tradingSymbol") : getString(row, "tradingsymbol"));
         dto.setName(getString(row, "name"));
         dto.setSegment(getString(row, "segment"));
         dto.setExchange(getString(row, "exchange"));
-        dto.setInstrumentType(getString(row, "instrument_type"));
+        dto.setInstrumentType(getString(row, "instrumentType") != null ? getString(row, "instrumentType") : getString(row, "instrument_type"));
         dto.setLastPrice(getDouble(row, "last_price"));
         dto.setLotSize(getInteger(row, "lot_size"));
         dto.setTickSize(getDouble(row, "tick_size"));

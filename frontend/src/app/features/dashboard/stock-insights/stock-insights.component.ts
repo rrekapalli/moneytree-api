@@ -94,7 +94,6 @@ import {StockDataDto} from '../../../services/entities/stock-ticks';
 // Import indices service and historical data entities
 import { IndicesService } from '../../../services/apis/indices.api';
 import { IndexHistoricalData } from '../../../services/entities/index-historical-data';
-import { IndexResponseDto } from '../../../services/entities/indices';
 
 // Import consolidated WebSocket service and entities
 import { WebSocketService, IndexDataDto, IndicesDto } from '../../../services/websockets';
@@ -354,9 +353,18 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         const sortedIndices = indices.sort((a, b) => a.localeCompare(b));
         this.filterOptions = { indices: sortedIndices };
         this.isLoadingFilters = false;
+        
+        // Verify that NIFTY 50 exists in the indices list
+        if (sortedIndices.includes('NIFTY 50')) {
+          this.selectedFilters = { index: 'NIFTY 50' };
+        } else if (sortedIndices.length > 0) {
+          // Fallback to first available index if NIFTY 50 not found
+          this.selectedFilters = { index: sortedIndices[0] };
+        }
+        
         this.cdr.detectChanges();
         
-        // Load initial data with default filters
+        // Load initial data with default filters ONLY after filter options are loaded
         this.loadFilteredInstruments();
       },
       error: (error) => {
@@ -370,7 +378,11 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
           life: 5000
         });
         
-        // Maintain previous filter options state (don't clear existing data)
+        // Set empty data on error
+        this.dashboardData = [];
+        this.filteredDashboardData = [];
+        this.updateStockListWithFilteredData();
+        
         this.cdr.detectChanges();
       }
     });
@@ -393,6 +405,11 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     
     this.filterChangeTimer = setTimeout(() => {
       this.loadFilteredInstruments();
+      
+      // Reconnect WebSocket with new index filter
+      if (filters.index) {
+        this.reconnectStocksWebSocketWithIndex(filters.index);
+      }
     }, 300);
   }
   
@@ -475,98 +492,26 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
     }));
   }
 
-  private indicesLoaded = false;
+
 
   private loadDefaultNifty50Data(): void {
-    if (this.indicesLoaded && this.dashboardData.length > 0) {
-      this.setDefaultIndexFromData(this.dashboardData);
-      return;
-    }
-
-    this.indicesService.getIndicesByExchangeSegment('NSE', 'NSE').subscribe({
-      next: (indices) => {
-        const mappedData = this.mapIndicesToStockData(indices || []);
-        if (mappedData.length === 0) {
-          this.loadDefaultNifty50DataFallback();
-          return;
-        }
-
-        this.updateIndexListData(mappedData);
-        this.indicesLoaded = true;
-        this.setDefaultIndexFromData(mappedData);
-      },
-      error: (error) => {
-        console.warn('Failed to list indices, using fallback:', error);
-        this.loadDefaultNifty50DataFallback();
-      }
-    });
+    // For stock-insights, we should load NIFTY 50 stocks, not indices
+    // Set the default filter to NIFTY 50 - actual loading will happen after filter options are loaded
+    this.selectedFilters = { index: 'NIFTY 50' };
+    
+    // Don't call loadFilteredInstruments() here - it will be called after filter options are loaded
+    // This prevents premature API calls before the component is fully initialized
   }
 
   private loadDefaultNifty50DataFallback(): void {
-    // Fallback method with hardcoded data
-    const defaultNifty50Data: SelectedIndexData = {
-      id: 'NIFTY50',
-      symbol: 'NIFTY 50',
-      name: 'NIFTY 50',
-      lastPrice: 0,
-      variation: 0,
-      percentChange: 0,
-      keyCategory: 'Index'
-    };
-    
-    this.updateDashboardWithSelectedIndex(defaultNifty50Data);
-  }
-
-  private mapIndicesToStockData(indices: IndexResponseDto[]): StockDataDto[] {
-    return indices.map(index => ({
-      tradingsymbol: index.indexSymbol || index.indexName || 'N/A',
-      symbol: index.indexSymbol || index.indexName || 'N/A',
-      companyName: index.indexName || index.indexSymbol || 'Unknown Index',
-      lastPrice: index.lastPrice || 0,
-      percentChange: (index as any).percentChange || 0,
-      totalTradedValue: 0,
-      sector: 'Indices',
-      industry: 'Indices'
-    }));
-  }
-
-  private updateIndexListData(data: StockDataDto[]): void {
-    this.initialDashboardData.length = 0;
-    this.initialDashboardData.push(...data);
-
-    this.dashboardData = [...data];
-    this.filteredDashboardData = [...data];
-    
+    // Fallback method - create empty stock data and show message
+    this.dashboardData = [];
+    this.filteredDashboardData = [];
     this.updateStockListWithFilteredData();
     this.cdr.detectChanges();
   }
 
-  private setDefaultIndexFromData(data: StockDataDto[]): void {
-    // Title not displayed when filters are shown, but kept for backward compatibility
-    this.dashboardTitle = 'NIFTY 50 - Financial Dashboard';
 
-    const targetIndex = data.find(
-      index => index.companyName?.toUpperCase().includes('NIFTY 50') ||
-        index.tradingsymbol?.toUpperCase().includes('NIFTY 50')
-    ) || (data.length > 0 ? data[0] : null);
-
-    if (!targetIndex) {
-      this.loadDefaultNifty50DataFallback();
-      return;
-    }
-
-    const defaultNifty50Data: SelectedIndexData = {
-      id: targetIndex.id || targetIndex.tradingsymbol || 'NIFTY50',
-      symbol: targetIndex.tradingsymbol || targetIndex.symbol || 'NIFTY 50',
-      name: targetIndex.companyName || targetIndex.tradingsymbol || 'NIFTY 50',
-      lastPrice: targetIndex.lastPrice || 0,
-      variation: (targetIndex as any).variation || 0,
-      percentChange: targetIndex.percentChange || 0,
-      keyCategory: 'Index'
-    };
-
-    this.updateDashboardWithSelectedIndex(defaultNifty50Data);
-  }
 
   /**
    * Handle single-click events from the Index List widget.
@@ -2339,18 +2284,21 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
   }
 
   /**
-   * Initialize stocks WebSocket connection and subscribe to all stocks data
-   * This method establishes the WebSocket connection and subscribes to the /ws/stocks/nse/all endpoint
-   * for real-time updates of all NSE stocks data.
+   * Initialize stocks WebSocket connection and subscribe to index-specific stocks data
+   * This method establishes the WebSocket connection and subscribes to index-specific endpoint
+   * for real-time updates of stocks belonging to the selected index.
    */
   private initializeStocksWebSocket(): void {
     // Register this component with stocks WebSocket service
     this.stocksWebSocketService.registerComponent('StockInsightsComponent');
     
-    // Connect to stocks WebSocket service
-    this.stocksWebSocketService.connect()
+    // Get initial index for connection (default to NIFTY 50)
+    const initialIndex = this.selectedFilters.index || 'NIFTY 50';
+    
+    // Connect to stocks WebSocket service with index filter
+    this.stocksWebSocketService.connect(initialIndex)
       .then(() => {
-        // Connection successful - subscribe to all stocks topic
+        // Connection successful - subscribe to index-specific stocks topic
         this.stocksWebSocketSubscription = this.stocksWebSocketService
           .subscribeToAllStocks()
           .subscribe({
@@ -2359,7 +2307,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
             },
             error: (error) => {
               // Use centralized subscription error handler with retry logic
-              this.handleStocksSubscriptionError('/ws/stocks/nse/all', error, 0);
+              this.handleStocksSubscriptionError(`/ws/stocks/nse/index/${initialIndex}`, error, 0);
             }
           });
         
@@ -2368,9 +2316,42 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
         
       })
       .catch((error) => {
-        // Connection failed - use centralized error handler
+        // Connection failed - use centralized error handler but don't show user error
+        console.warn('Stocks WebSocket connection failed - continuing with REST API data:', error);
         this.handleStocksConnectionError(error);
       });
+  }
+
+  /**
+   * Reconnect stocks WebSocket with a different index filter
+   * @param indexName The index name to filter stocks by
+   */
+  private async reconnectStocksWebSocketWithIndex(indexName: string): Promise<void> {
+    try {
+      // Clean up existing subscription
+      this.cleanupStocksWebSocketSubscription();
+      
+      // Reconnect with new index
+      await this.stocksWebSocketService.reconnectWithIndex(indexName);
+      
+      // Resubscribe to the new index-specific stream
+      this.stocksWebSocketSubscription = this.stocksWebSocketService
+        .subscribeToAllStocks()
+        .subscribe({
+          next: (stocksDto: StockTicksDto) => {
+            this.handleIncomingStocksData(stocksDto);
+          },
+          error: (error) => {
+            this.handleStocksSubscriptionError(`/ws/stocks/nse/index/${indexName}`, error, 0);
+          }
+        });
+      
+      this.isStocksWebSocketConnected = true;
+      
+    } catch (error) {
+      console.warn(`Failed to reconnect stocks WebSocket with index ${indexName} - continuing with REST API:`, error);
+      this.handleStocksConnectionError(error);
+    }
   }
 
   /**
@@ -2378,8 +2359,9 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
    */
   private handleStocksConnectionError(error: any): void {
     this.isStocksWebSocketConnected = false;
-    // Continue displaying fallback data - no user-facing error
-    // The application remains fully functional with REST API data
+    // Continue displaying REST API data - no user-facing error
+    // The application remains fully functional with the main backend REST API
+    console.info('Using REST API for stock data (WebSocket unavailable)');
   }
 
   /**
@@ -2408,7 +2390,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
    * Retry stocks WebSocket subscription after a failure
    */
   private retryStocksSubscription(topic: string, retryCount: number): void {
-    // Attempt to resubscribe to all stocks
+    // Attempt to resubscribe to index-specific stocks
     this.stocksWebSocketSubscription = this.stocksWebSocketService
       .subscribeToAllStocks()
       .subscribe({
@@ -2604,10 +2586,12 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
    */
   private async attemptStocksWebSocketReconnection(): Promise<void> {
     try {
-      await this.stocksWebSocketService.connect();
+      // Use current selected index for reconnection
+      const currentIndex = this.selectedFilters.index || 'NIFTY 50';
+      await this.stocksWebSocketService.connect(currentIndex);
       
       if (this.stocksWebSocketService.connected) {
-        // Resubscribe to all stocks
+        // Resubscribe to index-specific stocks
         this.stocksWebSocketSubscription = this.stocksWebSocketService
           .subscribeToAllStocks()
           .subscribe({
@@ -2615,7 +2599,7 @@ export class StockInsightsComponent extends BaseDashboardComponent<StockDataDto>
               this.handleIncomingStocksData(stocksDto);
             },
             error: (error) => {
-              this.handleStocksSubscriptionError('/ws/stocks/nse/all', error, 0);
+              this.handleStocksSubscriptionError(`/ws/stocks/nse/index/${currentIndex}`, error, 0);
             }
           });
       }

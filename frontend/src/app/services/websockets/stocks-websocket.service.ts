@@ -52,7 +52,7 @@ export class StocksWebSocketService {
     return this.isConnected;
   }
 
-  async connect(): Promise<void> {
+  async connect(indexName?: string): Promise<void> {
     if (this.isConnected) {
       return;
     }
@@ -60,11 +60,26 @@ export class StocksWebSocketService {
     this.connectionState$.next(StocksWebSocketConnectionState.CONNECTING);
 
     try {
-      // Connect to socketengine WebSocket endpoint for all NSE stocks using SockJS
+      // Connect to socketengine WebSocket endpoint for index-specific stocks using SockJS
       const baseUrl = environment.enginesHttpUrl;
-      const sockJsUrl = `${baseUrl}/ws/stocks/nse/all`;
+      // Use index-specific endpoint if provided, otherwise fallback to all stocks
+      const endpoint = indexName ? `/ws/stocks/nse/index/${encodeURIComponent(indexName)}` : '/ws/stocks/nse/all';
+      const sockJsUrl = `${baseUrl}${endpoint}`;
+      
+      // Add timeout and better error handling for SockJS connection
       const sockjs = new SockJS(sockJsUrl);
       this.ws = sockjs as any;
+      
+      // Set a connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (!this.isConnected) {
+          console.warn('WebSocket connection timeout - continuing with REST API fallback');
+          this.connectionState$.next(StocksWebSocketConnectionState.ERROR);
+          if (this.ws) {
+            this.ws.close();
+          }
+        }
+      }, 10000); // 10 second timeout
 
       if (!this.ws) {
         throw new Error('Failed to create SockJS connection');
@@ -72,6 +87,7 @@ export class StocksWebSocketService {
 
       // Set up event handlers
       this.ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         this.connectionState$.next(StocksWebSocketConnectionState.CONNECTED);
         this.isConnected = true;
         this.retryCount = 0;
@@ -88,23 +104,31 @@ export class StocksWebSocketService {
       };
 
       this.ws.onerror = (error: any) => {
-        this.errors$.next('WebSocket connection error');
+        clearTimeout(connectionTimeout);
+        console.warn('Stocks WebSocket connection error - continuing with REST API fallback:', error);
+        this.errors$.next('WebSocket connection error - using REST API fallback');
         this.connectionState$.next(StocksWebSocketConnectionState.ERROR);
       };
 
       this.ws.onclose = (event: any) => {
+        clearTimeout(connectionTimeout);
         this.connectionState$.next(StocksWebSocketConnectionState.DISCONNECTED);
         this.isConnected = false;
         
-        // Retry connection if not a clean close
-        if (event.code !== 1000 && this.retryCount < this.maxRetries) {
+        // Only retry if it's not a clean close and we haven't exceeded max retries
+        // For 404 errors (like missing /info endpoint), don't retry
+        if (event.code !== 1000 && event.code !== 1002 && this.retryCount < this.maxRetries) {
+          console.warn(`Stocks WebSocket closed (code: ${event.code}), attempting retry ${this.retryCount + 1}/${this.maxRetries}`);
           this.scheduleRetry();
+        } else {
+          console.warn('Stocks WebSocket connection failed - continuing with REST API fallback');
         }
       };
 
     } catch (error) {
+      console.warn('Failed to create stocks WebSocket connection - continuing with REST API fallback:', error);
       this.connectionState$.next(StocksWebSocketConnectionState.ERROR);
-      throw error;
+      // Don't throw error - let the application continue with REST API fallback
     }
   }
 
@@ -118,6 +142,21 @@ export class StocksWebSocketService {
     
     this.connectionState$.next(StocksWebSocketConnectionState.DISCONNECTED);
     this.isConnected = false;
+  }
+
+  /**
+   * Reconnect with a different index filter
+   * @param indexName The index name to filter stocks by
+   */
+  async reconnectWithIndex(indexName: string): Promise<void> {
+    // Disconnect current connection
+    this.disconnect();
+    
+    // Wait a moment for clean disconnect
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Reconnect with new index
+    await this.connect(indexName);
   }
 
   subscribeToAllStocks(): Observable<StockTicksDto> {
